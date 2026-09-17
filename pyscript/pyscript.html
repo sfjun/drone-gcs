@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyScript 오류 해결 및 속도 최적화 예제</title>
+    
+    <!-- [변경] 가장 안정적인 Cloudflare CDN(cdnjs)을 사용하여 접속 차단 오류를 해결합니다 -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    <script type="module" src="https://cloudflare.com"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .output-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-left: 5px solid #4caf50;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .msg-line {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .time-line {
+            font-size: 1rem;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PyScript 실행 결과</h1>
+    
+    <div class="output-box">
+        <div id="welcome-msg" class="msg-line">파이썬 로딩 중...</div>
+        <div id="time-msg" class="time-line"></div>
+    </div>
+
+    <!-- 속도 최적화를 위해 mpy(MicroPython) 엔진으로 작동하도록 고정했습니다 -->
+    <script type="mpy">
+        from datetime import datetime
+        from pyscript import display
+
+        # 1. 환영 메시지 출력
+        display("안녕하세요! PyScript 세계에 오신 것을 환영합니다.", target="welcome-msg", append=False)
+        
+        # 2. 현재 시간 출력
+        now = datetime.now().strftime("%Y년 %m월 %d일 %H시 %M분 %S초")
+        display(f"현재 실행 시간: {now}", target="time-msg", append=False)
+    </script>
+
+</body>
+</html>
