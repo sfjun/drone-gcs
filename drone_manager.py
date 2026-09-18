@@ -8,7 +8,6 @@ class DroneManager:
         self.master = None
         self.connected = False
         self.conn_str = "udp:0.0.0.0:14560"
-        # PyQt의 signal 대신 FastAPI 서버로 데이터를 넘겨줄 콜백 함수
         self.callback = callback 
 
     def set_connection_string(self, conn_str):
@@ -34,7 +33,6 @@ class DroneManager:
             self.callback("STATUS", True)
             self.callback("LOG", "🟢 MAVLink 통신 연결 성공!")
 
-            # 실시간 데이터 수신 루프
             while self.running and self.connected:
                 msg = self.master.recv_match(blocking=False)
                 if msg:
@@ -45,7 +43,6 @@ class DroneManager:
                         lat = msg.lat / 1e7
                         lon = msg.lon / 1e7
                         alt = msg.relative_alt / 1000.0
-                        # GPS 데이터를 서버 콜백으로 쏩니다
                         self.callback("GPS", {"lat": lat, "lon": lon, "alt": alt})
                         
                 time.sleep(0.05)
