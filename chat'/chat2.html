@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML 탭 간 채팅</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto; }
+        #chat-window { height: 300px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background: #f9f9f9; }
+        .message { margin: 5px 0; padding: 8px; border-radius: 5px; max-width: 70%; }
+        .sent { background: #dcf8c6; margin-left: auto; text-align: right; }
+        .received { background: #fff; border: 1px solid #eee; }
+        #input-container { display: flex; gap: 5px; }
+        #message-input { flex: 1; padding: 8px; }
+        button { padding: 8px 15px; }
+    </style>
+</head>
+<body>
+
+    <h2>💬 탭 간 실시간 채팅</h2>
+    <div id="chat-window"></div>
+    
+    <div id="input-container">
+        <input type="text" id="message-input" placeholder="메시지를 입력하세요..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">전송</button>
+    </div>
+
+    <script>
+        // 1. 'chat_channel'이라는 이름으로 브라우저 채널 개설
+        const bc = new BroadcastChannel('chat_channel');
+        const chatWindow = document.getElementById('chat-window');
+        const messageInput = document.getElementById('message-input');
+
+        // 2. 다른 탭으로부터 메시지를 받았을 때 처리
+        bc.onmessage = function(event) {
+            appendMessage(event.data, 'received');
+        };
+
+        // 3. 메시지 전송 함수
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            // 다른 탭으로 메시지 브로드캐스팅
+            bc.postMessage(message);
+
+            // 내 화면에 메시지 추가
+            appendMessage(message, 'sent');
+            
+            // 입력창 비우기
+            messageInput.value = '';
+        }
+
+        // 4. 화면에 메시지를 표시하는 함수
+        function appendMessage(text, type) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', type);
+            msgDiv.innerText = text;
+            chatWindow.appendChild(msgDiv);
+            
+            // 스크롤을 항상 가장 아래로 이동
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // 엔터키 입력 처리
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
