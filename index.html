@@ -22,7 +22,7 @@
             <hr style="border-color: #1e293b; width: 100%; margin: 15px 0;">
             
             <h3>COMMAND CONTROL</h3>
-            <input type="text" id="ip-input" placeholder="예: udp:0.0.0.0:14560" value="udp:0.0.0.0:14560">
+            <input type="text" id="ip-input" placeholder="예: udp:0.0.0.0:14550" value="udp:0.0.0.0:14550">
             <div style="display: flex; gap: 10px;">
                 <button id="btn-connect" class="btn-blue" onclick="connectWebSocket()">연결 시작</button>
                 <button id="btn-disconnect" class="btn-gray" onclick="disconnectWebSocket()" disabled>연결 해제</button>
@@ -38,10 +38,11 @@
                 <button class="btn-orange" onclick="sendCommand('TAKEOFF')">이륙</button>
                 <button class="btn-red" onclick="sendCommand('LAND')">착륙</button>
             </div>
+
+            <hr style="border-color: #1e293b; width: 100%; margin: 10px 0;"> <!-- 👈 이 구분선을 추가합니다 -->
             
             <!-- AI 위험도 요약 -->
-            <h3 style="margin-top: 15px;">AI RISK SUMMARY</h3>
-            <div class="risk-row"><span class="risk-label">화염</span><div class="progress-bg"><div id="risk-fire" class="progress-fill" style="width: 0%; background-color: #ef4444;"></div></div></div>
+            <h3 style="margin-top: 10px; margin-bottom: 8px;">AI RISK SUMMARY</h3>            <div class="risk-row"><span class="risk-label">화염</span><div class="progress-bg"><div id="risk-fire" class="progress-fill" style="width: 0%; background-color: #ef4444;"></div></div></div>
             <div class="risk-row"><span class="risk-label">연기</span><div class="progress-bg"><div id="risk-smoke" class="progress-fill" style="width: 0%; background-color: #94a3b8;"></div></div></div>
             <div class="risk-row"><span class="risk-label">요구조자</span><div class="progress-bg"><div id="risk-person" class="progress-fill" style="width: 0%; background-color: #3b82f6;"></div></div></div>
             <div class="risk-row"><span class="risk-label">고온점</span><div class="progress-bg"><div id="risk-hotspot" class="progress-fill" style="width: 0%; background-color: #f59e0b;"></div></div></div>

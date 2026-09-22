@@ -1,3 +1,4 @@
+// gcs_client.js
 // ==========================================
 // 1. 카카오맵 초기화 및 설정
 // ==========================================
@@ -347,10 +348,14 @@ function connectWebSocket() {
             addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
         }
         // GPS 데이터 처리
+        // 변경 후
+        // 비행 모드 데이터 처리 추가
+        else if (msg.type === "MODE") {
+            document.getElementById("mode").innerText = msg.data;
+        }
+        // GPS 데이터 처리
         else if (msg.type === "GPS") {
             document.getElementById("alt").innerText = msg.data.alt.toFixed(1);
-            document.getElementById("gps").innerText = `${msg.data.lat.toFixed(5)},\n${msg.data.lon.toFixed(5)}`;
-            
             if (msg.data.lat !== 0 && msg.data.lon !== 0) {
                 moveMarker(msg.data.lat, msg.data.lon);
             }

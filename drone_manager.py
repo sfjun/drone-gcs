@@ -24,9 +24,14 @@ class DroneManager:
         self.callback("LOG", f"[{self.conn_str}] 드론 MAVLink 연결 시도 중...")
         
         try:
-            self.master = mavutil.mavlink_connection(self.conn_str)
-            hb = self.master.wait_heartbeat(timeout=10)
+            if "," in self.conn_str:
+                port, baud = self.conn_str.split(",")
+                self.master = mavutil.mavlink_connection(port, baud=int(baud))
+            else:
+                self.master = mavutil.mavlink_connection(self.conn_str, baud=57600)
             
+            hb = self.master.wait_heartbeat(timeout=10)
+                        
             if hb is None:
                 raise Exception("10초 이내에 Heartbeat 응답 없음")
 
@@ -39,6 +44,8 @@ class DroneManager:
                 if msg:
                     if msg.get_type() == 'HEARTBEAT':
                         self.callback("STATUS", True)
+                        flight_mode = mavutil.mode_string_v10(msg)
+                        self.callback("MODE", flight_mode)
                     
                     elif msg.get_type() == 'GLOBAL_POSITION_INT':
                         lat = msg.lat / 1e7
