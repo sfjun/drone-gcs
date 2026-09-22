@@ -86,5 +86,3 @@ class DroneManager:
                 self.master = None
             except:
                 pass
-=======
->>>>>>> 58685b18d2b072528260b406817ab1d79d48fd2a

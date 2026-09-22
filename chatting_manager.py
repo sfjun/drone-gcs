@@ -1,5 +1,4 @@
 # chatting_manager.py
-=======
 # ============================================================
 # chatting_manager.py
 # AI Drone GCS - Chatting Manager
@@ -14,7 +13,7 @@
 # 7. 선택적 JSONL 로그 저장
 # ============================================================
 
->>>>>>> 58685b18d2b072528260b406817ab1d79d48fd2a
+
 import json
 import threading
 import uuid
