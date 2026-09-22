@@ -98,49 +98,67 @@ function connectWebSocket() {
     };
 
     ws.onmessage = function(event) {
-        const msg = JSON.parse(event.data);
-        
-        if (msg.type === "LOG") {
-            addLog(`[DRONE] ${msg.data}`);
-        } 
-        else if (msg.type === "CHAT" || msg.type === "VIDEO_CHAT") {
-            addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
-        }
-        else if (msg.type === "SYSTEM_MESSAGE") {
-            let levelColor = "#38bdf8";
-            if (msg.data.level === "WARNING") levelColor = "#facc15";
-            if (msg.data.level === "DANGER" || msg.data.level === "ERROR") levelColor = "#ef4444";
-            addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
-        }
-        else if (msg.type === "CHAT_ALERT") {
-            addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
-        }
-        else if (msg.type === "MODE") {
-            document.getElementById("mode").innerText = msg.data;
-        }
-        else if (msg.type === "GPS") {
-            document.getElementById("alt").innerText = msg.data.alt.toFixed(1);
-            if (msg.data.lat !== 0 && msg.data.lon !== 0) {
-                // ⭐ map_manager.js에 있는 함수를 호출해서 지도 마커를 이동시킵니다.
-                if (typeof moveMarker === "function") {
-                    moveMarker(msg.data.lat, msg.data.lon);
+        try {
+            const msg = JSON.parse(event.data);
+            
+            if (msg.type === "LOG") {
+                addLog(`[DRONE] ${msg.data}`);
+            } 
+            else if (msg.type === "CHAT" || msg.type === "VIDEO_CHAT") {
+                addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
+            }
+            else if (msg.type === "SYSTEM_MESSAGE") {
+                let levelColor = "#38bdf8";
+                if (msg.data.level === "WARNING") levelColor = "#facc15";
+                if (msg.data.level === "DANGER" || msg.data.level === "ERROR") levelColor = "#ef4444";
+                addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
+            }
+            else if (msg.type === "CHAT_ALERT") {
+                addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
+            }
+            else if (msg.type === "MODE") {
+                document.getElementById("mode").innerText = msg.data;
+            }
+            else if (msg.type === "GPS") {
+                document.getElementById("alt").innerText = msg.data.alt.toFixed(1);
+                
+                // 좌측 패널 GPS 텍스트 업데이트 추가
+                const gpsText = document.getElementById("gps");
+                if (gpsText) {
+                    gpsText.innerText = `${msg.data.lat.toFixed(5)}, ${msg.data.lon.toFixed(5)}`;
+                }
+
+                if (msg.data.lat !== 0 && msg.data.lon !== 0) {
+                    // map_manager.js에 있는 함수를 호출해서 지도 마커를 이동시킵니다.
+                    if (typeof moveMarker === "function") {
+                        moveMarker(msg.data.lat, msg.data.lon);
+                    }
                 }
             }
-        }
-        else if (msg.type === "VIDEO") {
-            const canvas = document.getElementById('video-canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = "data:image/jpeg;base64," + msg.data;
-        }
-        else if (msg.type === "AI_RISK") {
-            document.getElementById('risk-fire').style.width = msg.data.fire + '%';
-            document.getElementById('risk-smoke').style.width = msg.data.smoke + '%';
-            document.getElementById('risk-person').style.width = msg.data.person + '%';
-            document.getElementById('risk-hotspot').style.width = msg.data.hotspot + '%';
+            // 👇 수정됨: 파이썬 서버가 보내는 "VIDEO_FRAME" 타입과 일치시킵니다.
+            else if (msg.type === "VIDEO" || msg.type === "VIDEO_FRAME") {
+                const canvas = document.getElementById('video-canvas');
+                if (!canvas) return;
+                
+                // 캔버스 해상도를 실제 그려지는 크기에 맞춰 선명하게 만듭니다.
+                if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+                
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = "data:image/jpeg;base64," + msg.data;
+            }
+            else if (msg.type === "AI_RISK") {
+                document.getElementById('risk-fire').style.width = msg.data.fire + '%';
+                document.getElementById('risk-smoke').style.width = msg.data.smoke + '%';
+                document.getElementById('risk-person').style.width = msg.data.person + '%';
+                document.getElementById('risk-hotspot').style.width = msg.data.hotspot + '%';
+            }
+        } catch (e) {
+            console.error("JSON 파싱 에러:", e);
         }
     };
 
@@ -162,7 +180,7 @@ function disconnectWebSocket() {
         addLog("🔌 드론 연결 해제를 요청했습니다.");
         ws.send("DISCONNECT");
         ws.close();
-        // ⭐ map_manager.js에 선언된 flightPath 객체 접근
+        // map_manager.js에 선언된 flightPath 객체 접근
         if (typeof flightPath !== "undefined") {
             flightPath.setPath([]); 
         }
@@ -177,6 +195,10 @@ function sendCommand(command) {
 function drawStandbyFrame(text) {
     const canvas = document.getElementById('video-canvas');
     if (!canvas) return;
+    
+    if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+    if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -185,3 +207,8 @@ function drawStandbyFrame(text) {
     ctx.textAlign = 'center';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 }
+
+// 초기 로딩 시 스탠바이 화면을 그립니다.
+document.addEventListener("DOMContentLoaded", () => {
+    drawStandbyFrame("WAITING FOR SIGNAL...");
+});

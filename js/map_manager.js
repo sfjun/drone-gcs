@@ -2,22 +2,21 @@
 // map_manager.js - 카카오맵 지도 전용 모듈
 // ==========================================
 
-// 다른 파일(gcs_client.js)에서 사용할 수 있도록 지도 핵심 변수를 밖으로 빼둡니다.
 var map;
 var droneMarker;
 var flightPath;
 var geocoder;
 var targetMarker = null;
+var isFirstLocation = true; // 최초 1회 화면 포커싱을 위한 변수 추가
 
-// HTML 화면이 모두 그려진 후에 지도를 초기화합니다.
 document.addEventListener("DOMContentLoaded", function() {
     
     // 1. 카카오맵 초기화 및 설정
     var mapContainer = document.getElementById('map'); 
-    if (!mapContainer) return; // 지도를 넣을 공간이 없으면 실행 중지
+    if (!mapContainer) return;
 
     var mapOption = { 
-        center: new kakao.maps.LatLng(37.46067, 126.91946), // 초기 좌표
+        center: new kakao.maps.LatLng(37.46067, 126.91946), 
         level: 3 
     };
 
@@ -208,13 +207,18 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 }); // DOMContentLoaded 끝
 
-// 5. 드론 위치 실시간 이동 함수
+// 5. 드론 위치 실시간 이동 함수 (수정됨)
 function moveMarker(lat, lon) {
-    if(!map || !droneMarker || !flightPath) return; // 지도가 준비안됐으면 무시
+    if(!map || !droneMarker || !flightPath) return; 
     
     var newLatLng = new kakao.maps.LatLng(lat, lon);
     droneMarker.setPosition(newLatLng);
-    map.panTo(newLatLng);
+    
+    // 👇 관제사가 지도를 편하게 드래그할 수 있도록, 최초 1회만 드론 위치로 화면을 강제 이동시킵니다.
+    if (isFirstLocation) {
+        map.setCenter(newLatLng);
+        isFirstLocation = false;
+    }
     
     var path = flightPath.getPath();
     path.push(newLatLng);

@@ -1,4 +1,3 @@
-# drone_manager.py
 import time
 import threading
 from pymavlink import mavutil
@@ -40,21 +39,29 @@ class DroneManager:
             self.callback("LOG", "🟢 MAVLink 통신 연결 성공!")
 
             while self.running and self.connected:
-                msg = self.master.recv_match(blocking=False)
-                if msg:
-                    if msg.get_type() == 'HEARTBEAT':
-                        self.callback("STATUS", True)
-                        flight_mode = mavutil.mode_string_v10(msg)
-                        self.callback("MODE", flight_mode)
-                    
-                    elif msg.get_type() == 'GLOBAL_POSITION_INT':
-                        lat = msg.lat / 1e7
-                        lon = msg.lon / 1e7
-                        alt = msg.relative_alt / 1000.0
-                        self.callback("GPS", {"lat": lat, "lon": lon, "alt": alt})
-                        
-                time.sleep(0.05)
+                # 👇 수정: blocking=True 와 timeout을 주어 메시지가 밀리는 현상(딜레이) 완벽 방지
+                msg = self.master.recv_match(blocking=True, timeout=0.1)
                 
+                if not msg:
+                    continue
+                    
+                msg_type = msg.get_type()
+                
+                # 깨진 데이터는 무시
+                if msg_type == 'BAD_DATA':
+                    continue
+                    
+                if msg_type == 'HEARTBEAT':
+                    self.callback("STATUS", True)
+                    flight_mode = mavutil.mode_string_v10(msg)
+                    self.callback("MODE", flight_mode)
+                
+                elif msg_type == 'GLOBAL_POSITION_INT':
+                    lat = msg.lat / 1e7
+                    lon = msg.lon / 1e7
+                    alt = msg.relative_alt / 1000.0
+                    self.callback("GPS", {"lat": lat, "lon": lon, "alt": alt})
+                    
         except Exception as e:
             self.callback("LOG", f"❌ 연결 실패: {str(e)}")
             self.callback("STATUS", False)
@@ -84,5 +91,5 @@ class DroneManager:
             try:
                 self.master.close()
                 self.master = None
-            except:
+            except Exception:
                 pass
