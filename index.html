@@ -22,7 +22,7 @@
             <hr style="border-color: #1e293b; width: 100%; margin: 15px 0;">
             
             <h3>COMMAND CONTROL</h3>
-            <input type="text" id="ip-input" placeholder="예: udp:0.0.0.0:14550" value="udp:0.0.0.0:14550">
+            <input type="text" id="ip-input" value="COM11" placeholder="연결 주소 입력">
             <div style="display: flex; gap: 10px;">
                 <button id="btn-connect" class="btn-blue" onclick="connectWebSocket()">연결 시작</button>
                 <button id="btn-disconnect" class="btn-gray" onclick="disconnectWebSocket()" disabled>연결 해제</button>
@@ -96,8 +96,9 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
                 <h3 style="margin: 0;">SITUATION MAP</h3>
                 <div style="display: flex; gap: 5px;">
-                    <button id="btn-map-osm" class="btn-blue" style="margin: 0; padding: 5px 12px; font-size: 9pt;">일반</button>
-                    <button id="btn-map-sat" class="btn-gray" style="margin: 0; padding: 5px 12px; font-size: 9pt;">위성</button>
+                    <!-- 변경 후 -->
+                    <button id="btn-map-osm" class="btn-blue">일반</button>
+                    <button id="btn-map-sat" class="btn-gray">위성</button>
                 </div>
             </div>
             
@@ -129,7 +130,13 @@
     </div>
 
     <!-- 카카오맵 API 스크립트 -->
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"></script>
+    <!-- 카카오맵 API (정상) -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"></script>
+
+    <!-- 🚨 수정됨: 앞에 /static/ 을 붙여주세요! -->
+    <script src="/static/js/map_manager.js"></script>
+
+    <!-- 기존 클라이언트 (정상) -->
     <script src="/static/js/gcs_client.js"></script>
-</body>
+    </body>
 </html>
