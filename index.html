@@ -1,135 +1,865 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>AI Drone GCS (Web)</title>
+
     <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- COMMAND CHAT 전용 CSS -->
+    <style>
+        #chat-log-area {
+            flex: 1;
+            background: #0b141a;
+            border: 1px solid #1e293b;
+            color: #cbd5e1;
+            font-family: "Consolas", monospace;
+            padding: 10px;
+            overflow-y: auto;
+            border-radius: 0 4px 4px 4px;
+            font-size: 10pt;
+            margin-bottom: 6px;
+            min-height: 120px;
+            max-height: 220px;
+        }
+
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            width: fit-content;
+            max-width: 78%;
+            padding: 7px 10px;
+            margin: 6px 0;
+            border-radius: 8px;
+            word-break: break-word;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+
+        .chat-message.sent {
+            margin-left: auto;
+            background: #1d4ed8;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.received {
+            margin-right: auto;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-message.system {
+            margin-left: auto;
+            margin-right: auto;
+            background: rgba(14, 165, 233, 0.10);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            text-align: center;
+            max-width: 95%;
+        }
+
+        .chat-meta {
+            font-size: 9px;
+            opacity: 0.65;
+            margin-bottom: 3px;
+        }
+
+        .chat-text {
+            font-size: 13px;
+        }
+
+        #chat-input {
+            flex: 1;
+            margin-bottom: 0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 8px;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        #chat-input:focus {
+            border-color: #38bdf8;
+        }
+    </style>
 </head>
+
 <body>
+
     <div class="header">
         <h1>소방 관제 센터</h1>
-        <div id="status-label" class="status-label">상태: 연결 끊김 🔴</div>
+        <div id="status-label" class="status-label">
+            상태: 연결 끊김 🔴
+        </div>
     </div>
-    
+
     <div class="content">
+
         <!-- 왼쪽 패널 -->
         <div class="panel left">
+
             <h3>DRONE / FLIGHT STATUS</h3>
-            <p>MODE: <span id="mode" class="data-text">STANDBY</span></p>
-            <p>ALT: <span id="alt" class="data-text">0.0</span> m</p>
-            <p>GPS: <span id="gps" class="data-text" style="font-size: 14px;">대기 중...</span></p>
-            <hr style="border-color: #1e293b; width: 100%; margin: 15px 0;">
-            
+
+            <p>
+                MODE:
+                <span id="mode" class="data-text">STANDBY</span>
+            </p>
+
+            <p>
+                ALT:
+                <span id="alt" class="data-text">0.0</span>
+                m
+            </p>
+
+            <p>
+                GPS:
+                <span id="gps" class="data-text" style="font-size:14px;">
+                    대기 중...
+                </span>
+            </p>
+
+            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
+
             <h3>COMMAND CONTROL</h3>
-            <input type="text" id="ip-input" placeholder="예: udp:0.0.0.0:14550" value="udp:0.0.0.0:14550">
-            <div style="display: flex; gap: 10px;">
-                <button id="btn-connect" class="btn-blue" onclick="connectWebSocket()">연결 시작</button>
-                <button id="btn-disconnect" class="btn-gray" onclick="disconnectWebSocket()" disabled>연결 해제</button>
-            </div>
-            
-            <hr style="border-color: #1e293b; width: 100%; margin: 15px 0;">
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-green" onclick="sendCommand('ARM')">시동 (ARM)</button>
-                <button class="btn-red" onclick="sendCommand('DISARM')">시동 끄기</button>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-orange" onclick="sendCommand('TAKEOFF')">이륙</button>
-                <button class="btn-red" onclick="sendCommand('LAND')">착륙</button>
+
+            <input
+                type="text"
+                id="ip-input"
+                placeholder="예: udp:0.0.0.0:14550"
+                value="udp:0.0.0.0:14550"
+            >
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    id="btn-connect"
+                    class="btn-blue"
+                    onclick="connectWebSocket()"
+                >
+                    연결 시작
+                </button>
+
+                <button
+                    id="btn-disconnect"
+                    class="btn-gray"
+                    onclick="disconnectWebSocket()"
+                    disabled
+                >
+                    연결 해제
+                </button>
             </div>
 
-            <hr style="border-color: #1e293b; width: 100%; margin: 10px 0;"> <!-- 👈 이 구분선을 추가합니다 -->
-            
-            <!-- AI 위험도 요약 -->
-            <h3 style="margin-top: 10px; margin-bottom: 8px;">AI RISK SUMMARY</h3>            <div class="risk-row"><span class="risk-label">화염</span><div class="progress-bg"><div id="risk-fire" class="progress-fill" style="width: 0%; background-color: #ef4444;"></div></div></div>
-            <div class="risk-row"><span class="risk-label">연기</span><div class="progress-bg"><div id="risk-smoke" class="progress-fill" style="width: 0%; background-color: #94a3b8;"></div></div></div>
-            <div class="risk-row"><span class="risk-label">요구조자</span><div class="progress-bg"><div id="risk-person" class="progress-fill" style="width: 0%; background-color: #3b82f6;"></div></div></div>
-            <div class="risk-row"><span class="risk-label">고온점</span><div class="progress-bg"><div id="risk-hotspot" class="progress-fill" style="width: 0%; background-color: #f59e0b;"></div></div></div>
+            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    class="btn-green"
+                    onclick="sendCommand('ARM')"
+                >
+                    시동 (ARM)
+                </button>
+
+                <button
+                    class="btn-red"
+                    onclick="sendCommand('DISARM')"
+                >
+                    시동 끄기
+                </button>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    class="btn-orange"
+                    onclick="sendCommand('TAKEOFF')"
+                >
+                    이륙
+                </button>
+
+                <button
+                    class="btn-red"
+                    onclick="sendCommand('LAND')"
+                >
+                    착륙
+                </button>
+            </div>
+
+            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
+
+            <h3 style="margin-top:10px; margin-bottom:8px;">
+                AI RISK SUMMARY
+            </h3>
+
+            <div class="risk-row">
+                <span class="risk-label">화염</span>
+                <div class="progress-bg">
+                    <div
+                        id="risk-fire"
+                        class="progress-fill"
+                        style="width:0%; background-color:#ef4444;"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="risk-row">
+                <span class="risk-label">연기</span>
+                <div class="progress-bg">
+                    <div
+                        id="risk-smoke"
+                        class="progress-fill"
+                        style="width:0%; background-color:#94a3b8;"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="risk-row">
+                <span class="risk-label">요구조자</span>
+                <div class="progress-bg">
+                    <div
+                        id="risk-person"
+                        class="progress-fill"
+                        style="width:0%; background-color:#3b82f6;"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="risk-row">
+                <span class="risk-label">고온점</span>
+                <div class="progress-bg">
+                    <div
+                        id="risk-hotspot"
+                        class="progress-fill"
+                        style="width:0%; background-color:#f59e0b;"
+                    ></div>
+                </div>
+            </div>
+
         </div>
 
         <!-- 중앙 패널 -->
         <div class="center panel">
-            <!-- 탭 메뉴 (RGB LIVE 등) -->
+
             <div class="tabs">
                 <button class="tab-btn active">RGB LIVE</button>
                 <button class="tab-btn">THERMAL</button>
                 <button class="tab-btn">AI OVERLAY</button>
             </div>
 
-            <!-- 비디오 영역 -->
             <div class="video-container">
                 <canvas id="video-canvas"></canvas>
             </div>
 
-            <!-- 하단 통합 패널 (EVENT LOG / COMMAND CHAT 탭 전환) -->
-            <div style="display: flex; flex-direction: column; flex: 1; min-height: 180px;">
-                <!-- 서브 탭 버튼 -->
-                <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-                    <button class="sub-tab-btn active" onclick="switchTab('log', this)" style="flex: 1; padding: 6px; font-size: 10pt; margin-bottom: 0; background: #0f172a; color: #38bdf8; border: 1px solid #1e293b; border-bottom: 2px solid #38bdf8; cursor: pointer; font-weight: bold; border-radius: 4px 4px 0 0;">EVENT LOG</button>
-                    <button class="sub-tab-btn" onclick="switchTab('chat', this)" style="flex: 1; padding: 6px; font-size: 10pt; margin-bottom: 0; background: #0b141a; color: #94a3b8; border: 1px solid #1e293b; cursor: pointer; font-weight: bold; border-radius: 4px 4px 0 0;">COMMAND CHAT</button>
+            <div style="display:flex; flex-direction:column; flex:1; min-height:180px;">
+
+                <div style="display:flex; gap:5px; margin-bottom:5px;">
+
+                    <button
+                        id="bottom-tab-log"
+                        class="sub-tab-btn active"
+                        onclick="switchBottomTab('log', this)"
+                        style="
+                            flex:1;
+                            padding:6px;
+                            font-size:10pt;
+                            margin-bottom:0;
+                            background:#0f172a;
+                            color:#38bdf8;
+                            border:1px solid #1e293b;
+                            border-bottom:2px solid #38bdf8;
+                            cursor:pointer;
+                            font-weight:bold;
+                            border-radius:4px 4px 0 0;
+                        "
+                    >
+                        EVENT LOG
+                    </button>
+
+                    <button
+                        id="bottom-tab-chat"
+                        class="sub-tab-btn"
+                        onclick="switchBottomTab('chat', this)"
+                        style="
+                            flex:1;
+                            padding:6px;
+                            font-size:10pt;
+                            margin-bottom:0;
+                            background:#0b141a;
+                            color:#94a3b8;
+                            border:1px solid #1e293b;
+                            cursor:pointer;
+                            font-weight:bold;
+                            border-radius:4px 4px 0 0;
+                        "
+                    >
+                        COMMAND CHAT
+                    </button>
                 </div>
 
-                <!-- 1. EVENT LOG 뷰 -->
-                <div id="view-log" class="tab-view" style="display: flex; flex-direction: column; flex: 1;">
-                    <div id="log-area" style="flex: 1; background: #0b141a; border: 1px solid #1e293b; color: #cbd5e1; font-family: 'Consolas', monospace; padding: 10px; overflow-y: auto; border-radius: 0 4px 4px 4px; font-size: 10pt;">
+                <div
+                    id="view-log"
+                    class="tab-view"
+                    style="display:flex; flex-direction:column; flex:1;"
+                >
+                    <div
+                        id="log-area"
+                        style="
+                            flex:1;
+                            background:#0b141a;
+                            border:1px solid #1e293b;
+                            color:#cbd5e1;
+                            font-family:'Consolas', monospace;
+                            padding:10px;
+                            overflow-y:auto;
+                            border-radius:0 4px 4px 4px;
+                            font-size:10pt;
+                        "
+                    >
                         시스템 대기 중...
                     </div>
                 </div>
 
-                <!-- 2. COMMAND CHAT 뷰 -->
-                <div id="view-chat" class="tab-view" style="display: none; flex-direction: column; flex: 1;">
-                    <div id="chat-log-area" style="flex: 1; background: #0b141a; border: 1px solid #1e293b; color: #cbd5e1; font-family: 'Consolas', monospace; padding: 10px; overflow-y: auto; border-radius: 0 4px 4px 4px; font-size: 10pt; margin-bottom: 6px;">
-                        [13:45:23] [SYSTEM] 관제 채팅창이 활성화되었습니다.<br>
+                <div
+                    id="view-chat"
+                    class="tab-view"
+                    style="display:none; flex-direction:column; flex:1;"
+                >
+
+                    <div id="chat-window"></div>
+                    
+                    <div id="input-container">
+                        <input type="text" id="message-input" placeholder="메시지를 입력하세요..." onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()">전송</button>
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="chat-input" placeholder="관제 메시지 입력..." style="margin-bottom: 0;" onkeypress="if(event.key==='Enter') sendChat();">
-                        <button class="btn-blue" style="width: 70px; margin-bottom: 0; padding: 8px;" onclick="sendChat()">전송</button>
-                    </div>
+
+
+
                 </div>
             </div>
+
         </div>
 
         <!-- 오른쪽 패널 -->
         <div class="panel right">
-            <!-- 지도 헤더 -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
-                <h3 style="margin: 0;">SITUATION MAP</h3>
-                <div style="display: flex; gap: 5px;">
-                    <button id="btn-map-osm" class="btn-blue" style="margin: 0; padding: 5px 12px; font-size: 9pt;">일반</button>
-                    <button id="btn-map-sat" class="btn-gray" style="margin: 0; padding: 5px 12px; font-size: 9pt;">위성</button>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+
+                <h3 style="margin:0;">
+                    SITUATION MAP
+                </h3>
+
+                <div style="display:flex; gap:5px;">
+                    <button
+                        id="btn-map-osm"
+                        class="btn-blue"
+                        style="margin:0; padding:5px 12px; font-size:9pt;"
+                    >
+                        일반
+                    </button>
+
+                    <button
+                        id="btn-map-sat"
+                        class="btn-gray"
+                        style="margin:0; padding:5px 12px; font-size:9pt;"
+                    >
+                        위성
+                    </button>
                 </div>
             </div>
-            
-            <!-- 지도 영역 -->
-            <div style="position: relative; display: flex; flex-direction: column; flex-grow: 1;">
-                <div id="map" style="width: 100%; height: 350px;"></div>
-                
-                <!-- 1. 주소 검색창 오버레이 -->
-                <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; align-items: center; width: 260px; height: 32px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                    <input type="text" id="address-input" placeholder="주소 입력 (예: 서울시청)" onkeypress="if(event.key==='Enter') searchAddress()" style="flex-grow: 1; height: 100%; margin: 0; padding: 0 10px; border: none; background: transparent; color: white; outline: none; font-size: 15px; font-family: inherit; box-sizing: border-box; line-height: 32px;">
-                    <button onclick="searchAddress()" style="width: 55px; height: 100%; margin: 0; padding: 0; border: none; border-radius: 0; background-color: #3b82f6; color: white; font-size: 12px; font-weight: bold; cursor: pointer; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.1);">검색</button>
+
+            <div style="position:relative; display:flex; flex-direction:column; flex-grow:1;">
+
+                <div
+                    id="map"
+                    style="width:100%; height:350px;"
+                ></div>
+
+                <div
+                    style="
+                        position:absolute;
+                        top:10px;
+                        left:10px;
+                        z-index:2;
+                        display:flex;
+                        align-items:center;
+                        width:260px;
+                        height:32px;
+                        background:rgba(30,41,59,0.7);
+                        backdrop-filter:blur(4px);
+                        border:1px solid rgba(255,255,255,0.3);
+                        border-radius:5px;
+                        overflow:hidden;
+                        box-shadow:0 2px 4px rgba(0,0,0,0.3);
+                    "
+                >
+                    <input
+                        type="text"
+                        id="address-input"
+                        placeholder="주소 입력 (예: 서울시청)"
+                        onkeydown="
+                            if(event.key === 'Enter') {
+                                searchAddress();
+                            }
+                        "
+                        style="
+                            flex-grow:1;
+                            height:100%;
+                            margin:0;
+                            padding:0 10px;
+                            border:none;
+                            background:transparent;
+                            color:white;
+                            outline:none;
+                            font-size:15px;
+                            font-family:inherit;
+                            box-sizing:border-box;
+                            line-height:32px;
+                        "
+                    >
+
+                    <button
+                        onclick="searchAddress()"
+                        style="
+                            width:55px;
+                            height:100%;
+                            margin:0;
+                            padding:0;
+                            border:none;
+                            border-radius:0;
+                            background-color:#3b82f6;
+                            color:white;
+                            font-size:12px;
+                            font-weight:bold;
+                            cursor:pointer;
+                            flex-shrink:0;
+                            border-left:1px solid rgba(255,255,255,0.1);
+                        "
+                    >
+                        검색
+                    </button>
                 </div>
 
-                <!-- 2. 맵 오버레이 좌표 HUD -->
-                <div style="position: absolute; bottom: 15px; right: 10px; z-index: 2; display: flex; flex-direction: column; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 5px; padding: 8px 12px; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #94a3b8; font-size: 11px; font-weight: bold; width: 28px;">CUR</span>
-                        <span id="live-coordinates" style="color: #38bdf8; font-family: 'Consolas', monospace; font-size: 13px; font-weight: bold; width: 140px; text-align: right; white-space: nowrap;">---.-----, ---.-----</span>
+                <div
+                    style="
+                        position:absolute;
+                        bottom:15px;
+                        right:10px;
+                        z-index:2;
+                        display:flex;
+                        flex-direction:column;
+                        background:rgba(30,41,59,0.5);
+                        backdrop-filter:blur(4px);
+                        border:1px solid rgba(255,255,255,0.2);
+                        border-radius:5px;
+                        padding:8px 12px;
+                        gap:6px;
+                        box-shadow:0 4px 6px rgba(0,0,0,0.3);
+                    "
+                >
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span
+                            style="
+                                color:#94a3b8;
+                                font-size:11px;
+                                font-weight:bold;
+                                width:28px;
+                            "
+                        >
+                            CUR
+                        </span>
+
+                        <span
+                            id="live-coordinates"
+                            style="
+                                color:#38bdf8;
+                                font-family:'Consolas', monospace;
+                                font-size:13px;
+                                font-weight:bold;
+                                width:140px;
+                                text-align:right;
+                                white-space:nowrap;
+                            "
+                        >
+                            ---.-----, ---.-----
+                        </span>
                     </div>
-                    <div style="width: 100%; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #94a3b8; font-size: 11px; font-weight: bold; width: 28px;">TGT</span>
-                        <input type="text" id="target-coords" value="TARGET 미설정" readonly style="background: transparent; color: #facc15; border: none; font-size: 13px; font-family: 'Consolas', monospace; width: 140px; text-align: right; cursor: text; outline: none; padding: 0; margin: 0;">
+
+                    <div
+                        style="
+                            width:100%;
+                            height:1px;
+                            background:rgba(255,255,255,0.1);
+                        "
+                    ></div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span
+                            style="
+                                color:#94a3b8;
+                                font-size:11px;
+                                font-weight:bold;
+                                width:28px;
+                            "
+                        >
+                            TGT
+                        </span>
+
+                        <input
+                            type="text"
+                            id="target-coords"
+                            value="TARGET 미설정"
+                            readonly
+                            style="
+                                background:transparent;
+                                color:#facc15;
+                                border:none;
+                                font-size:13px;
+                                font-family:'Consolas', monospace;
+                                width:140px;
+                                text-align:right;
+                                cursor:text;
+                                outline:none;
+                                padding:0;
+                                margin:0;
+                            "
+                        >
                     </div>
+
                 </div>
-            </div>       
-            
+            </div>
+
         </div>
     </div>
 
-    <!-- 카카오맵 API 스크립트 -->
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"></script>
+    <!-- 카카오맵 API -->
+    <script
+        type="text/javascript"
+        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"
+    ></script>
+
+    <!-- 기존 GCS 기능 -->
     <script src="/static/js/gcs_client.js"></script>
+
+    <!-- COMMAND CHAT -->
+    <script>
+        const commandChatTabId =
+            (
+                typeof crypto !== "undefined" &&
+                crypto.randomUUID
+            )
+            ?
+            crypto.randomUUID()
+            :
+            "tab-" +
+            Date.now() +
+            "-" +
+            Math.random().toString(36).substring(2);
+
+        const commandChatChannel =
+            new BroadcastChannel("gcs_command_chat_channel");
+
+        const commandChatInput =
+            document.getElementById("chat-input");
+
+        const commandChatLog =
+            document.getElementById("chat-log-area");
+
+        function getChatTime() {
+            const now = new Date();
+
+            const hour =
+                String(now.getHours()).padStart(2, "0");
+
+            const minute =
+                String(now.getMinutes()).padStart(2, "0");
+
+            const second =
+                String(now.getSeconds()).padStart(2, "0");
+
+            return hour + ":" + minute + ":" + second;
+        }
+
+        function appendCommandChatMessage(
+            text,
+            type = "received",
+            sender = "CONTROL",
+            time = getChatTime()
+        ) {
+            const message =
+                document.createElement("div");
+
+            message.classList.add(
+                "chat-message",
+                type
+            );
+
+            if (type === "system") {
+
+                const textElement =
+                    document.createElement("div");
+
+                textElement.className =
+                    "chat-text";
+
+                textElement.textContent =
+                    "[" + time + "] " + text;
+
+                message.appendChild(
+                    textElement
+                );
+
+            } else {
+
+                const meta =
+                    document.createElement("div");
+
+                meta.className =
+                    "chat-meta";
+
+                meta.textContent =
+                    "[" +
+                    time +
+                    "] " +
+                    sender;
+
+                const textElement =
+                    document.createElement("div");
+
+                textElement.className =
+                    "chat-text";
+
+                textElement.textContent =
+                    text;
+
+                message.appendChild(meta);
+                message.appendChild(textElement);
+            }
+
+            commandChatLog.appendChild(
+                message
+            );
+
+            commandChatLog.scrollTop =
+                commandChatLog.scrollHeight;
+        }
+
+        function sendCommandChat() {
+
+            const message =
+                commandChatInput.value.trim();
+
+            if (message === "") {
+                return;
+            }
+
+            const packet = {
+                type: "COMMAND_CHAT",
+                sender: "CONTROL",
+                senderId: commandChatTabId,
+                message: message,
+                timestamp: Date.now(),
+                time: getChatTime()
+            };
+
+            commandChatChannel.postMessage(
+                packet
+            );
+
+            appendCommandChatMessage(
+                message,
+                "sent",
+                "ME",
+                packet.time
+            );
+
+            commandChatInput.value = "";
+            commandChatInput.focus();
+        }
+
+        commandChatChannel.onmessage =
+            function(event) {
+
+                const packet =
+                    event.data;
+
+                if (!packet) {
+                    return;
+                }
+
+                if (
+                    typeof packet === "string"
+                ) {
+                    appendCommandChatMessage(
+                        packet,
+                        "received",
+                        "CONTROL"
+                    );
+
+                    return;
+                }
+
+                if (
+                    packet.type !== "COMMAND_CHAT"
+                ) {
+                    return;
+                }
+
+                if (
+                    packet.senderId === commandChatTabId
+                ) {
+                    return;
+                }
+
+                appendCommandChatMessage(
+                    packet.message,
+                    "received",
+                    packet.sender || "CONTROL",
+                    packet.time || getChatTime()
+                );
+            };
+
+        function switchBottomTab(
+            tabName,
+            clickedButton
+        ) {
+
+            const logView =
+                document.getElementById(
+                    "view-log"
+                );
+
+            const chatView =
+                document.getElementById(
+                    "view-chat"
+                );
+
+            const buttons =
+                document.querySelectorAll(
+                    ".sub-tab-btn"
+                );
+
+            buttons.forEach(
+                function(button) {
+
+                    button.classList.remove(
+                        "active"
+                    );
+
+                    button.style.background =
+                        "#0b141a";
+
+                    button.style.color =
+                        "#94a3b8";
+
+                    button.style.borderBottom =
+                        "1px solid #1e293b";
+                }
+            );
+
+            if (tabName === "log") {
+
+                logView.style.display =
+                    "flex";
+
+                chatView.style.display =
+                    "none";
+
+            } else if (
+                tabName === "chat"
+            ) {
+
+                logView.style.display =
+                    "none";
+
+                chatView.style.display =
+                    "flex";
+
+                setTimeout(
+                    function() {
+                        commandChatInput.focus();
+                    },
+                    50
+                );
+            }
+
+            if (clickedButton) {
+
+                clickedButton.classList.add(
+                    "active"
+                );
+
+                clickedButton.style.background =
+                    "#0f172a";
+
+                clickedButton.style.color =
+                    "#38bdf8";
+
+                clickedButton.style.borderBottom =
+                    "2px solid #38bdf8";
+            }
+        }
+
+        appendCommandChatMessage(
+            "관제 채팅 시스템 활성화",
+            "system",
+            "SYSTEM"
+        );
+
+        window.addEventListener(
+            "beforeunload",
+            function() {
+                commandChatChannel.close();
+            }
+        );
+    </script>
+    <script>
+        // 1. 'chat_channel'이라는 이름으로 브라우저 채널 개설
+        const bc = new BroadcastChannel('chat_channel');
+        const chatWindow = document.getElementById('chat-window');
+        const messageInput = document.getElementById('message-input');
+
+        // 2. 다른 탭으로부터 메시지를 받았을 때 처리
+        bc.onmessage = function(event) {
+            appendMessage(event.data, 'received');
+        };
+
+        // 3. 메시지 전송 함수
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            // 다른 탭으로 메시지 브로드캐스팅
+            bc.postMessage(message);
+
+            // 내 화면에 메시지 추가
+            appendMessage(message, 'sent');
+            
+            // 입력창 비우기
+            messageInput.value = '';
+        }
+
+        // 4. 화면에 메시지를 표시하는 함수
+        function appendMessage(text, type) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', type);
+            msgDiv.innerText = text;
+            chatWindow.appendChild(msgDiv);
+            
+            // 스크롤을 항상 가장 아래로 이동
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // 엔터키 입력 처리
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+
 </body>
 </html>
