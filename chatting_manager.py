@@ -1,4 +1,3 @@
-# chatting_manager.py
 # ============================================================
 # chatting_manager.py
 # AI Drone GCS - Chatting Manager
