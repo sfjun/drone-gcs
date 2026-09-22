@@ -127,10 +127,65 @@
             <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
 
             <h3>COMMAND CONTROL</h3>
-            <input type="text" id="ip-input" placeholder="예: udp:0.0.0.0:14550" value="udp:0.0.0.0:14550">
-            <div style="display: flex; gap: 10px;">
-                <button id="btn-connect" class="btn-blue" onclick="connectWebSocket()">연결 시작</button>
-                <button id="btn-disconnect" class="btn-gray" onclick="disconnectWebSocket()" disabled>연결 해제</button>
+
+            <input
+                type="text"
+                id="ip-input"
+                placeholder="예: udp:0.0.0.0:14550"
+                value="udp:0.0.0.0:14550"
+            >
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    id="btn-connect"
+                    class="btn-blue"
+                    onclick="connectWebSocket()"
+                >
+                    연결 시작
+                </button>
+
+                <button
+                    id="btn-disconnect"
+                    class="btn-gray"
+                    onclick="disconnectWebSocket()"
+                    disabled
+                >
+                    연결 해제
+                </button>
+            </div>
+
+            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    class="btn-green"
+                    onclick="sendCommand('ARM')"
+                >
+                    시동 (ARM)
+                </button>
+
+                <button
+                    class="btn-red"
+                    onclick="sendCommand('DISARM')"
+                >
+                    시동 끄기
+                </button>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button
+                    class="btn-orange"
+                    onclick="sendCommand('TAKEOFF')"
+                >
+                    이륙
+                </button>
+
+                <button
+                    class="btn-red"
+                    onclick="sendCommand('LAND')"
+                >
+                    착륙
+                </button>
             </div>
 
             <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
@@ -273,14 +328,30 @@
                     style="display:none; flex-direction:column; flex:1;"
                 >
 
-                    <div id="chat-window"></div>
-                    
-                    <div id="input-container">
-                        <input type="text" id="message-input" placeholder="메시지를 입력하세요..." onkeypress="handleKeyPress(event)">
-                        <button onclick="sendMessage()">전송</button>
+                    <div id="chat-log-area"></div>
+
+                    <div style="display:flex; gap:5px;">
+                        <input
+                            type="text"
+                            id="chat-input"
+                            placeholder="관제 메시지 입력..."
+                            autocomplete="off"
+                            onkeydown="
+                                if(event.key === 'Enter') {
+                                    event.preventDefault();
+                                    sendCommandChat();
+                                }
+                            "
+                        >
+
+                        <button
+                            class="btn-blue"
+                            style="width:70px; margin-bottom:0; padding:8px;"
+                            onclick="sendCommandChat()"
+                        >
+                            전송
+                        </button>
                     </div>
-
-
 
                 </div>
             </div>
@@ -289,12 +360,29 @@
 
         <!-- 오른쪽 패널 -->
         <div class="panel right">
-            <!-- 지도 헤더 -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
-                <h3 style="margin: 0;">SITUATION MAP</h3>
-                <div style="display: flex; gap: 5px;">
-                    <button id="btn-map-osm" class="btn-blue" style="margin: 0; padding: 5px 12px; font-size: 9pt;">일반</button>
-                    <button id="btn-map-sat" class="btn-gray" style="margin: 0; padding: 5px 12px; font-size: 9pt;">위성</button>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+
+                <h3 style="margin:0;">
+                    SITUATION MAP
+                </h3>
+
+                <div style="display:flex; gap:5px;">
+                    <button
+                        id="btn-map-osm"
+                        class="btn-blue"
+                        style="margin:0; padding:5px 12px; font-size:9pt;"
+                    >
+                        일반
+                    </button>
+
+                    <button
+                        id="btn-map-sat"
+                        class="btn-gray"
+                        style="margin:0; padding:5px 12px; font-size:9pt;"
+                    >
+                        위성
+                    </button>
                 </div>
             </div>
 
@@ -463,8 +551,118 @@
         </div>
     </div>
 
-    <!-- 카카오맵 API 스크립트 -->
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"></script>
+    <!-- 카카오맵 API -->
+    <script
+        type="text/javascript"
+        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"
+    ></script>
+
+    <!-- 기존 GCS 기능 -->
     <script src="/static/js/gcs_client.js"></script>
+
+    <!-- COMMAND CHAT : chat2.html BroadcastChannel 방식 적용 -->
+    <script>
+        // chat2.html과 동일한 채널명을 사용합니다.
+        // 따라서 index.html과 chat2.html을 서로 다른 탭에서 열면 메시지가 실시간 공유됩니다.
+        const commandChatChannel = new BroadcastChannel('chat_channel');
+        const commandChatInput = document.getElementById('chat-input');
+        const commandChatLog = document.getElementById('chat-log-area');
+
+        function getChatTime() {
+            const now = new Date();
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+            return `${hour}:${minute}:${second}`;
+        }
+
+        // index.html 기존 UI 디자인은 유지하고, chat2.html의 appendMessage 역할만 연결합니다.
+        function appendCommandChatMessage(text, type = 'received', sender = 'CONTROL', time = getChatTime()) {
+            const message = document.createElement('div');
+            message.classList.add('chat-message', type);
+
+            if (type === 'system') {
+                const textElement = document.createElement('div');
+                textElement.className = 'chat-text';
+                textElement.textContent = `[${time}] ${text}`;
+                message.appendChild(textElement);
+            } else {
+                const meta = document.createElement('div');
+                meta.className = 'chat-meta';
+                meta.textContent = `[${time}] ${sender}`;
+
+                const textElement = document.createElement('div');
+                textElement.className = 'chat-text';
+                textElement.textContent = String(text);
+
+                message.appendChild(meta);
+                message.appendChild(textElement);
+            }
+
+            commandChatLog.appendChild(message);
+            commandChatLog.scrollTop = commandChatLog.scrollHeight;
+        }
+
+        // chat2.html의 sendMessage()와 같은 동작:
+        // 1) 입력값 확인 -> 2) BroadcastChannel 전송 -> 3) 내 화면 표시 -> 4) 입력창 초기화
+        function sendCommandChat() {
+            const message = commandChatInput.value.trim();
+            if (message === '') return;
+
+            commandChatChannel.postMessage(message);
+            appendCommandChatMessage(message, 'sent', 'ME');
+
+            commandChatInput.value = '';
+            commandChatInput.focus();
+        }
+
+        // chat2.html과 동일하게 다른 탭에서 받은 메시지를 바로 표시합니다.
+        commandChatChannel.onmessage = function(event) {
+            appendCommandChatMessage(event.data, 'received', 'CONTROL');
+        };
+
+        function switchBottomTab(tabName, clickedButton) {
+            const logView = document.getElementById('view-log');
+            const chatView = document.getElementById('view-chat');
+            const buttons = document.querySelectorAll('.sub-tab-btn');
+
+            buttons.forEach(function(button) {
+                button.classList.remove('active');
+                button.style.background = '#0b141a';
+                button.style.color = '#94a3b8';
+                button.style.borderBottom = '1px solid #1e293b';
+            });
+
+            if (tabName === 'log') {
+                logView.style.display = 'flex';
+                chatView.style.display = 'none';
+            } else if (tabName === 'chat') {
+                logView.style.display = 'none';
+                chatView.style.display = 'flex';
+                setTimeout(function() {
+                    commandChatInput.focus();
+                }, 50);
+            }
+
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+                clickedButton.style.background = '#0f172a';
+                clickedButton.style.color = '#38bdf8';
+                clickedButton.style.borderBottom = '2px solid #38bdf8';
+            }
+        }
+
+        // 기존 index.html에서 참조할 수 있는 함수명도 유지합니다.
+        window.sendChat = sendCommandChat;
+        window.sendMessage = sendCommandChat;
+        window.switchTab = switchBottomTab;
+
+        appendCommandChatMessage('관제 채팅 시스템 활성화', 'system', 'SYSTEM');
+
+        window.addEventListener('beforeunload', function() {
+            commandChatChannel.close();
+        });
+    </script>
+
 </body>
 </html>

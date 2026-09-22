@@ -121,4 +121,5 @@ if __name__ == "__main__":
     threading.Timer(1.5, open_browser).start()
 
     # 서버 실행 (이 코드가 타이머 대기 없이 바로 실행되어야 합니다)
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, ws="wsproto")
+    # uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, ws="wsproto")
+    uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True, ws="wsproto")
