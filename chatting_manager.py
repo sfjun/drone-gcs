@@ -1,3 +1,4 @@
+# chatting_manager.py
 # ============================================================
 # chatting_manager.py
 # AI Drone GCS - Chatting Manager
@@ -11,6 +12,7 @@
 # 6. 호출부호 / 사용자명 관리
 # 7. 선택적 JSONL 로그 저장
 # ============================================================
+
 
 import json
 import threading
