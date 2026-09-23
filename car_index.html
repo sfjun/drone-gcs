@@ -1,0 +1,174 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출동 소방차</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- COMMAND CHAT 전용 CSS -->
+    <style>
+        #chat-log-area {
+            flex: 1;
+            background: #0b141a;
+            border: 1px solid #1e293b;
+            color: #cbd5e1;
+            font-family: "Consolas", monospace;
+            padding: 10px;
+            overflow-y: auto;
+            border-radius: 0 4px 4px 4px;
+            font-size: 10pt;
+            margin-bottom: 6px;
+            min-height: 120px;
+            max-height: 220px;
+        }
+
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            width: fit-content;
+            max-width: 78%;
+            padding: 7px 10px;
+            margin: 6px 0;
+            border-radius: 8px;
+            word-break: break-word;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+
+        .chat-message.sent {
+            margin-left: auto;
+            background: #1d4ed8;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.received {
+            margin-right: auto;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-message.system {
+            margin-left: auto;
+            margin-right: auto;
+            background: rgba(14, 165, 233, 0.10);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            text-align: center;
+            max-width: 95%;
+        }
+
+        .chat-meta {
+            font-size: 9px;
+            opacity: 0.65;
+            margin-bottom: 3px;
+        }
+
+        .chat-text {
+            font-size: 13px;
+        }
+
+        #chat-input {
+            flex: 1;
+            margin-bottom: 0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 8px;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        #chat-input:focus {
+            border-color: #38bdf8;
+        }
+  
+        /* 전체 화면을 반으로 축소 
+        body {
+            transform: scale(0.5);
+            transform-origin: top left;
+            width: 200%;
+            height: 200%;
+            box-sizing: border-box;
+            margin: 0;
+            overflow: hidden;
+        } */
+
+      </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>출동 소방차</h1>
+        <div id="status-label" class="status-label">
+            상태: 연결 끊김 🔴
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- 중앙 패널 -->
+        <div class="center panel">
+
+            <div class="tabs">
+                <button class="tab-btn active">RGB LIVE</button>
+                <button class="tab-btn">THERMAL</button>
+                <button class="tab-btn">AI OVERLAY</button>
+            </div>
+
+            <div class="video-container">
+                <canvas id="video-canvas"></canvas>
+            </div>
+
+            <div style="display:flex; flex-direction:column; flex:1; min-height:180px;">
+    
+                <!-- 채팅창 영역 -->
+                <div id="view-chat" class="chat-container" style="display: flex; flex-direction: column; flex: 1; height: 100%;">
+        
+                    <!-- 채팅 로그 영역 -->
+                    <div id="chat-log-area" style="flex: 1; overflow-y: auto; padding: 10px; margin-bottom: 4px; border: 1px solid #1e293b; border-radius: 4px; background: #0b141a;">
+                    </div>
+                    
+                    <!-- 채팅 입력창 및 전송 버튼 -->
+                    <div class="chat-input-area" style="display: flex; gap: 5px; margin-bottom: 0;">
+                        <input type="text" id="chat-input" placeholder="관제 메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()" style="flex: 1; height: 34px; box-sizing: border-box; padding: 0 10px; margin: 0; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 4px; outline: none; font-size: 13px;">
+                        <button onclick="sendChat()" style="height: 34px; box-sizing: border-box; padding: 0 15px; margin: 0; background: #0284c7; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; line-height: 1;">전송</button>
+                    </div>
+                    
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+ 
+    <!-- 맵 매니저 모듈 -->
+    <script src="/static/js/map_manager.js"></script>
+
+    <!-- 기존 GCS 기능 -->
+    <script src="/static/js/gcs_client.js"></script>
+
+    <!-- 채팅 기능 모듈 -->
+    <script src="/static/js/chat_manager.js"></script>
+
+    <!-- car_index.html 파일 하단 예시 -->
+    <script>
+    // 1. 페이지를 나갈 때(X 버튼 클릭, 새로고침 등) 경고창 띄우기
+    window.addEventListener('beforeunload', function (e) {
+        // 표준에 따라 이벤트를 취소하여 브라우저에 알림창을 띄우도록 요청합니다.
+        e.preventDefault();
+        
+        //# [주의] 최신 크롬 브라우저는 보안 및 사용자 경험 정책상 
+        //# 개발자가 작성한 커스텀 텍스트 대신 브라우저 자체 기본 메시지인 
+        //# "변경사항이 저장되지 않을 수 있습니다."와 [취소]/[떠나기] 버튼을 강제로 출력합니다.
+        e.returnValue = ''; 
+    });
+    </script>
+</body>
+</html>

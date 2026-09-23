@@ -92,8 +92,18 @@
 <body>
 
     <div class="header">
-        <h1>소방 관제 센터</h1>
-        <div id="status-label" class="status-label">
+        <h1>소방 관제 센터</h1>        
+        <!-- <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;"> -->
+        <div> 
+        <!-- 오른쪽 끝 고정: 출동 소방차 화면 열기 버튼 -->
+            <button id="btn-open-car" onclick="launchCarApp()" style="margin-left: 15px; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;">
+                🚒 출동 소방차 화면(단독 창) 열기
+            </button>
+        </div>
+
+
+        <!-- <div id="status-label" class="status-label"> -->
+        <div id="status-label" style="margin-left: auto; font-size: 1.1rem; font-weight: bold; color: #f38ba8; white-space: nowrap; display: flex; align-items: center;"></div>
             상태: 연결 끊김 🔴
         </div>
     </div>

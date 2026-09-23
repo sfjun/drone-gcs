@@ -1,4 +1,5 @@
 /* css/style.css */
+/* 1. 최상위 body 설정: 화면 고정 해제 */
 body { 
     background-color: #0b141a; 
     color: #e2e8f0; 
@@ -6,36 +7,24 @@ body {
     display: flex; 
     flex-direction: column; 
     margin: 0; 
-    height: 100vh; 
+    /* 고정 높이를 최소 높이 개념으로 전환하여 아래로 유연하게 늘어나도록 변경 */
+    min-height: 100vh; 
     padding: 20px; 
     box-sizing: border-box; 
 }
 
-.header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 20px; 
-}
-.header h1 { 
-    font-size: 22px; 
-    margin: 0; 
-    color: rgb(255, 255, 255); 
-    letter-spacing: 1px; 
-}
-.status-label { 
-    font-size: 16px; 
-    font-weight: bold; 
-    color: #f38ba8; 
-}
-
+/* 2. 메인 콘텐츠 컨테이너 설정 (핵심 변경점) */
 .content { 
     display: flex; 
+    flex-direction: row;
+    flex-wrap: wrap; /* 💡 핵심: 자리가 부족하면 자식 요소들을 다음 줄로 자동 줄바꿈 */
     gap: 20px; 
     flex: 1; 
-    height: calc(100% - 60px); 
+    width: 100%;
+    /* height: calc(100% - 60px); <-- ❌ 기존의 고정 높이 코드는 완벽히 제거해 줍니다. */
 }
 
+/* 3. 각 패널들의 유연한 성장 및 최소 크기 제어 */
 .panel { 
     background: #0f172a; 
     border: 1px solid #1e293b; 
@@ -43,22 +32,38 @@ body {
     padding: 10px 12px; 
     display: flex; 
     flex-direction: column; 
-    box-sizing: border-box; 
+    box-sizing: border-box;
+    
+    /* 💡 아래의 유연한 크기 조절 설정을 모든 패널에 기본 적용 */
+    flex-grow: 1;      /* 남는 여백이 있으면 화면을 꽉 채우도록 늘어남 */
+    flex-shrink: 1;     /* 화면이 좁아지면 최소 크기 전까지는 자연스럽게 줄어듦 */
 }
 
+/* [좌측 드론 패널] */
 .left { 
-    flex: 1.5; 
-    min-width: 0;
-    overflow: hidden; 
+    flex-basis: 250px;  /* 💡 기본 권장 크기 */
+    min-width: 220px;   /* ❌ 이 크기보다 작아지면 더 줄어들지 않고 버팁니다. */
 } 
+
+/* [중앙 영상 패널] */
 .center { 
-    flex: 3.5; 
-    display: flex; 
-    flex-direction: column; 
+    flex-basis: 500px;  /* 💡 기본 권장 크기 */
+    min-width: 450px;   /* ❌ 요청하신 센터의 최소 사이즈 보장 */
     overflow: hidden; 
 } 
+
+/* [우측 지도 패널] */
 .right { 
-    flex: 3; 
+    flex-basis: 400px;  /* 💡 기본 권장 크기 */
+    min-width: 380px;   /* ❌ 요청하신 지도의 최소 사이즈 보장 */
+}
+
+/* 4. 화면이 세로로 길어졌을 때 내부 뷰포트 높이 방어벽 */
+.center .video-container {
+    min-height: 350px;  /* 세로로 배치되어도 영상이 찌그러지지 않게 최소 높이 부여 */
+}
+#map {
+    min-height: 600px;  /* 지도가 아래 줄로 떨어졌을 때 시원하게 볼 수 있도록 최소 높이 부여 */
 }
 
 input[type="text"] { 

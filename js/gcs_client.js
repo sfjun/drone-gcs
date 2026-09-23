@@ -72,7 +72,20 @@ function connectWebSocket() {
         ws = null;
     }
 
-    ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
+    // gcs_client.js 수정 전 [4]
+    // ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
+
+    // 🔄 gcs_client.js 수정 후 (주소창 경로를 감지하여 웹소켓 분기)
+    // 현재 웹 브라우저 주소창의 경로(pathname)가 '/car'를 포함하고 있는지 확인합니다.
+    if (window.location.pathname.includes('/car')) {
+        // 🚒 서브 화면(출동 소방차)일 때는 /ws/car/drone 경로로 연결
+        ws = new WebSocket(`ws://${window.location.host}/ws/car/drone`);
+        console.log("🚒 출동 소방차 웹소켓 채널로 연결합니다. (/ws/car/drone)");
+    } else {
+        // 🖥️ 초기 화면(소방 관제 센터)일 때는 원래대로 /ws/drone 경로로 연결
+        ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
+        console.log("🖥️ 소방 관제 센터 웹소켓 채널로 연결합니다. (/ws/drone)");
+    }
 
     ws.onopen = function() {
         isConnected = true;
@@ -225,3 +238,24 @@ function drawStandbyFrame(text) {
 document.addEventListener("DOMContentLoaded", () => {
     drawStandbyFrame("WAITING FOR SIGNAL...");
 });
+
+// 버튼 클릭 시 백엔드 API를 호출하는 함수
+function launchCarApp() {
+    fetch('/open-car-app')
+        .then(response => {
+            if (!response.ok) throw new Error('서버 연결 실패');
+            return response.json();
+        })
+        .then(data => {
+            // 서버가 보낸 리턴 구조와 완벽히 매칭
+            if (data && data.status === 'success') {
+                console.log("🟢 서버가 단독 앱 창을 정상적으로 실행했습니다.");
+            } else {
+                alert("앱 실행 실패: " + (data.message || "알 수 없는 오류"));
+            }
+        })
+        .catch(err => {
+            console.error("통신 에러:", err);
+            alert("서버 통신 실패: " + err.message);
+        });
+}
