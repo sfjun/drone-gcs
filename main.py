@@ -197,3 +197,4 @@ if __name__ == "__main__":
 
     # 서버 실행 (host="0.0.0.0"은 '어떤 IP로 들어오든 다 받아주겠다'는 뜻이므로 수정할 필요 없습니다)
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False, ws="wsproto")
+    

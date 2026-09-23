@@ -1,3 +1,4 @@
+# drone_manager.py
 import time
 import threading
 from pymavlink import mavutil
@@ -39,7 +40,7 @@ class DroneManager:
             self.callback("LOG", "🟢 MAVLink 통신 연결 성공!")
 
             while self.running and self.connected:
-                # 👇 수정: blocking=True 와 timeout을 주어 메시지가 밀리는 현상(딜레이) 완벽 방지
+                # blocking=True 와 timeout을 주어 메시지가 밀리는 현상(딜레이) 완벽 방지
                 msg = self.master.recv_match(blocking=True, timeout=0.1)
                 
                 if not msg:
@@ -61,6 +62,12 @@ class DroneManager:
                     lon = msg.lon / 1e7
                     alt = msg.relative_alt / 1000.0
                     self.callback("GPS", {"lat": lat, "lon": lon, "alt": alt})
+                
+                # 👇 [새로 추가된 부분] 드론의 배터리 상태 읽기
+                elif msg_type == 'SYS_STATUS':
+                    # battery_remaining은 0~100 사이의 % 값입니다 (-1은 센서 없음/측정 불가)
+                    if msg.battery_remaining >= 0:
+                        self.callback("BATTERY", msg.battery_remaining)
                     
         except Exception as e:
             self.callback("LOG", f"❌ 연결 실패: {str(e)}")

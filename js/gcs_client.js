@@ -2,43 +2,24 @@
 // gcs_client.js - 메인 관제 웹소켓 및 UI 로직
 // ==========================================
 
-// 서브 탭 전환 함수 (EVENT LOG <-> COMMAND CHAT)
-function switchTab(tabName, btnElement) {
-    const viewLog = document.getElementById('view-log');
-    const viewChat = document.getElementById('view-chat');
-    
-    if (!viewLog || !viewChat) return;
-
-    // 모든 뷰 숨기기
-    viewLog.style.display = 'none';
-    viewChat.style.display = 'none';
-
-    // 모든 탭 버튼의 active 클래스 제거
-    const buttons = document.querySelectorAll('.sub-tab-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-
-    // 선택된 탭 및 뷰 활성화
-    if (tabName === 'log') {
-        viewLog.style.display = 'flex';
-    } else if (tabName === 'chat') {
-        viewChat.style.display = 'flex';
-        const chatInput = document.getElementById('chat-input');
-        if (chatInput) chatInput.focus();
+// [수정된 이벤트 로그 표시 함수]
+function updateEventLog(message) {
+    const logElement = document.getElementById('single-event-log');
+    if (logElement) {
+        const now = new Date();
+        const time = String(now.getHours()).padStart(2, '0') + ':' + 
+                     String(now.getMinutes()).padStart(2, '0') + ':' + 
+                     String(now.getSeconds()).padStart(2, '0');
+        
+        // 텍스트를 누적하지 않고 통째로 덮어씌움 (최신 1줄만 유지)
+        logElement.textContent = `[${time}] ${message}`;
+        
+        // (선택) 새 로그가 뜰 때 글씨 색상을 잠깐 깜빡이게 하는 효과
+        logElement.style.color = '#ffffff';
+        setTimeout(() => {
+            logElement.style.color = '#38bdf8';
+        }, 300);
     }
-
-    // 클릭한 버튼 활성화
-    if (btnElement) {
-        btnElement.classList.add('active');
-    }
-}
-
-function addLog(msg) {
-    const logDiv = document.getElementById("log-area");
-    if (!logDiv) return;
-    const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
-    logDiv.innerHTML += `[${timeStr}] ${msg}<br>`;
-    logDiv.scrollTop = logDiv.scrollHeight;
 }
 
 // 채팅창 전용 로그 추가 함수
@@ -81,14 +62,21 @@ let isConnected = false;
 function connectWebSocket() {
     if (isConnected) return;
     const ipVal = document.getElementById("ip-input").value.trim();
-    if (!ipVal) return addLog("⚠️ 연결 주소를 입력하세요.");
+    if (!ipVal) return updateEventLog("⚠️ 연결 주소를 입력하세요.");
 
-    addLog("📡 서버로 웹소켓 연결 시도 중...");
+    updateEventLog("📡 서버로 웹소켓 연결 시도 중...");
+    
+    // ⭐️ 이전 소켓이 남아있다면 강제로 닫고 완전 초기화
+    if (ws !== null) {
+        ws.close();
+        ws = null;
+    }
+
     ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
 
     ws.onopen = function() {
         isConnected = true;
-        addLog("🟢 백엔드 웹소켓 연결 완료! 드론 연결을 시도합니다...");
+        updateEventLog("🟢 백엔드 웹소켓 연결 완료! 드론 연결을 시도합니다...");
         document.getElementById("status-label").innerText = `상태: 서버 연결됨 🟢`;
         document.getElementById("status-label").style.color = "#a6e3a1";
         document.getElementById("btn-connect").disabled = true;
@@ -100,47 +88,53 @@ function connectWebSocket() {
     ws.onmessage = function(event) {
         try {
             const msg = JSON.parse(event.data);
+
+            console.log("서버로부터 받은 데이터 타입:", msg.type);
             
             if (msg.type === "LOG") {
-                addLog(`[DRONE] ${msg.data}`);
+                if (typeof updateEventLog === "function") updateEventLog(`[DRONE] ${msg.data}`);
             } 
             else if (msg.type === "CHAT" || msg.type === "VIDEO_CHAT") {
-                addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
+                if (typeof addChatLog === "function") addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
             }
             else if (msg.type === "SYSTEM_MESSAGE") {
                 let levelColor = "#38bdf8";
                 if (msg.data.level === "WARNING") levelColor = "#facc15";
                 if (msg.data.level === "DANGER" || msg.data.level === "ERROR") levelColor = "#ef4444";
-                addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
+                if (typeof addChatLog === "function") addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
             }
             else if (msg.type === "CHAT_ALERT") {
-                addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
+                if (typeof addChatLog === "function") addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
             }
             else if (msg.type === "MODE") {
-                document.getElementById("mode").innerText = msg.data;
+                const modeEl = document.getElementById("status-mode");
+                if (modeEl) modeEl.innerText = msg.data;
             }
             else if (msg.type === "GPS") {
-                document.getElementById("alt").innerText = msg.data.alt.toFixed(1);
+                const altEl = document.getElementById("status-alt");
+                if (altEl) altEl.innerText = msg.data.alt.toFixed(1) + " m";
                 
-                // 좌측 패널 GPS 텍스트 업데이트 추가
-                const gpsText = document.getElementById("gps");
+                const gpsText = document.getElementById("status-gps");
                 if (gpsText) {
                     gpsText.innerText = `${msg.data.lat.toFixed(5)}, ${msg.data.lon.toFixed(5)}`;
                 }
 
                 if (msg.data.lat !== 0 && msg.data.lon !== 0) {
-                    // map_manager.js에 있는 함수를 호출해서 지도 마커를 이동시킵니다.
                     if (typeof moveMarker === "function") {
                         moveMarker(msg.data.lat, msg.data.lon);
                     }
                 }
             }
-            // 👇 수정됨: 파이썬 서버가 보내는 "VIDEO_FRAME" 타입과 일치시킵니다.
+            else if (msg.type === "BATTERY") {
+                const batteryText = document.getElementById("status-battery");
+                if (batteryText) {
+                    batteryText.innerText = msg.data + "%"; 
+                }
+            }
             else if (msg.type === "VIDEO" || msg.type === "VIDEO_FRAME") {
                 const canvas = document.getElementById('video-canvas');
                 if (!canvas) return;
                 
-                // 캔버스 해상도를 실제 그려지는 크기에 맞춰 선명하게 만듭니다.
                 if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
                 if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
                 
@@ -152,34 +146,53 @@ function connectWebSocket() {
                 img.src = "data:image/jpeg;base64," + msg.data;
             }
             else if (msg.type === "AI_RISK") {
-                document.getElementById('risk-fire').style.width = msg.data.fire + '%';
-                document.getElementById('risk-smoke').style.width = msg.data.smoke + '%';
-                document.getElementById('risk-person').style.width = msg.data.person + '%';
-                document.getElementById('risk-hotspot').style.width = msg.data.hotspot + '%';
+                const fireEl = document.getElementById('risk-fire');
+                if (fireEl) fireEl.style.width = msg.data.fire + '%';
+                
+                const smokeEl = document.getElementById('risk-smoke');
+                if (smokeEl) smokeEl.style.width = msg.data.smoke + '%';
+                
+                const personEl = document.getElementById('risk-person');
+                if (personEl) personEl.style.width = msg.data.person + '%';
+                
+                const hotspotEl = document.getElementById('risk-hotspot');
+                if (hotspotEl) hotspotEl.style.width = msg.data.hotspot + '%';
             }
         } catch (e) {
             console.error("JSON 파싱 에러:", e);
         }
     };
 
-    ws.onerror = () => addLog("❌ 웹소켓 에러 발생.");
+    ws.onerror = () => updateEventLog("❌ 웹소켓 에러 발생.");
     
     ws.onclose = () => {
         isConnected = false;
+        ws = null; // ⭐️ 재연결을 위해 객체를 완벽히 비워줌
+        
         document.getElementById("status-label").innerText = "상태: 연결 끊김 🔴";
         document.getElementById("status-label").style.color = "#f38ba8";
         document.getElementById("btn-connect").disabled = false;
         document.getElementById("btn-disconnect").disabled = true;
-        addLog("🔴 서버와의 웹소켓 연결이 해제되었습니다.");
+        updateEventLog("🔴 서버와의 웹소켓 연결이 해제되었습니다.");
         drawStandbyFrame("WAITING FOR SIGNAL..."); 
     };
 }
 
 function disconnectWebSocket() {
     if (ws && isConnected) {
-        addLog("🔌 드론 연결 해제를 요청했습니다.");
+        updateEventLog("🔌 드론 연결 해제를 요청했습니다.");
+        
+        // 서버로 해제 신호 전송
         ws.send("DISCONNECT");
-        ws.close();
+        
+        // ⭐️ 서버가 DISCONNECT 메시지를 정상적으로 수신할 수 있도록 아주 짧은 딜레이 후 소켓 종료
+        setTimeout(() => {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }, 100);
+
         // map_manager.js에 선언된 flightPath 객체 접근
         if (typeof flightPath !== "undefined") {
             flightPath.setPath([]); 
@@ -188,7 +201,7 @@ function disconnectWebSocket() {
 }
 
 function sendCommand(command) {
-    if (!isConnected || !ws) return addLog("명령 불가: 서버와 연결되지 않았습니다.");
+    if (!isConnected || !ws) return updateEventLog("명령 불가: 서버와 연결되지 않았습니다.");
     ws.send(command);
 }
 
