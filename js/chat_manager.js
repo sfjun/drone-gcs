@@ -1,8 +1,14 @@
 // ==========================================
-// chat_manager.js - 관제 채팅 (BroadcastChannel) 분리 모듈
+// chat_manager.js - 웹소켓 기반 통신으로 수정
 // ==========================================
 
-const commandChatChannel = new BroadcastChannel('chat_channel');
+// 1. 고유 ID 생성 (내가 보낸 메시지와 남이 보낸 메시지 구분용)
+const myClientId = Math.random().toString(36).substring(2, 10);
+
+// 2. 서버의 채팅 웹소켓 주소로 연결
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const chatWs = new WebSocket(`${wsProtocol}//${window.location.host}/ws/chat`);
+
 const commandChatInput = document.getElementById('chat-input');
 const commandChatLog = document.getElementById('chat-log-area');
 
@@ -42,20 +48,37 @@ function appendCommandChatMessage(text, type = 'received', sender = 'CONTROL', t
     }
 }
 
+// 3. 메시지 전송 로직 수정 (웹소켓 사용)
 function sendCommandChat() {
     if(!commandChatInput) return;
     const message = commandChatInput.value.trim();
     if (message === '') return;
 
-    commandChatChannel.postMessage(message);
-    appendCommandChatMessage(message, 'sent', 'ME');
+    // 서버로 보낼 데이터 (내 ID와 메시지)
+    const payload = {
+        id: myClientId,
+        text: message
+    };
+    
+    // 서버가 연결되어 있을 때만 전송
+    if (chatWs.readyState === WebSocket.OPEN) {
+        chatWs.send(JSON.stringify(payload));
+    }
 
     commandChatInput.value = '';
     commandChatInput.focus();
 }
 
-commandChatChannel.onmessage = function(event) {
-    appendCommandChatMessage(event.data, 'received', 'CONTROL');
+// 4. 서버로부터 메시지 수신 로직
+chatWs.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    
+    // 내 ID와 일치하면 내가 보낸 것(오른쪽), 아니면 남이 보낸 것(왼쪽)으로 처리
+    if (data.id === myClientId) {
+        appendCommandChatMessage(data.text, 'sent', 'ME');
+    } else {
+        appendCommandChatMessage(data.text, 'received', 'TEAM');
+    }
 };
 
 function switchBottomTab(tabName, clickedButton) {
@@ -93,8 +116,6 @@ window.sendChat = sendCommandChat;
 window.sendMessage = sendCommandChat;
 window.switchTab = switchBottomTab;
 
-appendCommandChatMessage('관제 채팅 시스템 활성화', 'system', 'SYSTEM');
-
-window.addEventListener('beforeunload', function() {
-    commandChatChannel.close();
-});
+// 연결 상태 알림
+chatWs.onopen = () => appendCommandChatMessage('관제 서버에 연결되었습니다.', 'system', 'SYSTEM');
+chatWs.onclose = () => appendCommandChatMessage('관제 서버와 연결이 끊어졌습니다.', 'system', 'SYSTEM');

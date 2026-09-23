@@ -1,3 +1,4 @@
+# main.py
 import os
 import asyncio
 import json
@@ -6,6 +7,7 @@ import webbrowser
 import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -68,8 +70,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
-
 # [수정됨] 만약 static 폴더(CSS/JS 등)를 따로 관리한다면 아래 주석을 풀고 사용하세요.
 # 파이썬 코드가 있는 폴더를 통째로 마운트하는 것은 보안상 위험합니다.
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -88,6 +88,50 @@ async def get_index():
         "Pragma": "no-cache",
         "Expires": "0"
     })
+
+# ==========================================
+# 채팅 웹소켓 관리자 및 엔드포인트 추가
+# ==========================================
+class ChatManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        # 접속할 때마다 터미널에 인원수 출력
+        print(f"🟢 [채팅] 새 사용자 접속! 현재 채팅 인원: {len(self.active_connections)}명")
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            print(f"🔴 [채팅] 사용자 퇴장. 남은 채팅 인원: {len(self.active_connections)}명")
+
+    async def broadcast(self, message: str):
+        # 메시지를 뿌리기 전에 터미널에 출력
+        print(f"전체 전송 중 💬 : {message}")
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception as e:
+                print(f"⚠️ [채팅] 특정 사용자에게 전송 실패 (무시됨): {e}")
+
+chat_manager = ChatManager()
+
+@app.websocket("/ws/chat")
+async def websocket_chat_endpoint(websocket: WebSocket):
+    await chat_manager.connect(websocket)
+    try:
+        while True:
+            # 클라이언트로부터 메시지 수신
+            data = await websocket.receive_text()
+            print(f"받은 데이터 📥 : {data}")
+            # 모든 사람에게 전송
+            await chat_manager.broadcast(data)
+    # 기존 WebSocketDisconnect 대신 Exception을 사용하여 모든 튕김 현상 방지
+    except Exception as e:
+        print(f"⚠️ [채팅] 연결 끊김: {e}")
+        chat_manager.disconnect(websocket)      
 
 @app.websocket("/ws/drone")
 async def websocket_endpoint(websocket: WebSocket):
