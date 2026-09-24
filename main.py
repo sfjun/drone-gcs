@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+import signal
 
 from drone_manager import DroneManager
 from video_manager import VideoManager
@@ -212,8 +213,16 @@ async def websocket_chat_endpoint(websocket: WebSocket):
             await chat_manager.broadcast(data)
     except Exception as e:
         print(f"⚠️ [채팅] 연결 끊김: {e}")
-        chat_manager.disconnect(websocket)      
-
+        chat_manager.disconnect(websocket)
+        
+        # [핵심 추가] 남은 채팅 인원이 0명이 되면 Ctrl + C 시그널을 보내 서버를 자동 종료합니다.
+        # 만약 chat_manager 내부 변수명이 다르면 구조에 맞게 수정해 주세요 (예: len(chat_manager.active_connections))
+        if hasattr(chat_manager, 'active_connections') and len(chat_manager.active_connections) == 0:
+            print("INFO:     Shutting down (모든 클라이언트 퇴장)")
+            os.kill(os.getpid(), signal.SIGINT)
+        else:
+            # 안전장치: 만약 인원 체크 변수명을 모른다면 무조건 종료하도록 아래 한 줄만 남기셔도 됩니다.
+            os.kill(os.getpid(), signal.SIGINT)
 
 # ==========================================
 # [드론 제어 웹소켓] 메인 및 서브 분리 등록
@@ -241,6 +250,10 @@ async def main_websocket_endpoint(websocket: WebSocket):
         if len(main_active_websockets) == 0:
             main_drone.stop()
             main_video.stop()
+            # 가장 안전하게 현재 프로세스를 종료하는 방법
+            os.kill(os.getpid(), signal.SIGINT) # 또는 sys.exit(0)            
+              
+            
 
 # 2. 출동 소방차용 드론 웹소켓 (/ws/car/drone)
 @app.websocket("/ws/car/drone")
@@ -265,7 +278,9 @@ async def car_websocket_endpoint(websocket: WebSocket):
         if len(car_active_websockets) == 0:
             car_drone.stop()
             car_video.stop()
-
+            # 가장 안전하게 현재 프로세스를 종료하는 방법
+            os.kill(os.getpid(), signal.SIGINT) # 또는 sys.exit(0)               
+    
 
 # ==========================================
 # [서버 실행 및 브라우저 자동 오픈]

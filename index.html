@@ -90,21 +90,21 @@
 </head>
 
 <body>
-
-    <div class="header">
-        <h1>소방 관제 센터</h1>        
-        <!-- <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;"> -->
-        <div> 
-        <!-- 오른쪽 끝 고정: 출동 소방차 화면 열기 버튼 -->
-            <button id="btn-open-car" onclick="launchCarApp()" style="margin-left: 15px; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;">
-                🚒 출동 소방차 화면(단독 창) 열기
-            </button>
-        </div>
-
-
-        <!-- <div id="status-label" class="status-label"> -->
-        <div id="status-label" style="margin-left: auto; font-size: 1.1rem; font-weight: bold; color: #f38ba8; white-space: nowrap; display: flex; align-items: center;"></div>
-            상태: 연결 끊김 🔴
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 20px;"> 
+        <!-- 1. 타이틀 (왼쪽 고정 및 브라우저가 작아지면 자동 축소/말줄임 가능) -->
+        <h1 style="margin: 0; font-size: 1.8rem; white-space: nowrap; flex-shrink: 1;">소방 관제 센터</h1> 
+        
+        <!-- 오른쪽 영역: 버튼과 상태창을 묶어서 우측 정렬 -->
+        <div style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+            <!-- 2. 출동 소방차 화면 열기 버튼 --> 
+            <button id="btn-open-car" onclick="launchCarApp()" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;"> 
+                🚒 출동 소방차 화면(단독 창) 열기 
+            </button> 
+            
+            <!-- 3. 상태 표시 텍스트 --> 
+            <div id="status-label" style="font-size: 1.1rem; font-weight: bold; color: #f38ba8; white-space: nowrap; display: flex; align-items: center;">
+                상태: 연결 끊김 🔴
+            </div> 
         </div>
     </div>
 
@@ -138,8 +138,9 @@
             <div class="left-section-box" style="background: #0f172a; border: 1px solid #1e293b; border-radius: 5px; padding: 10px;">
                 <h3 style="color: #94a3b8; font-size: 12px; margin: 0 0 5px 0; font-weight: bold;">LATEST EVENT LOG</h3>
                 
-                <div id="single-event-log" style="color: #94a3b8; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: keep-all; line-height: 1.5; height: 63px;">
+                <div id="single-event-log" style="color: #94a3b8; font-size: 14px; display: -webkit-box; -line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: keep-all; line-height: 1.5; height: 63px;">
                     시스템 대기 중...
+
                 </div>
             </div>
 
@@ -453,6 +454,16 @@
 
     <!-- 채팅 기능 모듈 -->
     <script src="/static/js/chat_manager.js"></script>
-
+    <script>
+        // 페이지를 떠나려고 할 때 발생하는 이벤트 감지
+        window.addEventListener('beforeunload', function (event) {
+            // 표준 명세에 따른 설정 (크롬, 파이어폭스 등에서 필수)
+            event.preventDefault();
+            
+            // 크롬 및 일부 브라우저에서 경고창을 띄우기 위해 returnValue 설정 필수
+            // (과거와 달리 현대 브라우저는 커스텀 문구 지정을 무시하고 브라우저 기본 문구를 보여줍니다)
+            event.returnValue = ''; 
+        });
+    </script>
 </body>
 </html>

@@ -259,3 +259,4 @@ function launchCarApp() {
             alert("서버 통신 실패: " + err.message);
         });
 }
+
