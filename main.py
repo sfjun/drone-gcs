@@ -215,15 +215,26 @@ async def websocket_chat_endpoint(websocket: WebSocket):
         print(f"⚠️ [채팅] 연결 끊김: {e}")
         chat_manager.disconnect(websocket)
         
-        # [핵심 추가] 남은 채팅 인원이 0명이 되면 Ctrl + C 시그널을 보내 서버를 자동 종료합니다.
-        # 만약 chat_manager 내부 변수명이 다르면 구조에 맞게 수정해 주세요 (예: len(chat_manager.active_connections))
-        if hasattr(chat_manager, 'active_connections') and len(chat_manager.active_connections) == 0:
-            print("INFO:     Shutting down (모든 클라이언트 퇴장)")
-            os.kill(os.getpid(), signal.SIGINT)
-        else:
-            # 안전장치: 만약 인원 체크 변수명을 모른다면 무조건 종료하도록 아래 한 줄만 남기셔도 됩니다.
-            os.kill(os.getpid(), signal.SIGINT)
-
+        # [수정] 새로고침 대비 안전장치: 즉시 끄지 않고 1초 동안 재접속을 기다립니다.
+        async def delayed_shutdown():
+            await asyncio.sleep(1.0)
+            # [핵심 추가] 남은 채팅 인원이 0명이 되면 Ctrl + C 시그널을 보내 서버를 자동 종료합니다.
+            # 만약 chat_manager 내부 변수명이 다르면 구조에 맞게 수정해 주세요 (예: len(chat_manager.active_connections))
+            
+            if hasattr(chat_manager, 'active_connections'):
+                current_count = len(chat_manager.active_connections)
+            else:
+                # 변수명을 모를 경우를 대비한 기본값 설정 (구조에 맞게 변형 필요)
+                current_count = 0
+                
+            if current_count == 0:
+                print("INFO:     Shutting down (모든 클라이언트가 퇴장하여 서버를 종료합니다.)")        
+                os.kill(os.getpid(), signal.SIGINT)
+            else:
+                print(f"INFO:     새로고침 또는 다른 사용자가 감지되었습니다. (현재 인원: {current_count}명) 서버 유지.")
+        # 백그라운드 태스크로 지연 종료 함수 실행 (메인 루프를 막지 않음)
+        asyncio.create_task(delayed_shutdown())
+        
 # ==========================================
 # [드론 제어 웹소켓] 메인 및 서브 분리 등록
 # ==========================================
@@ -260,6 +271,7 @@ async def main_websocket_endpoint(websocket: WebSocket):
 async def car_websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     car_active_websockets.append(websocket)
+    
     try:
         while True:
             command = await websocket.receive_text()
