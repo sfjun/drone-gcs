@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Cesium 3D 지도를 활용한 GCS</title>
+    <link rel="stylesheet" href="/cesium/Widgets/widgets.css">
+    <!-- FontAwesome 아이콘 스타일 시트 추가 (홈 아이콘용) -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    <script>window.CESIUM_BASE_URL = '/cesium/';</script>
+    <script src="/cesium/Cesium.js"></script>
+
+    <style>
+        html, body, #cesiumContainer {
+            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+            background-color: #000;
+        }
+        
+        /* GCS 상단 주소 검색 패널 */
+        #gcsPanel {
+            position: absolute; top: 20px; left: 20px; z-index: 10;
+            background: rgba(20, 24, 30, 0.9); padding: 10px; border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; gap: 6px;
+            border: 1px solid #333;
+        }
+        #searchInput {
+            width: 260px; padding: 10px; border: 1px solid #444;
+            background: #111; color: #fff; border-radius: 4px; font-size: 13px;
+        }
+        #searchInput:focus { border-color: #007acc; outline: none; }
+        #searchButton {
+            padding: 0 18px; background: #007acc; color: white; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;
+        }
+        #searchButton:hover { background: #0098ff; }
+
+        /* 🔥 독립형 전용 홈 위젯 아이콘 (우측 상단 고정) */
+        #gcsHomeWidget {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            background: rgba(20, 24, 30, 0.9); width: 44px; height: 44px;
+            border-radius: 6px; border: 1px solid #007acc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            color: #007acc; cursor: pointer; font-size: 18px; transition: all 0.2s;
+        }
+        #gcsHomeWidget:hover {
+            background: #007acc; color: #fff; box-shadow: 0 0 12px #007acc;
+        }
+
+        /* 마커 우클릭 커스텀 메뉴 */
+        #customContextMenu {
+            display: none; position: absolute; z-index: 100;
+            background: rgba(15, 18, 22, 0.95); border: 1px solid #007acc;
+            border-radius: 4px; padding: 4px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            min-width: 140px;
+        }
+        .menu-item {
+            padding: 10px 16px; color: #ccc; cursor: pointer;
+            font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 8px;
+        }
+        .menu-item:hover { background: #007acc; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <!-- GCS 상단 관제 검색 패널 -->
+    <div id="gcsPanel">
+        <input type="text" id="searchInput" placeholder="국내 장소/주소 입력 (예: 서울역, 독도)">
+        <button id="searchButton"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
+    </div>
+
+    <!-- 🔥 우측 상단 독립 홈 대시보드 아이콘 -->
+    <div id="gcsHomeWidget" title="홈 위치로 카메라 뷰 복귀">
+        <i class="fa-solid fa-house"></i>
+    </div>
+
+    <!-- 마커 우클릭 메뉴 UI -->
+    <div id="customContextMenu">
+        <div class="menu-item" id="menuSetTarget"><i class="fa-solid fa-crosshairs" style="color: #ff4a4a;"></i> 목표지 설정</div>
+        <div class="menu-item" id="menuSetHome"><i class="fa-solid fa-house-chimney" style="color: #4affff;"></i> 홈설정</div>
+        <div class="menu-item" id="menuGoHome"><i class="fa-solid fa-plane-arrival" style="color: #a0ff4a;"></i> 홈복귀</div>
+    </div>
+
+    <div id="cesiumContainer"></div>
+
+    <script type="module">
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IkstLW45Y215a2JhYjZTbVEiLCJqdGkiOiJjZWQ4OGMxZC05NThmLTQzYjktOWJjOC0zNzAwMGM3ZGQzYWIiLCJpZCI6NTA2NTcyLCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3OTAyNTM3MzR9.DPoaj-sAdJS2yii90qgG6KMRzmdzc4vGkAAMeL8wF4I';
+
+        window.viewer = new Cesium.Viewer('cesiumContainer', {
+            terrain: Cesium.Terrain.fromWorldTerrain(),
+            geocoder: false, navigationHelpButton: false, homeButton: false,
+            sceneModePicker: false, timeline: false, animation: false
+        });    
+
+        // 3D 빌딩 레이어 추가
+        async function loadBuildings() {
+            try {
+                const buildingTileset = await Cesium.createOsmBuildingsAsync();
+                window.viewer.scene.primitives.add(buildingTileset);  
+            } catch (error) { console.error("3D 건물 로드 실패", error); }
+        }
+        loadBuildings();
+    </script>
+    
+    <script src="/js/cesium_marker.js"></script>
+</body>

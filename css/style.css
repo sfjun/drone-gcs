@@ -1,5 +1,8 @@
-/* css/style.css */
-/* 1. 최상위 body 설정: 화면 고정 해제 */
+/* =========================================================================
+   [최종 마스터] 전체 화면 절대 고정 + 창 축소 시 위아래 자동 레이아웃 조정 CSS
+   ========================================================================= */
+
+/* 1. 최상위 body 설정: 화면을 모니터 해상도 크기에 강제로 고정하고 스크롤바 삭제 */
 body { 
     background-color: #0b141a; 
     color: #e2e8f0; 
@@ -7,21 +10,24 @@ body {
     display: flex; 
     flex-direction: column; 
     margin: 0; 
-    /* 고정 높이를 최소 높이 개념으로 전환하여 아래로 유연하게 늘어나도록 변경 */
-    min-height: 100vh; 
+    height: 100vh;          /* 💡 무한 확장을 막기 위해 화면 높이를 100%로 완전 봉인 */
+    max-height: 100vh;      /* 💡 아래로 삐져나가는 현상을 절대 차단 */
     padding: 20px; 
     box-sizing: border-box; 
+    overflow: hidden;       /* 💡 브라우저 자체 스크롤바가 생기는 것을 원천 방지 */
 }
 
-/* 2. 메인 콘텐츠 컨테이너 설정 (핵심 변경점) */
+/* 2. 메인 콘텐츠 컨테이너 설정 */
 .content { 
     display: flex; 
     flex-direction: row;
-    flex-wrap: wrap; /* 💡 핵심: 자리가 부족하면 자식 요소들을 다음 줄로 자동 줄바꿈 */
+    flex-wrap: wrap;       /* 💡 창이 작아지면 자식 패널들이 아래로 떨어지도록 유연성 유지 */
     gap: 20px; 
     flex: 1; 
     width: 100%;
-    /* height: calc(100% - 60px); <-- ❌ 기존의 고정 높이 코드는 완벽히 제거해 줍니다. */
+    height: calc(100% - 40px); /* 💡 부모 바디 크기를 절대 넘어가지 못하도록 제약 */
+    min-height: 0;         /* 💡 Flex 자식의 무한 확장을 막는 1차 방어벽 */
+    overflow-y: auto;       /* 💡 [핵심] 창이 아래로 떨어져 화면이 넘칠 경우, 창 전체가 늘어나는 대신 이 컨테이너 내부에만 스크롤이 생김 */
 }
 
 /* 3. 각 패널들의 유연한 성장 및 최소 크기 제어 */
@@ -34,36 +40,78 @@ body {
     flex-direction: column; 
     box-sizing: border-box;
     
-    /* 💡 아래의 유연한 크기 조절 설정을 모든 패널에 기본 적용 */
-    flex-grow: 1;      /* 남는 여백이 있으면 화면을 꽉 채우도록 늘어남 */
-    flex-shrink: 1;     /* 화면이 좁아지면 최소 크기 전까지는 자연스럽게 줄어듦 */
+    /* 💡 평소에는 100% 높이를 채우되, 줄바꿈 시 유연하게 대처 */
+    flex-grow: 1;      
+    flex-shrink: 1;     
+    min-width: 0;          /* 💡 내부 캔버스 때문에 패널이 무한히 벌어지는 현상 차단 */
+    min-height: 0;         /* 💡 내부 캔버스 때문에 패널이 무한히 늘어나는 현상 차단 */
 }
 
-/* [좌측 드론 패널] */
+/* [좌측 드론 패널] - 화면이 작아지면 위아래 구조로 떨어짐 */
 .left { 
-    flex-basis: 250px;  /* 💡 기본 권장 크기 */
-    min-width: 220px;   /* ❌ 이 크기보다 작아지면 더 줄어들지 않고 버팁니다. */
+    flex-basis: 280px;  
+    min-width: 250px;   
+    height: 100%;
+    min-height: 400px;     /* 줄바꿈 시 유지할 최소 높이 */
 } 
 
 /* [중앙 영상 패널] */
 .center { 
-    flex-basis: 500px;  /* 💡 기본 권장 크기 */
-    min-width: 450px;   /* ❌ 요청하신 센터의 최소 사이즈 보장 */
+    flex-basis: 550px;  
+    min-width: 450px;   
+    height: 100%;
+    min-height: 400px;     /* 줄바꿈 시 유지할 최소 높이 */
     overflow: hidden; 
 } 
 
 /* [우측 지도 패널] */
 .right { 
-    flex-basis: 400px;  /* 💡 기본 권장 크기 */
-    min-width: 380px;   /* ❌ 요청하신 지도의 최소 사이즈 보장 */
+    flex-basis: 600px;  /* 평소 가로 권장 너비 */
+    min-width: 400px;   
+    
+    /* 💡 [핵심] 평소에는 한 줄에 맞춰 늘어나다가, 창이 좁아져서 아래 줄로 떨어지는 순간
+          지도 패널 전체 높이를 '정확히 고정된 픽셀(예: 500px)'로 고정해 버립니다.
+          이렇게 단단한 벽을 쳐주어야 세슘이 밑으로 화면을 늘리지 못합니다. */
+    height: 100%;
+    min-height: 500px !important; 
 }
 
-/* 4. 화면이 세로로 길어졌을 때 내부 뷰포트 높이 방어벽 */
+
+/* 4. 세슘 지도가 무한 증식하며 흘러내리는 것을 막는 절대 고정 높이 구조 */
 .center .video-container {
-    min-height: 350px;  /* 세로로 배치되어도 영상이 찌그러지지 않게 최소 높이 부여 */
+    flex: 1;
+    min-height: 200px; 
 }
-#map {
-    min-height: 600px;  /* 지도가 아래 줄로 떨어졌을 때 시원하게 볼 수 있도록 최소 높이 부여 */
+
+/* 🚨 기존의 map-cesium-wrapper 스타일을 인라인이 아닌 여기에 확실하게 고정합니다. */
+#map-cesium-wrapper {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #1e293b;
+    
+    /* 🎯 [매우 중요] 자식인 세슘 캔버스를 내부에 가두기 위해 부모는 반드시 relative여야 합니다. */
+    position: relative !important; 
+}
+
+/* 🚨 무한 루프의 진짜 범인이었던 #map(또는 cesiumContainer) 영역입니다.
+      반드시 이 구조로 교체하여 물리 엔진을 잠가야 합니다. */
+#map, #cesiumContainer {
+    /* 🎯 [최후의 치트키] 위에서 지정한 부모 wrapper(#map-cesium-wrapper)의 
+          가로세로 500px 크기 안에 지도를 강제로 묶어버리는 자바스크립트/CSS 국룰 공식입니다.
+          이렇게 absolute로 묶으면 지도가 브라우저 화면을 밑으로 밀어낼 수 없습니다. */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important; /* ❌ 스스로 아래로 늘어나는 성질을 완벽 차단 */
+    
+    border-radius: 5px; 
+    margin-bottom: 0 !important; 
+    z-index: 1; 
 }
 
 input[type="text"] { 
