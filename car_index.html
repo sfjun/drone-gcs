@@ -21,7 +21,6 @@
             font-size: 10pt;
             margin-bottom: 6px;
             min-height: 120px;
-            max-height: 220px;
         }
 
         .chat-message {
@@ -103,10 +102,18 @@
 
 <body>
 
-    <div class="header">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <h1>출동 소방차</h1>
-        <div id="status-label" class="status-label">
-            상태: 연결 끊김 🔴
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- 비상용 수동 연결 버튼 추가 -->
+            <button onclick="connectWebSocket()" style="padding: 6px 12px; background: #0284c7; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                📡 수동 연결
+            </button>
+            
+            <div id="status-label" class="status-label" style="margin: 0;">
+                상태: 연결 끊김 🔴
+            </div>
         </div>
     </div>
 
@@ -151,8 +158,8 @@
     <!-- 맵 매니저 모듈 -->
     <script src="/static/js/map_manager.js"></script>
 
-    <!-- 기존 GCS 기능 -->
-    <script src="/static/js/gcs_client.js"></script>
+    <!-- 기존 GCS 기능 (버전 번호를 달아서 강제 최신화)  -->
+    <script src="/static/js/gcs_client.js?v=999"></script>
 
     <!-- 채팅 기능 모듈 -->
     <script src="/static/js/chat_manager.js"></script>

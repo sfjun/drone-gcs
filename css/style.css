@@ -208,7 +208,7 @@ h3 {
 #video-canvas {
     width: 100%;
     height: 100%;
-    object-fit: fill; 
+    object-fit: fill; /* 원상복구 (또는 이 줄을 아예 삭제하셔도 됩니다) */
 }
 
 .center > div:last-child {

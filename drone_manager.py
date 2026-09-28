@@ -8,7 +8,7 @@ class DroneManager:
         self.running = False
         self.master = None
         self.connected = False
-        self.conn_str = "udp:0.0.0.0:14560"
+        self.conn_str = "udp:0.0.0.0:14550"
         self.callback = callback 
 
     def set_connection_string(self, conn_str):

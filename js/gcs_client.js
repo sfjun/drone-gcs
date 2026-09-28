@@ -1,8 +1,7 @@
 // ==========================================
-// gcs_client.js - 메인 관제 웹소켓 및 UI 로직
+// gcs_client.js - 메인 관제 웹소켓 및 UI 로직 (통합 완결본)
 // ==========================================
 
-// [수정된 이벤트 로그 표시 함수]
 function updateEventLog(message) {
     const logElement = document.getElementById('single-event-log');
     if (logElement) {
@@ -11,18 +10,12 @@ function updateEventLog(message) {
                      String(now.getMinutes()).padStart(2, '0') + ':' + 
                      String(now.getSeconds()).padStart(2, '0');
         
-        // 텍스트를 누적하지 않고 통째로 덮어씌움 (최신 1줄만 유지)
         logElement.textContent = `[${time}] ${message}`;
-        
-        // (선택) 새 로그가 뜰 때 글씨 색상을 잠깐 깜빡이게 하는 효과
         logElement.style.color = '#ffffff';
-        setTimeout(() => {
-            logElement.style.color = '#38bdf8';
-        }, 300);
+        setTimeout(() => { logElement.style.color = '#38bdf8'; }, 300);
     }
 }
 
-// 채팅창 전용 로그 추가 함수
 function addChatLog(htmlContent) {
     const chatLog = document.getElementById("chat-log-area");
     if (!chatLog) return;
@@ -32,9 +25,9 @@ function addChatLog(htmlContent) {
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
-// 채팅 전송 함수
 function sendChat() {
     const input = document.getElementById('chat-input');
+    if (!input) return;
     const msg = input.value.trim();
     if (!msg) return;
 
@@ -45,14 +38,8 @@ function sendChat() {
 
     addChatLog(`💬 <b style="color:#10b981;">[관제사]</b> ${msg}`);
 
-    // 서버로 데이터 전송
-    const packet = {
-        action: "CHAT",
-        message: msg
-    };
+    const packet = { action: "CHAT", message: msg };
     ws.send(JSON.stringify(packet));
-    
-    // 입력창 초기화
     input.value = "";
 }
 
@@ -61,39 +48,45 @@ let isConnected = false;
 
 function connectWebSocket() {
     if (isConnected) return;
-    const ipVal = document.getElementById("ip-input").value.trim();
-    if (!ipVal) return updateEventLog("⚠️ 연결 주소를 입력하세요.");
+    
+    // 💡 소방차 화면(input 없는 경우)을 위한 기본 IP 세팅 방어 로직
+    let ipVal = "udp:0.0.0.0:14550"; 
+    const ipInput = document.getElementById("ip-input");
+    if (ipInput) {
+        ipVal = ipInput.value.trim();
+        if (!ipVal) return updateEventLog("⚠️ 연결 주소를 입력하세요.");
+    }
 
     updateEventLog("📡 서버로 웹소켓 연결 시도 중...");
     
-    // ⭐️ 이전 소켓이 남아있다면 강제로 닫고 완전 초기화
     if (ws !== null) {
         ws.close();
         ws = null;
     }
 
-    // gcs_client.js 수정 전 [4]
-    // ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
-
-    // 🔄 gcs_client.js 수정 후 (주소창 경로를 감지하여 웹소켓 분기)
-    // 현재 웹 브라우저 주소창의 경로(pathname)가 '/car'를 포함하고 있는지 확인합니다.
+    // 웹소켓 주소 자동 분기
     if (window.location.pathname.includes('/car')) {
-        // 🚒 서브 화면(출동 소방차)일 때는 /ws/car/drone 경로로 연결
         ws = new WebSocket(`ws://${window.location.host}/ws/car/drone`);
-        console.log("🚒 출동 소방차 웹소켓 채널로 연결합니다. (/ws/car/drone)");
+        console.log("🚒 출동 소방차 웹소켓 연결 시도");
     } else {
-        // 🖥️ 초기 화면(소방 관제 센터)일 때는 원래대로 /ws/drone 경로로 연결
         ws = new WebSocket(`ws://${window.location.host}/ws/drone`);
-        console.log("🖥️ 소방 관제 센터 웹소켓 채널로 연결합니다. (/ws/drone)");
+        console.log("🖥️ 관제 센터 웹소켓 연결 시도");
     }
 
     ws.onopen = function() {
         isConnected = true;
         updateEventLog("🟢 백엔드 웹소켓 연결 완료! 드론 연결을 시도합니다...");
-        document.getElementById("status-label").innerText = `상태: 서버 연결됨 🟢`;
-        document.getElementById("status-label").style.color = "#a6e3a1";
-        document.getElementById("btn-connect").disabled = true;
-        document.getElementById("btn-disconnect").disabled = false;
+        
+        const statusLabel = document.getElementById("status-label");
+        if (statusLabel) {
+            statusLabel.innerText = `상태: 서버 연결됨 🟢`;
+            statusLabel.style.color = "#a6e3a1";
+        }
+        
+        const btnConnect = document.getElementById("btn-connect");
+        const btnDisconnect = document.getElementById("btn-disconnect");
+        if (btnConnect) btnConnect.disabled = true;
+        if (btnDisconnect) btnDisconnect.disabled = false;
         
         ws.send("CONNECT:" + ipVal);
     };
@@ -101,23 +94,21 @@ function connectWebSocket() {
     ws.onmessage = function(event) {
         try {
             const msg = JSON.parse(event.data);
-
-            console.log("서버로부터 받은 데이터 타입:", msg.type);
             
             if (msg.type === "LOG") {
-                if (typeof updateEventLog === "function") updateEventLog(`[DRONE] ${msg.data}`);
+                updateEventLog(`[DRONE] ${msg.data}`);
             } 
             else if (msg.type === "CHAT" || msg.type === "VIDEO_CHAT") {
-                if (typeof addChatLog === "function") addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
+                addChatLog(`💬 <b>[${msg.data.name || "User"}]</b> ${msg.data.message}`);
             }
             else if (msg.type === "SYSTEM_MESSAGE") {
                 let levelColor = "#38bdf8";
                 if (msg.data.level === "WARNING") levelColor = "#facc15";
                 if (msg.data.level === "DANGER" || msg.data.level === "ERROR") levelColor = "#ef4444";
-                if (typeof addChatLog === "function") addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
+                addChatLog(`<span style="color: ${levelColor};">[SYS] ${msg.data.message}</span>`);
             }
             else if (msg.type === "CHAT_ALERT") {
-                if (typeof addChatLog === "function") addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
+                addChatLog(`🚨 <span style="color: #ef4444; font-weight: bold;">[ALERT] ${msg.data.message}</span>`);
             }
             else if (msg.type === "MODE") {
                 const modeEl = document.getElementById("status-mode");
@@ -148,44 +139,60 @@ function connectWebSocket() {
                 const canvas = document.getElementById('video-canvas');
                 if (!canvas) return;
                 
-                if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
-                if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
-                
                 const ctx = canvas.getContext('2d');
                 const img = new Image();
+                
                 img.onload = () => {
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    // 1. 캔버스의 그리기 영역 해상도를 현재 화면 창 크기에 딱 맞춤
+                    if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                    if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+                    
+                    // 2. 배경을 검은색으로 칠하기 (레터박스 역할)
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // 3. 원본 영상의 비율을 계산하여 화면 중앙에 찌그러짐 없이(contain) 배치
+                    const hRatio = canvas.width / img.width;
+                    const vRatio = canvas.height / img.height;
+                    const ratio  = Math.min(hRatio, vRatio);
+                    
+                    const centerShift_x = (canvas.width - img.width * ratio) / 2;
+                    const centerShift_y = (canvas.height - img.height * ratio) / 2;  
+                    
+                    ctx.drawImage(img, 0, 0, img.width, img.height,
+                                  centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
                 };
                 img.src = "data:image/jpeg;base64," + msg.data;
             }
             else if (msg.type === "AI_RISK") {
                 const fireEl = document.getElementById('risk-fire');
                 if (fireEl) fireEl.style.width = msg.data.fire + '%';
-                
                 const smokeEl = document.getElementById('risk-smoke');
                 if (smokeEl) smokeEl.style.width = msg.data.smoke + '%';
-                
                 const personEl = document.getElementById('risk-person');
                 if (personEl) personEl.style.width = msg.data.person + '%';
-                
                 const hotspotEl = document.getElementById('risk-hotspot');
                 if (hotspotEl) hotspotEl.style.width = msg.data.hotspot + '%';
             }
-        } catch (e) {
-            console.error("JSON 파싱 에러:", e);
-        }
+        } catch (e) {}
     };
 
     ws.onerror = () => updateEventLog("❌ 웹소켓 에러 발생.");
     
     ws.onclose = () => {
         isConnected = false;
-        ws = null; // ⭐️ 재연결을 위해 객체를 완벽히 비워줌
+        ws = null; 
         
-        document.getElementById("status-label").innerText = "상태: 연결 끊김 🔴";
-        document.getElementById("status-label").style.color = "#f38ba8";
-        document.getElementById("btn-connect").disabled = false;
-        document.getElementById("btn-disconnect").disabled = true;
+        const statusLabel = document.getElementById("status-label");
+        if (statusLabel) {
+            statusLabel.innerText = "상태: 연결 끊김 🔴";
+            statusLabel.style.color = "#f38ba8";
+        }
+        
+        const btnConnect = document.getElementById("btn-connect");
+        const btnDisconnect = document.getElementById("btn-disconnect");
+        if (btnConnect) btnConnect.disabled = false;
+        if (btnDisconnect) btnDisconnect.disabled = true;
         updateEventLog("🔴 서버와의 웹소켓 연결이 해제되었습니다.");
         drawStandbyFrame("WAITING FOR SIGNAL..."); 
     };
@@ -194,11 +201,8 @@ function connectWebSocket() {
 function disconnectWebSocket() {
     if (ws && isConnected) {
         updateEventLog("🔌 드론 연결 해제를 요청했습니다.");
-        
-        // 서버로 해제 신호 전송
         ws.send("DISCONNECT");
         
-        // ⭐️ 서버가 DISCONNECT 메시지를 정상적으로 수신할 수 있도록 아주 짧은 딜레이 후 소켓 종료
         setTimeout(() => {
             if (ws) {
                 ws.close();
@@ -206,7 +210,6 @@ function disconnectWebSocket() {
             }
         }, 100);
 
-        // map_manager.js에 선언된 flightPath 객체 접근
         if (typeof flightPath !== "undefined") {
             flightPath.setPath([]); 
         }
@@ -234,12 +237,6 @@ function drawStandbyFrame(text) {
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 }
 
-// 초기 로딩 시 스탠바이 화면을 그립니다.
-document.addEventListener("DOMContentLoaded", () => {
-    drawStandbyFrame("WAITING FOR SIGNAL...");
-});
-
-// 버튼 클릭 시 백엔드 API를 호출하는 함수
 function launchCarApp() {
     fetch('/open-car-app')
         .then(response => {
@@ -247,16 +244,32 @@ function launchCarApp() {
             return response.json();
         })
         .then(data => {
-            // 서버가 보낸 리턴 구조와 완벽히 매칭
             if (data && data.status === 'success') {
-                console.log("🟢 서버가 단독 앱 창을 정상적으로 실행했습니다.");
+                console.log("🟢 단독 앱 창 실행 명령 전송");
             } else {
                 alert("앱 실행 실패: " + (data.message || "알 수 없는 오류"));
             }
         })
         .catch(err => {
-            console.error("통신 에러:", err);
             alert("서버 통신 실패: " + err.message);
         });
 }
 
+// 💡 [핵심] DOM 로딩 상태와 무관하게 100% 실행되도록 보장하는 초기화 로직
+function initAutoConnect() {
+    drawStandbyFrame("WAITING FOR SIGNAL...");
+    // 출동 소방차 화면이면 무조건 1초 뒤 자동 연결
+    if (window.location.pathname.includes('/car')) {
+        setTimeout(() => {
+            console.log("🚒 소방차 화면 자동 연결 실행");
+            connectWebSocket();
+        }, 1000);
+    }
+}
+
+// 브라우저가 스크립트를 언제 읽든 무조건 실행되게 강제
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", initAutoConnect);
+} else {
+    initAutoConnect();
+}

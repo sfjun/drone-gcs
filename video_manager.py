@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import threading
 import queue
-import base64  # Base64 인코딩을 위해 추가됨
+import base64
 
 Gst.init(None)
 
@@ -16,22 +16,13 @@ class VideoManager:
         self.video_queue = queue.Queue(maxsize=2)
         self.loop = None
         self.thread = None
-        
-        # GStreamer 파이프라인 설정
-        pipeline_str = (
-            f"udpsrc port={self.port} ! "
-            "application/x-rtp, media=video, clock-rate=90000, encoding-name=H264 ! "
-            "rtph264depay ! decodebin ! "
-            "videoconvert ! video/x-raw, format=BGR ! "
-            "appsink name=sink emit-signals=true max-buffers=1 drop=true"
-        )
-        
-        self.pipeline = Gst.parse_launch(pipeline_str)
-        appsink = self.pipeline.get_by_name("sink")
-        appsink.connect("new-sample", self.on_new_sample)
+        self.pipeline = None  # 파이프라인 변수를 비워둠 (start 시 생성)
 
     def on_new_sample(self, sink):
         sample = sink.emit("pull-sample")
+        if not sample:
+            return Gst.FlowReturn.ERROR
+            
         buf = sample.get_buffer()
         caps = sample.get_caps()
         
@@ -52,15 +43,12 @@ class VideoManager:
                     pass
             self.video_queue.put(frame_rgb)
             
-            # 👇 수정된 부분: 콜백 함수 호출 규격 맞추기 및 Base64 인코딩
+            # 콜백 함수 호출 규격 맞추기 및 Base64 인코딩
             if self.callback:
                 try:
-                    # 웹 브라우저 전송을 위해 BGR 이미지를 JPG로 압축
                     ret, buffer = cv2.imencode('.jpg', frame)
                     if ret:
-                        # 이미지를 Base64 문자열로 변환
                         b64_string = base64.b64encode(buffer).decode('utf-8')
-                        # main.py의 gcs_callback(msg_type, data) 형태에 맞게 2개의 인자 전달
                         self.callback("VIDEO_FRAME", b64_string)
                 except Exception as e:
                     print(f"❌ Video callback error: {e}")
@@ -69,6 +57,23 @@ class VideoManager:
         return Gst.FlowReturn.OK
 
     def start(self):
+        # 💡 핵심 수정: 기존에 돌던 파이프라인이 있다면 완전히 삭제
+        if self.pipeline:
+            self.stop()
+            
+        # 💡 매 연결(start)마다 파이프라인을 완전히 새롭게 구축하여 스트림 멈춤 해결
+        pipeline_str = (
+            f"udpsrc port={self.port} ! "
+            "application/x-rtp, media=video, clock-rate=90000, encoding-name=H264 ! "
+            "rtph264depay ! decodebin ! "
+            "videoconvert ! video/x-raw, format=BGR ! "
+            "appsink name=sink emit-signals=true max-buffers=1 drop=true"
+        )
+        
+        self.pipeline = Gst.parse_launch(pipeline_str)
+        appsink = self.pipeline.get_by_name("sink")
+        appsink.connect("new-sample", self.on_new_sample)
+
         self.pipeline.set_state(Gst.State.PLAYING)
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
@@ -82,13 +87,16 @@ class VideoManager:
             pass
 
     def get_frame(self):
-        """최신 프레임을 가져오는 메서드"""
         if not self.video_queue.empty():
             return self.video_queue.get()
         return None
 
     def stop(self):
-        self.pipeline.set_state(Gst.State.NULL)
+        # 완전히 객체에서 비워주어 재시작 시 꼬임을 방지
+        if self.pipeline:
+            self.pipeline.set_state(Gst.State.NULL)
+            self.pipeline = None
         if self.loop:
             self.loop.quit()
+            self.loop = None
         print("🛑 영상 수신기 종료")
