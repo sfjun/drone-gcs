@@ -90,11 +90,30 @@
 
 <body>
     <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 20px;"> 
-        <!-- 1. 타이틀 (왼쪽 고정 및 브라우저가 작아지면 자동 축소/말줄임 가능) -->
+        <!-- 1. 타이틀 -->
         <h1 style="margin: 0; font-size: 1.8rem; white-space: nowrap; flex-shrink: 1;">소방 관제 센터</h1> 
         
-        <!-- 오른쪽 영역: 버튼과 상태창을 묶어서 우측 정렬 -->
-        <div style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+        <!-- ✨ 1-5. 새로 추가된 기상 정보 영역 (자동으로 타이틀과 오른쪽 버튼 사이 빈 공간을 밀어줌) ✨ -->
+        <div id="weather-info" style="display: flex; gap: 15px; background: #0f172a; padding: 10px 20px; border: 1px solid #1e293b; border-radius: 8px; font-size: 0.95rem; align-items: center; margin-left: auto;">
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
+                💨 풍속: <span id="w-speed" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
+                🧭 풍향: <span id="w-dir" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
+                ⛅ 기상: <span id="w-cond" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
+                👁️ 시정: <span id="w-vis" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
+                🚨 상태: <span id="w-status" style="color: #10b981; font-weight: bold; cursor: help;">대기중</span>
+            </div>
+        </div>
+
+        <!-- 오른쪽 영역: margin-left: auto 제거 (위의 weather-info가 밀어주기 때문) -->
+        <div style="display: flex; align-items: center; gap: 15px;">
             <!-- 2. 출동 소방차 화면 열기 버튼 --> 
             <button id="btn-open-car" onclick="launchCarApp()" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;"> 
                 🚒 출동 소방차 화면 열기 
@@ -462,6 +481,81 @@
             // 크롬 및 일부 브라우저에서 경고창을 띄우기 위해 returnValue 설정 필수
             // (과거와 달리 현대 브라우저는 커스텀 문구 지정을 무시하고 브라우저 기본 문구를 보여줍니다)
             event.returnValue = ''; 
+        });
+    </script>
+
+    <!-- 기상 정보 업데이트 스크립트 -->
+    <script>
+        // 1. 방위 변환 함수
+        function getDirectionText(degree) {
+            if (degree === null || degree === undefined) return '';
+            const directions = ['북', '북동', '동', '남동', '남', '남서', '서', '북서', '북'];
+            const index = Math.round((degree % 360) / 45);
+            return `(${directions[index]})`;
+        }
+
+        // 2. 날씨 코드(숫자)를 한글 상태 문구로 변환하는 함수
+        function getWeatherConditionText(weatherCode, ptyCode) {
+            // 기상청 비/눈 데이터 최우선 반영
+            if (ptyCode !== undefined && ptyCode !== null && ptyCode > 0) {
+                if (ptyCode === 1 || ptyCode === 5) return '비 🌧️';
+                if (ptyCode === 2 || ptyCode === 6) return '비/눈 🌨️';
+                if (ptyCode === 3 || ptyCode === 7) return '눈 ❄️';
+            }
+            
+            // Open-Meteo 코드 변환
+            if (weatherCode !== undefined && weatherCode !== null) {
+                if (weatherCode === 0) return '맑음 ☀️';
+                if (weatherCode === 1 || weatherCode === 2) return '구름조금 🌤️';
+                if (weatherCode === 3) return '흐림 ☁️';
+                if ([45, 48].includes(weatherCode)) return '안개 🌫️';
+                if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) return '비 🌧️';
+                if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return '눈 ❄️';
+                if ([95, 96, 99].includes(weatherCode)) return '뇌우 ⛈️';
+            }
+            return '--';
+        }
+
+        async function fetchWeatherData(lat = 37.5665, lon = 126.9780) { 
+            try {
+                const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+                if (!response.ok) throw new Error("서버 응답 오류");
+                const data = await response.json();
+
+                // UI 매핑
+                document.getElementById('w-speed').innerText = data.wind_speed !== null ? `${data.wind_speed} m/s` : '-- m/s';
+                document.getElementById('w-dir').innerText = data.wind_direction !== null 
+                    ? `${data.wind_direction}° ${getDirectionText(data.wind_direction)}` 
+                    : '-- °';
+                    
+                // 기상 상태 UI에 텍스트 적용
+                document.getElementById('w-cond').innerText = getWeatherConditionText(data.weather_code, data.precipitation_type);
+                
+                document.getElementById('w-vis').innerText = data.visibility_km !== undefined && data.visibility_km !== null 
+                    ? `${data.visibility_km} km` 
+                    : '-- km';
+
+                const statusEl = document.getElementById('w-status');
+                if (data.risk) {
+                    statusEl.innerText = data.risk.level;
+                    statusEl.title = data.risk.action;
+
+                    if (data.risk.level === 'HIGH') {
+                        statusEl.style.color = '#ef4444';
+                    } else if (data.risk.level === 'CAUTION') {
+                        statusEl.style.color = '#facc15';
+                    } else {
+                        statusEl.style.color = '#10b981';
+                    }
+                }
+            } catch (error) {
+                console.error("기상 정보를 가져오는데 실패했습니다:", error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchWeatherData();
+            setInterval(() => fetchWeatherData(), 600000); 
         });
     </script>
 </body>

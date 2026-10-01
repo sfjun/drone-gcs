@@ -110,6 +110,11 @@ document.addEventListener("DOMContentLoaded", function() {
             addLog(`📍 목표 지점 클릭 설정됨: ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
         }
 
+        // ✨ 여기에 추가 ✨ (클릭한 곳의 날씨 즉시 업데이트)
+        if (typeof window.fetchWeatherData === 'function') {
+            window.fetchWeatherData(lat, lon);
+        }
+
         if (dispatchOverlay) {
             dispatchOverlay.setMap(null);
         }
@@ -262,6 +267,11 @@ function searchAddress() {
             
             if (typeof addLog === "function") {
                 addLog(`📍 장소 검색으로 목표 지점 설정됨: ${query} (${data[0].place_name})`);
+            }
+
+            // ✨ 여기에 추가 ✨ (검색한 곳의 날씨 즉시 업데이트)
+            if (typeof window.fetchWeatherData === 'function') {
+                window.fetchWeatherData(lat, lon);
             }
             
         } else {

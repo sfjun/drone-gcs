@@ -60,22 +60,29 @@ class WeatherProvider(Protocol):
 
 
 class OpenMeteoProvider:
-    """API 키 없이 이용하는 좌표 기반 보조 관측 소스."""
     name = "Open-Meteo"
 
     async def fetch(self, client: httpx.AsyncClient, lat: float, lon: float, icao: str | None = None) -> dict[str, Any]:
         response = await client.get("https://api.open-meteo.com/v1/forecast", params={
             "latitude": lat, "longitude": lon,
-            "current": "temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+            # ✨ 수정: 끝에 ,visibility 추가
+            "current": "temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,visibility",
             "wind_speed_unit": "ms", "timezone": "auto",
         })
         response.raise_for_status()
         current = response.json()["current"]
+        
+        # ✨ 미터(m)를 킬로미터(km)로 변환
+        vis_m = current.get("visibility")
+        vis_km = round(vis_m / 1000, 1) if vis_m is not None else None
+
         return {"temperature": current.get("temperature_2m"), "humidity": current.get("relative_humidity_2m"),
                 "pressure": current.get("surface_pressure"), "wind_speed": current.get("wind_speed_10m"),
                 "wind_direction": current.get("wind_direction_10m"), "wind_gusts": current.get("wind_gusts_10m"),
+                "weather_code": current.get("weather_code"),
+                # ✨ 수정: visibility_km 반환 추가
+                "visibility_km": vis_km,
                 "observed_at": current.get("time"), "source": self.name}
-
 
 class KmaUltraShortProvider:
     """기상청 초단기실황 API. data.go.kr 서비스키가 있을 때만 호출한다."""
@@ -99,7 +106,10 @@ class KmaUltraShortProvider:
         items = {item["category"]: item["obsrValue"] for item in body["items"]["item"]}
         return {"temperature": _number(items.get("T1H")), "humidity": _number(items.get("REH")),
                 "wind_speed": _number(items.get("WSD")), "wind_direction": _number(items.get("VEC")),
-                "precipitation_mm": _number(items.get("RN1")), "observed_at": f"{base:%Y-%m-%d %H:00} KST",
+                "precipitation_mm": _number(items.get("RN1")), 
+                # ✨ 수정: 아래 한 줄 추가
+                "precipitation_type": _number(items.get("PTY")), 
+                "observed_at": f"{base:%Y-%m-%d %H:00} KST",
                 "source": self.name, "kma_grid": {"nx": nx, "ny": ny}}
 
 

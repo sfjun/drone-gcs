@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+from weather_manager import WeatherManager
 
 from drone_manager import DroneManager
 from video_manager import VideoManager
@@ -77,6 +78,11 @@ async def lifespan(app: FastAPI):
     shared_drone.stop()
     shared_video.stop()
 
+# ==========================================
+# [기상 관리] WeatherManager 단일 매니저
+# ==========================================
+# main.py
+weather_mgr = WeatherManager(kma_service_key="7d0fa779fe54dad96be36fa5ef4408a738ca9aad25554a116a19f3763d5e5348")
 # FastAPI 앱 초기화
 app = FastAPI(title="소방 관제 시스템 통합 서버", lifespan=lifespan)
 
@@ -137,6 +143,11 @@ async def get_car_index():
         return {"error": f"서브 화면 파일을 찾을 수 없습니다: {file_path}"}
     return FileResponse(file_path, headers={"Cache-Control": "no-cache"})
 
+@app.get("/api/weather")
+async def get_weather(lat: float = 37.5665, lon: float = 126.9780, icao: str = None):
+    """지정된 좌표를 바탕으로 WeatherManager를 통해 기상 데이터를 가져옵니다."""
+    data = await weather_mgr.get_current(lat, lon, icao=icao)
+    return data
 
 # ==========================================
 # [채팅 웹소켓] 공통 관리자
