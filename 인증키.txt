@@ -1,2 +1,44 @@
 디지틀트윈국토, 오픈API
 0DB2E2FF-05EE-499D-9621-86FC06F403D0
+
+0DB2E2FF-05EE-499D-9621-86FC06F403D0
+- 개요 : web gcs
+- 서비스대상 : 지도 서비스
+- 목적 : cesiumjs를 활용세 검색기능 강화를 위해
+- 추가 url: https://127.0.0.7:8000
+                https://127.0.0.17:8000
+
+<script type="text/javascript" src="https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=0DB2E2FF-05EE-499D-9621-86FC06F403D0"></script>
+
+
+
+https://map.vworld.kr/js/vworldMapInit.js.do?version=2.0&apiKey=[인증키]&domain=[인증받은도메인]
+
+
+사전 설치
+장기적인 프로젝트 관리를 위한 팁 (npm 환경 구축)
+나중에 프로젝트가 커져서 검색 기능 외에 주제별 항목(통계 레이어, 마커 클러스터, 데이터 시각화 라이브러리 등)을 계속 추가할 예정이시라면, CDN을 완전히 배제하고 npm을 이용한 로컬 빌드 환경(Vite 또는 Webpack)을 구축하시는 것이 향후 배포나 보안 측면에서 가장 안전하고 트렌디한 방법입니다.
+VSC 터미널에서 npm install ol 명령어로 지도 엔진을 프로젝트 내부에 설치해두고 개발하면, 외부 인터넷이 완전히 끊긴 오프라인 환경에서도 지도를 제외한 모든 코드가 에러 없이 완벽하게 동작합니다.
+만약 향후 확장성을 위해 npm과 Vite를 활용하여 외부 CDN 없이 완벽하게 구동되는 모던 웹 지도 개발 환경 구조를 세팅하는 방법이 궁금하시다면 언제든 말씀해 주세요!
+
+# 1. Vite를 이용해 새로운 프론트엔드 프로젝트 생성 (vworld-map 폴더가 만들어집니다)
+npm create vite@latest vworld-map -- --template vanilla
+
+# 2. 생성된 프로젝트 폴더로 이동
+cd vworld-map
+
+# 3. 지도 구현을 위한 OpenLayers 엔진 라이브러리 설치 (로컬에 저장되므로 CDN 불필요!)
+npm install ol
+
+# 4. 프로젝트 구동을 위한 기본 패키지 설치
+npm install
+
+
+
+
+
+
+
+
+
+

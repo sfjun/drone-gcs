@@ -1,0 +1,4 @@
+div.olLayerDiv { -webkit-user-select: none; -moz-user-select: none; }
+.olLayerGridTile { -webkit-transform: translateZ(0); -moz-transform: translateZ(0); -o-transform: translateZ(0); -ms-transform: translateZ(0); transform: translateZ(0); }
+.olControlAttribution { bottom: 1em; right: 1em; font-family: sans-serif; font-size: smaller; position: absolute; display: block; z-index: 1005; }
+.olControlNavigationHistory { display: none; }
