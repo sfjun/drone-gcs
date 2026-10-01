@@ -332,3 +332,10 @@ h3 {
 #map:has(.dispatch-popup:hover) .crosshair-y {
     display: none !important;
 }
+
+/* OpenLayers 기본 줌 컨트롤 우측 상단으로 이동 */
+.ol-zoom {
+    left: auto !important;
+    right: 10px !important;
+    top: 50px !important; /* 위성/일반 버튼 아래쪽에 겹치지 않게 배치 */
+}

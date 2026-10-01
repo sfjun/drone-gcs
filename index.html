@@ -293,75 +293,42 @@
 
             <div style="position:relative; display:flex; flex-direction:column; flex-grow:1;">
 
-                <div
+               <div
                     id="map"
                     style="width:100%; height:350px;"
                 ></div>
 
-                <div
-                    style="
-                        position:absolute;
-                        top:10px;
-                        left:10px;
-                        z-index:2;
-                        display:flex;
-                        align-items:center;
-                        width:260px;
-                        height:32px;
-                        background:rgba(30,41,59,0.7);
-                        backdrop-filter:blur(4px);
-                        border:1px solid rgba(255,255,255,0.3);
-                        border-radius:5px;
-                        overflow:hidden;
-                        box-shadow:0 2px 4px rgba(0,0,0,0.3);
-                    "
-                >
-                    <input
-                        type="text"
-                        id="address-input"
-                        placeholder="주소 입력 (예: 서울시청)"
-                        onkeydown="
-                            if(event.key === 'Enter') {
-                                searchAddress();
-                            }
-                        "
-                        style="
-                            flex-grow:1;
-                            height:100%;
-                            margin:0;
-                            padding:0 10px;
-                            border:none;
-                            background:transparent;
-                            color:white;
-                            outline:none;
-                            font-size:15px;
-                            font-family:inherit;
-                            box-sizing:border-box;
-                            line-height:32px;
-                        "
-                    >
+                <!-- ✨ 이 자리에 아래 코드를 붙여넣으세요 ✨ -->
+                <div id="search-container" style="position:absolute; top:10px; left:10px; z-index:999; display:flex; flex-direction:column; width:500px;">
+                    
+                    <div style="display:flex; align-items:center; width:100%; height:32px; background:rgba(30,41,59,0.7); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                        <input
+                            type="text"
+                            id="address-input"
+                            placeholder="주소 또는 장소 입력"
+                            spellcheck="false"
+                            autocomplete="off"
+                            readonly                                      
+                            onfocus="this.removeAttribute('readonly');"   
+                            oninput="handleAutoSearch()"
+                            onkeydown="if(event.key === 'Enter') { searchAddress(true); }"
+                            style="flex-grow:1; height:100%; margin:0; padding:0 10px; border:none; background:transparent; color:white; outline:none; font-size:15px; font-family:inherit; box-sizing:border-box; line-height:32px;"
+                        >
 
-                    <button
-                        onclick="searchAddress()"
-                        style="
-                            width:55px;
-                            height:100%;
-                            margin:0;
-                            padding:0;
-                            border:none;
-                            border-radius:0;
-                            background-color:#3b82f6;
-                            color:white;
-                            font-size:12px;
-                            font-weight:bold;
-                            cursor:pointer;
-                            flex-shrink:0;
-                            border-left:1px solid rgba(255,255,255,0.1);
-                        "
-                    >
-                        검색
-                    </button>
+                        <!-- 검색 버튼 (선택사항) -->
+                        <button
+                            onclick="searchAddress(true)" 
+                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0 4px 4px 0; background-color:#3b82f6; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
+                        >
+                            검색
+                        </button>
+                    </div>
+
+                    <!-- 드롭다운 결과창 (초기엔 숨김) -->
+                    <div id="search-results-dropdown" style="display:none; flex-direction:column; width:100%; margin-top:5px; background:rgba(15,23,42,0.95); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 4px 6px rgba(0,0,0,0.5); max-height:200px; overflow-y:auto;">
+                    </div>
                 </div>
+                <!-- ✨ 여기까지 ✨ -->
 
                 <div
                     style="
@@ -458,14 +425,36 @@
 
     </div>
 
-    <!-- 카카오맵 API -->
-    <script
-        type="text/javascript"
-        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d1cf4099d1b658b9d6d9c14e6b6cebbd&libraries=services"
-    ></script>
+    <!-- OpenLayers 최신 스타일시트 및 코어 라이브러리 (추가) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
 
     <!-- 맵 매니저 모듈 -->
     <script src="/static/js/map_manager.js"></script>
+    <!-- ✨ 드롭다운 자동완성(디바운스) 스크립트 ✨ -->
+    <script>
+        // let 대신 window. 을 붙여줍니다.
+        window.searchTimeout = null; 
+
+        window.handleAutoSearch = function() {
+            const query = document.getElementById('address-input').value;
+            const dropdown = document.getElementById('search-results-dropdown');
+
+            if (!query.trim()) {
+                if (dropdown) dropdown.style.display = 'none';
+                if (window.searchTimeout) clearTimeout(window.searchTimeout);
+                return;
+            }
+
+            if (window.searchTimeout) clearTimeout(window.searchTimeout);
+
+            window.searchTimeout = setTimeout(() => {
+                if (typeof window.searchAddress === 'function') {
+                    window.searchAddress();
+                }
+            }, 300);
+        };
+    </script>
 
     <!-- 기존 GCS 기능 -->
     <script src="/static/js/gcs_client.js"></script>
