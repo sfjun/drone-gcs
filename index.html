@@ -89,40 +89,43 @@
 </head>
 
 <body>
-    <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 20px;"> 
-        <!-- 1. 타이틀 -->
-        <h1 style="margin: 0; font-size: 1.8rem; white-space: nowrap; flex-shrink: 1;">소방 관제 센터</h1> 
-        
-        <!-- ✨ 1-5. 새로 추가된 기상 정보 영역 (자동으로 타이틀과 오른쪽 버튼 사이 빈 공간을 밀어줌) ✨ -->
-        <div id="weather-info" style="display: flex; gap: 15px; background: #0f172a; padding: 10px 20px; border: 1px solid #1e293b; border-radius: 8px; font-size: 0.95rem; align-items: center; margin-left: auto;">
-            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
-                💨 풍속: <span id="w-speed" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
-            </div>
-            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
-                🧭 풍향: <span id="w-dir" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
-            </div>
-            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
-                ⛅ 기상: <span id="w-cond" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
-            </div>
-            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
-                👁️ 시정: <span id="w-vis" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
-            </div>
-            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px;">
-                🚨 상태: <span id="w-status" style="color: #10b981; font-weight: bold; cursor: help;">대기중</span>
-            </div>
-        </div>
-
-        <!-- 오른쪽 영역: margin-left: auto 제거 (위의 weather-info가 밀어주기 때문) -->
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <!-- 2. 출동 소방차 화면 열기 버튼 --> 
-            <button id="btn-open-car" onclick="launchCarApp()" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;"> 
-                🚒 출동 소방차 화면 열기 
-            </button> 
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 20px; flex-wrap: wrap;"> 
+    
+        <!-- 1. 왼쪽 그룹 (타이틀 + 소방차 버튼 + 상태) -->
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <h1 style="margin: 0; font-size: 1.8rem; white-space: nowrap;">소방 관제 센터</h1> 
             
-            <!-- 3. 상태 표시 텍스트 --> 
+            <button id="btn-open-car" onclick="window.open('/car', '_blank', 'width=960,height=540')" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; z-index: 999; white-space: nowrap;"> 
+                🚒 출동 소방차 화면 열기 
+            </button>
+            
             <div id="status-label" style="font-size: 1.1rem; font-weight: bold; color: #f38ba8; white-space: nowrap; display: flex; align-items: center;">
                 상태: 연결 끊김 🔴
             </div> 
+        </div>
+
+        <!-- 2. 오른쪽 그룹 (기상 정보) -->
+        <div id="weather-info" style="display: flex; gap: 15px; background: #0f172a; padding: 10px 20px; border: 1px solid #1e293b; border-radius: 8px; font-size: 0.95rem; align-items: center;">
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px; text-align:center;">
+                <span>💨 풍속:</span> 
+                <span id="w-speed" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px; text-align:center;">
+                <span>🧭 풍향:</span> 
+                <span id="w-dir" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px; text-align:center;">
+                <span>⛅ 기상:</span> 
+                <span id="w-cond" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px; text-align:center;">
+                <span>👁️ 시정:</span> 
+                <span id="w-vis" style="color: #38bdf8; font-weight: bold; font-family: 'Consolas', monospace;">--</span>
+            </div>
+            <div style="color:#94a3b8; display:flex; align-items:center; gap:5px; text-align:center;">
+                <span>🚨 상태:</span> 
+                <span id="w-status" style="color: #10b981; font-weight: bold; cursor: help;">대기중</span>
+            </div>
         </div>
     </div>
 
@@ -194,37 +197,61 @@
 
             <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
 
-            <div style="display:flex; gap:10px;">
-                <button
-                    class="btn-green"
-                    onclick="sendCommand('ARM')"
-                >
-                    시동 (ARM)
-                </button>
+            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
 
-                <button
-                    class="btn-red"
-                    onclick="sendCommand('DISARM')"
-                >
-                    시동 끄기
-                </button>
+            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
+
+            <!-- 🎮 가상 조종기 (듀얼센스 패드 스타일 + 중앙 시스템 제어) -->
+            <div class="virtual-gamepad">
+                
+                <!-- 왼쪽 스틱 (Throttle & Yaw) -->
+                <div class="pad-container">
+                    <div class="pad-label">고도 / 회전</div>
+                    <div class="d-pad">
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_THROTTLE_UP')" title="상승">▲</button>
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_YAW_LEFT')" title="좌회전">◀</button>
+                        <div class="pad-center"></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_YAW_RIGHT')" title="우회전">▶</button>
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_THROTTLE_DOWN')" title="하강">▼</button>
+                        <div></div>
+                    </div>
+                </div>
+
+                <!-- 중앙 시스템 제어 버튼 (2x2 배열) -->
+                <div class="pad-center-controls">
+                    <div class="pad-label">시스템 제어</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%;">
+                        <button class="btn-green" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('ARM')">ARM</button>
+                        <button class="btn-red" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('DISARM')">DISARM</button>
+                        <button class="btn-orange" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('TAKEOFF')">이륙</button>
+                        <button class="btn-blue" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('LAND')">착륙</button>
+                    </div>
+                </div>
+
+                <!-- 오른쪽 스틱 (Pitch & Roll) -->
+                <div class="pad-container">
+                    <div class="pad-label">전후좌우 이동</div>
+                    <div class="d-pad">
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_PITCH_DOWN')" title="전진">▲</button>
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_ROLL_LEFT')" title="좌이동">◀</button>
+                        <div class="pad-center"></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_ROLL_RIGHT')" title="우이동">▶</button>
+                        <div></div>
+                        <button class="pad-btn" onclick="sendCommand('RC_PITCH_UP')" title="후진">▼</button>
+                        <div></div>
+                    </div>
+                </div>
+
             </div>
 
-            <div style="display:flex; gap:10px;">
-                <button
-                    class="btn-orange"
-                    onclick="sendCommand('TAKEOFF')"
-                >
-                    이륙
-                </button>
+            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
 
-                <button
-                    class="btn-red"
-                    onclick="sendCommand('LAND')"
-                >
-                    착륙
-                </button>
-            </div>
+            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
 
             <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
 

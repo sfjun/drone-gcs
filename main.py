@@ -108,34 +108,6 @@ async def get_main_index():
         return {"error": f"메인 화면 파일을 찾을 수 없습니다: {file_path}"}
     return FileResponse(file_path, headers={"Cache-Control": "no-cache"})
 
-@app.get("/open-car-app")
-async def open_car_app_endpoint():
-    def launch_chrome():
-        try:
-            user32 = ctypes.windll.user32
-            monitor_width = user32.GetSystemMetrics(0)
-            monitor_height = user32.GetSystemMetrics(1)
-
-            win_width = int(monitor_width * 0.5)
-            win_height = int(monitor_height * 0.5)
-            left_position = int((monitor_width - win_width) / 2)
-            top_position = int((monitor_height - win_height) / 2)
-
-            car_url = "http://127.0.0.1:8000/car"
-            
-            args = [
-                "C:/Program Files/Google/Chrome/Application/chrome.exe",
-                f"--app={car_url}",
-                f"--window-size={win_width},{win_height}",
-                f"--window-position={left_position},{top_position}"
-            ]
-            subprocess.Popen(args)
-        except Exception as e:
-            print(f"❌ 크롬 백그라운드 실행 실패: {e}")
-
-    threading.Thread(target=launch_chrome, daemon=True).start()
-    return {"status": "success", "message": "앱 실행 명령을 전달했습니다."}
-
 @app.get("/car")
 async def get_car_index():
     file_path = os.path.join(base_dir, "car_index.html")

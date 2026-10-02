@@ -339,3 +339,113 @@ h3 {
     right: 10px !important;
     top: 50px !important; /* 위성/일반 버튼 아래쪽에 겹치지 않게 배치 */
 }
+
+/* =========================================================================
+   반응형 헤더 & 기상 정보 (창 축소 시 기상정보 글자-위, 데이터-아래 배치)
+   ========================================================================= */
+@media (max-width: 1350px) {
+    #weather-info {
+        gap: 12px !important;
+        padding: 8px 15px !important;
+    }
+    #weather-info > div {
+        flex-direction: column;      /* 텍스트를 위로, 데이터를 아래로 */
+        justify-content: center;
+        gap: 3px !important;
+        font-size: 0.85rem;
+    }
+}
+
+/* =========================================================================
+   🎮 가상 조종기 (Gamepad / D-Pad) 스타일
+   ========================================================================= */
+.virtual-gamepad {
+    display: flex;
+    justify-content: center; /* 양끝으로 밀어내지 않고 중앙으로 모음 */
+    align-items: center;
+    gap: 6px;                /* 패드 사이의 간격 */
+    background: #060b0f;
+    padding: 10px 4px;       /* 좌우 여백을 최소화하여 공간 확보 */
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pad-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pad-label {
+    font-size: 10px; 
+    color: #94a3b8;
+    margin-bottom: 5px;
+    font-weight: bold;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+}
+
+.d-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 26px);
+    grid-template-rows: repeat(3, 26px);
+    gap: 2px;
+}
+
+/* 십자키 버튼 기본 스타일 */
+.pad-btn {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    margin: 0 !important; /* 기존 버튼 마진 덮어쓰기 */
+    padding: 0;
+    font-size: 13px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+}
+
+/* 버튼 마우스 오버 */
+.pad-btn:hover {
+    background: #27374d;
+    color: #38bdf8;
+    border-color: #38bdf8;
+}
+
+/* 버튼 눌렀을 때 (쫀득한 게임패드 효과) */
+.pad-btn:active {
+    background: #0ea5e9;
+    color: white;
+    border-color: #0284c7;
+    transform: scale(0.9) translateY(2px);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+}
+
+/* =========================================================================
+   가상 조종기 - 중앙 시스템 제어 버튼 레이아웃
+   ========================================================================= */
+.pad-center-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0;               /* 기존 margin 삭제 (gap으로 대체) */
+}
+
+/* 중앙 버튼 누를 때 눌리는 애니메이션 효과 */
+.pad-center-controls button {
+    transition: all 0.1s ease;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+}
+
+.pad-center-controls button:active {
+    transform: scale(0.92) translateY(2px);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+}

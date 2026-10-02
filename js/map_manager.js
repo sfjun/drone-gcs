@@ -6,7 +6,7 @@
 const VWORLD_KEYS = {
     //김태정
     "172.30.1.60": "146276DC-08A0-4AEB-8B6B-191171FECE2A", 
-    "192.168.0.7": "10A1AE7F-6846-4723-926A-0C5AC671EE54"  
+    "192.168.0.7": "10A1AE7F-6846-4723-926A-0C5AC671EE54",
 };
 
 // 2. 현재 접속한 호스트(IP)를 확인합니다.
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var lat = lonlat[1];
 
         // 뷰 이동
-        map.getView().animate({ center: e.coordinate, zoom: 16, duration: 500 });
+        map.getView().animate({ center: e.coordinate, zoom: 20, duration: 500 });
 
         // 마커 업데이트
         // ✨ 변경된 코드: 빨간색 핀 마커 생성 ✨

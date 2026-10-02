@@ -80,12 +80,32 @@ class DroneManager:
             return
 
         if command_name == "ARM":
+            # 1. 재시동을 위해 비행 모드를 다시 GUIDED(4)로 변경
+            self.master.mav.set_mode_send(
+                self.master.target_system,
+                mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+                4
+            )
+            time.sleep(0.5) # 모드 전환 대기
+            
+            # 2. 시동 명령 전송
             self.master.mav.command_long_send(self.master.target_system, self.master.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 1, 0, 0, 0, 0, 0, 0)
             self.callback("LOG", "명령 전송: 시동 (ARM)")
         elif command_name == "DISARM":
             self.master.mav.command_long_send(self.master.target_system, self.master.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 0, 0, 0, 0, 0, 0, 0)
             self.callback("LOG", "명령 전송: 시동 끄기 (DISARM)")
         elif command_name == "TAKEOFF":
+            # 1. 비행 모드를 GUIDED(4)로 변경
+            self.master.mav.set_mode_send(
+                self.master.target_system,
+                mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+                4
+            )
+            
+            # 2. 모드 전환이 적용될 때까지 잠시 대기
+            time.sleep(0.5)
+            
+            # 3. 이륙 명령 전송 (목표 고도 10m)
             self.master.mav.command_long_send(self.master.target_system, self.master.target_component, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 10)
             self.callback("LOG", "명령 전송: 이륙 (TAKEOFF 10m)")
         elif command_name == "LAND":
