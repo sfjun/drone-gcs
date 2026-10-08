@@ -129,6 +129,7 @@
         </div>
     </div>
 
+    <!-- 메인 컨텐츠 영역 시작 -->
     <div class="content">
 
         <!-- 왼쪽 패널 -->
@@ -141,14 +142,23 @@
                 <div style="margin-bottom: 8px;"> 
                     <span style="color:#94a3b8;">MODE:</span> <span id="status-mode" style="color: #38bdf8;">STANDBY</span>
                 </div>
-                <div style="margin-bottom: 8px;"> 
-                    <span style="color:#94a3b8;">ALT:</span> <span id="status-alt">0.0 m</span>
+                <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 4px;"> 
+                    <span style="color:#94a3b8; width: 40px;">ALT:</span> 
+                    <span id="status-alt-rel" style="color: #38bdf8; font-weight: bold;">0.0 m</span>
+                    <span style="font-size: 11px; color:#64748b; margin-right: 4px;">(상대)</span>
+                    <span style="color:#94a3b8;">/</span>
+                    <span id="status-alt-msl" style="color: #10b981; font-weight: bold; margin-left: 4px;">0.0 m</span>
+                    <span style="font-size: 11px; color:#64748b;">(해발)</span>
                 </div>
                 <div style="margin-bottom: 8px;"> 
                     <span style="color:#94a3b8;">GPS:</span> <span id="status-gps">대기 중...</span>
                 </div>
                 <div style="margin-bottom: 8px;"> 
                     <span style="color:#94a3b8;">BATTERY:</span> <span id="status-battery">100%</span>
+                </div>
+                <!-- 시스템 상태 항목 -->
+                <div style="margin-bottom: 8px;">
+                    <span style="color:#94a3b8;">SYS STATUS:</span> <span id="telemetry-sys-status" style="color: #FFC107; font-weight: bold;">CAUTION</span>
                 </div>
             </div>
 
@@ -161,7 +171,6 @@
                 
                 <div id="single-event-log" style="color: #94a3b8; font-size: 14px; display: -webkit-box; -line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: keep-all; line-height: 1.5; height: 63px;">
                     시스템 대기 중...
-
                 </div>
             </div>
 
@@ -172,11 +181,11 @@
             <input
                 type="text"
                 id="ip-input"
-                placeholder="예: udp:0.0.0.0:14550"
-                value="udp:0.0.0.0:14550"
+                placeholder="예: udpin:0.0.0.0:14550"
+                value="udpin:0.0.0.0:14550"
             >
 
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <button
                     id="btn-connect"
                     class="btn-blue"
@@ -195,67 +204,10 @@
                 </button>
             </div>
 
-            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
-
-            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
-
-            <hr style="border-color:#1e293b; width:100%; margin:15px 0;">
-
-            <!-- 🎮 가상 조종기 (듀얼센스 패드 스타일 + 중앙 시스템 제어) -->
-            <div class="virtual-gamepad">
-                
-                <!-- 왼쪽 스틱 (Throttle & Yaw) -->
-                <div class="pad-container">
-                    <div class="pad-label">고도 / 회전</div>
-                    <div class="d-pad">
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_THROTTLE_UP')" title="상승">▲</button>
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_YAW_LEFT')" title="좌회전">◀</button>
-                        <div class="pad-center"></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_YAW_RIGHT')" title="우회전">▶</button>
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_THROTTLE_DOWN')" title="하강">▼</button>
-                        <div></div>
-                    </div>
-                </div>
-
-                <!-- 중앙 시스템 제어 버튼 (2x2 배열) -->
-                <div class="pad-center-controls">
-                    <div class="pad-label">시스템 제어</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%;">
-                        <button class="btn-green" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('ARM')">ARM</button>
-                        <button class="btn-red" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('DISARM')">DISARM</button>
-                        <button class="btn-orange" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('TAKEOFF')">이륙</button>
-                        <button class="btn-blue" style="padding: 8px 2px; font-size: 11px; margin: 0; font-weight: bold; border-radius: 4px;" onclick="sendCommand('LAND')">착륙</button>
-                    </div>
-                </div>
-
-                <!-- 오른쪽 스틱 (Pitch & Roll) -->
-                <div class="pad-container">
-                    <div class="pad-label">전후좌우 이동</div>
-                    <div class="d-pad">
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_PITCH_DOWN')" title="전진">▲</button>
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_ROLL_LEFT')" title="좌이동">◀</button>
-                        <div class="pad-center"></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_ROLL_RIGHT')" title="우이동">▶</button>
-                        <div></div>
-                        <button class="pad-btn" onclick="sendCommand('RC_PITCH_UP')" title="후진">▼</button>
-                        <div></div>
-                    </div>
-                </div>
-
-            </div>
-
-            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
-
-            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
-
-            <hr style="border-color:#1e293b; width:100%; margin:10px 0;">
-
+            <!-- 하단 마무리 선 -->
+            <hr style="border-color:#1e293b; width:100%; margin: 15px 0;">
         </div>
+        <!-- 왼쪽 패널 끝 -->
 
         <!-- 중앙 패널 -->
         <div class="center panel">
@@ -266,30 +218,32 @@
                 <button class="tab-btn">AI OVERLAY</button>
             </div>
 
-            <div class="video-container">
-                <canvas id="video-canvas"></canvas>
-            </div>
-
-            <div style="display:flex; flex-direction:column; flex:1; min-height:180px;">
-    
-                <!-- 채팅창 영역 -->
-                <div id="view-chat" class="chat-container" style="display: flex; flex-direction: column; flex: 1; height: 100%;">
-        
-                    <!-- 채팅 로그 영역 -->
-                    <div id="chat-log-area" style="flex: 1; overflow-y: auto; padding: 10px; margin-bottom: 4px; border: 1px solid #1e293b; border-radius: 4px; background: #0b141a;">
-                    </div>
-                    
-                    <!-- 채팅 입력창 및 전송 버튼 -->
-                    <div class="chat-input-area" style="display: flex; gap: 5px; margin-bottom: 0;">
-                        <input type="text" id="chat-input" placeholder="관제 메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()" style="flex: 1; height: 34px; box-sizing: border-box; padding: 0 10px; margin: 0; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 4px; outline: none; font-size: 13px;">
-                        <button onclick="sendChat()" style="height: 34px; box-sizing: border-box; padding: 0 15px; margin: 0; background: #0284c7; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; line-height: 1;">전송</button>
-                    </div>
-                    
+            <!-- 비디오 영역 (높이 고정 및 고정 비율 유지) -->
+            <div class="video-container" style="position: relative; width: 100%; height: 260px; min-height: 260px; background: #0f172a; flex-shrink: 0;">
+                <canvas id="video-canvas" style="width: 100%; height: 100%;"></canvas>
+                
+                <!-- ✨ AI 오버레이 ✨ -->
+                <div id="hud-alert" class="ai-video-overlay">
+                    ⚠️ <span id="hud-alert-text">여기에 메시지가 뜹니다</span>
                 </div>
-
             </div>
 
-        </div>
+            <!-- 채팅창 영역 (남은 공간을 채우고 스크롤이 내부에서만 돌도록 설정) -->
+            <div id="view-chat" class="chat-container" style="display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 10px;">
+                
+                <!-- 채팅 로그 영역 (내부 스크롤 활성화) -->
+                <div id="chat-log-area" style="flex: 1; overflow-y: auto; padding: 10px; margin-bottom: 4px; border: 1px solid #1e293b; border-radius: 4px; background: #0b141a; min-height: 0;">
+                </div>
+                
+                <!-- 채팅 입력창 및 전송 버튼 -->
+                <div class="chat-input-area" style="display: flex; gap: 5px; margin-bottom: 0; flex-shrink: 0;">
+                    <input type="text" id="chat-input" placeholder="관제 메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()" style="flex: 1; height: 34px; box-sizing: border-box; padding: 0 10px; margin: 0; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 4px; outline: none; font-size: 13px;">
+                    <button onclick="sendChat()" style="height: 34px; box-sizing: border-box; padding: 0 15px; margin: 0; background: #0284c7; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; line-height: 1;">전송</button>
+                </div>
+                
+            </div>
+
+        </div> <!-- 중앙 패널 끝 -->
 
         <!-- 오른쪽 패널 -->
         <div class="panel right">
@@ -300,32 +254,78 @@
                 </h3>
 
                 <div style="display:flex; gap:5px;">
-                    <button
-                        id="btn-map-osm"
-                        class="btn-blue"
-                        style="margin:0; padding:5px 12px; font-size:9pt;"
-                    >
-                        일반
-                    </button>
-
-                    <button
-                        id="btn-map-sat"
-                        class="btn-gray"
-                        style="margin:0; padding:5px 12px; font-size:9pt;"
-                    >
-                        위성
-                    </button>
+                    <button id="btn-map-osm" class="btn-blue" style="margin:0; padding:5px 12px; font-size:9pt;">일반</button>
+                    <button id="btn-map-sat" class="btn-gray" style="margin:0; padding:5px 12px; font-size:9pt;">위성</button>
                 </div>
             </div>
 
             <div style="position:relative; display:flex; flex-direction:column; flex-grow:1;">
 
-               <div
-                    id="map"
-                    style="width:100%; height:350px;"
-                ></div>
+               <div id="map" style="width:100%; height:350px;"></div>
 
-                <!-- ✨ 이 자리에 아래 코드를 붙여넣으세요 ✨ -->
+                <!-- 🎮 가상 조종기 (드래그, 접기 지원) -->
+                <div class="virtual-gamepad" id="virtual-gamepad">
+                    
+                    <!-- 상단 드래그 헤더 및 제어 버튼 -->
+                    <div class="gamepad-header" id="gamepad-header">
+                        <span style="font-size: 11px; font-weight: bold; color: #cbd5e1; pointer-events: none;">🎮 드론 조종패드</span>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="gamepad-btn" onclick="resetGamepadPosition()" title="초기 위치로 복귀">↺</button>
+                            <button class="gamepad-btn" id="btn-toggle-gamepad" onclick="toggleGamepad()" title="숨기기/펼치기">－</button>
+                        </div>
+                    </div>
+
+                    <!-- 기존 컨트롤 영역 (숨김 대상) -->
+                    <div class="gamepad-body" id="gamepad-body">
+                        <!-- 왼쪽 스틱 -->
+                        <div class="pad-container">
+                            <div class="pad-label">고도 / 회전</div>
+                            <div class="d-pad">
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="상승">▲</button>
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_YAW_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌회전">◀</button>
+                                <div class="pad-center"></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_YAW_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우회전">▶</button>
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="하강">▼</button>
+                                <div></div>
+                            </div>
+                        </div>
+
+                        <!-- 중앙 시스템 제어 버튼 -->
+                        <div class="pad-center-controls">
+                            <div class="pad-label">시스템 제어</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;">
+                                <button class="btn-green" onclick="sendCommand('ARM')">ARM</button>
+                                <button class="btn-red" onclick="sendCommand('DISARM')">DISARM</button>
+                                <button class="btn-orange" onclick="sendCommand('TAKEOFF')">이륙</button>
+                                <button class="btn-blue" onclick="sendCommand('LAND')">착륙</button>
+                                <button style="background: #64748b; color: white; border: none;" onclick="sendCommand('BRAKE')">정지</button>
+                                <button style="background: #8b5cf6; color: white; border: none;" onclick="sendCommand('RTH')">RTH</button>
+                            </div>
+                        </div>
+
+                        <!-- 오른쪽 스틱 -->
+                        <div class="pad-container">
+                            <div class="pad-label">전후좌우 이동</div>
+                            <div class="d-pad">
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_PITCH_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="전진">▲</button>
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_ROLL_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌이동">◀</button>
+                                <div class="pad-center"></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_ROLL_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우이동">▶</button>
+                                <div></div>
+                                <button class="pad-btn" onmousedown="startJog('RC_PITCH_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="후진">▼</button>
+                                <div></div>
+                            </div>
+                        </div>
+                    </div> <!-- // gamepad-body -->
+                </div>
+                <!-- 🎮 조종패드 끝 -->
+
+                <!-- 🔍 지도 검색 컨테이너 -->
                 <div id="search-container" style="position:absolute; top:10px; left:10px; z-index:999; display:flex; flex-direction:column; width:500px;">
                     
                     <div style="display:flex; align-items:center; width:100%; height:32px; background:rgba(30,41,59,0.7); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
@@ -342,12 +342,21 @@
                             style="flex-grow:1; height:100%; margin:0; padding:0 10px; border:none; background:transparent; color:white; outline:none; font-size:15px; font-family:inherit; box-sizing:border-box; line-height:32px;"
                         >
 
-                        <!-- 검색 버튼 (선택사항) -->
+                        <!-- 검색 버튼 -->
                         <button
                             onclick="searchAddress(true)" 
-                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0 4px 4px 0; background-color:#3b82f6; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
+                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0; background-color:#3b82f6; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
                         >
                             검색
+                        </button>
+
+                        <!-- 드론 위치 복귀 버튼 -->
+                        <button
+                            onclick="if(typeof map !== 'undefined' && typeof droneFeature !== 'undefined') map.getView().animate({ center: droneFeature.getGeometry().getCoordinates(), zoom: 19, duration: 800 });" 
+                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0 4px 4px 0; background-color:#10b981; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
+                            title="현재 드론 위치로 이동"
+                        >
+                            드론
                         </button>
                     </div>
 
@@ -355,8 +364,8 @@
                     <div id="search-results-dropdown" style="display:none; flex-direction:column; width:100%; margin-top:5px; background:rgba(15,23,42,0.95); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 4px 6px rgba(0,0,0,0.5); max-height:200px; overflow-y:auto;">
                     </div>
                 </div>
-                <!-- ✨ 여기까지 ✨ -->
 
+                <!-- 📍 좌표 상태창 (하단) -->
                 <div
                     style="
                         position:absolute;
@@ -376,17 +385,7 @@
                 >
 
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span
-                            style="
-                                color:#94a3b8;
-                                font-size:11px;
-                                font-weight:bold;
-                                width:28px;
-                            "
-                        >
-                            CUR
-                        </span>
-
+                        <span style="color:#94a3b8; font-size:11px; font-weight:bold; width:28px;">CUR</span>
                         <span
                             id="live-coordinates"
                             style="
@@ -403,26 +402,10 @@
                         </span>
                     </div>
 
-                    <div
-                        style="
-                            width:100%;
-                            height:1px;
-                            background:rgba(255,255,255,0.1);
-                        "
-                    ></div>
+                    <div style="width:100%; height:1px; background:rgba(255,255,255,0.1);"></div>
 
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span
-                            style="
-                                color:#94a3b8;
-                                font-size:11px;
-                                font-weight:bold;
-                                width:28px;
-                            "
-                        >
-                            TGT
-                        </span>
-
+                        <span style="color:#94a3b8; font-size:11px; font-weight:bold; width:28px;">TGT</span>
                         <input
                             type="text"
                             id="target-coords"
@@ -449,18 +432,24 @@
             </div>
 
         </div>
+        <!-- 오른쪽 패널 끝 -->
 
     </div>
+    <!-- 메인 컨텐츠 영역 끝 -->
 
-    <!-- OpenLayers 최신 스타일시트 및 코어 라이브러리 (추가) -->
+    <!-- ========================================== -->
+    <!-- ⬇️ 스크립트 로드 및 모듈 초기화 영역 ⬇️ -->
+    <!-- ========================================== -->
+
+    <!-- OpenLayers 최신 스타일시트 및 코어 라이브러리 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
 
     <!-- 맵 매니저 모듈 -->
-    <script src="/static/js/map_manager.js"></script>
-    <!-- ✨ 드롭다운 자동완성(디바운스) 스크립트 ✨ -->
+    <script src="/static/js/map_manager.js?v=2"></script>
+
+    <!-- ✨ 드롭다운 자동완성(디바운스) 스크립트 -->
     <script>
-        // let 대신 window. 을 붙여줍니다.
         window.searchTimeout = null; 
 
         window.handleAutoSearch = function() {
@@ -483,19 +472,18 @@
         };
     </script>
 
-    <!-- 기존 GCS 기능 -->
+    <!-- 기존 GCS 웹소켓 통신 기능 -->
     <script src="/static/js/gcs_client.js"></script>
 
     <!-- 채팅 기능 모듈 -->
     <script src="/static/js/chat_manager.js"></script>
+
+    <!-- 페이지 이탈 경고 -->
     <script>
-        // 페이지를 떠나려고 할 때 발생하는 이벤트 감지
         window.addEventListener('beforeunload', function (event) {
             // 표준 명세에 따른 설정 (크롬, 파이어폭스 등에서 필수)
             event.preventDefault();
-            
-            // 크롬 및 일부 브라우저에서 경고창을 띄우기 위해 returnValue 설정 필수
-            // (과거와 달리 현대 브라우저는 커스텀 문구 지정을 무시하고 브라우저 기본 문구를 보여줍니다)
+            // 브라우저 기본 경고창 활성화
             event.returnValue = ''; 
         });
     </script>
@@ -544,7 +532,6 @@
                     ? `${data.wind_direction}° ${getDirectionText(data.wind_direction)}` 
                     : '-- °';
                     
-                // 기상 상태 UI에 텍스트 적용
                 document.getElementById('w-cond').innerText = getWeatherConditionText(data.weather_code, data.precipitation_type);
                 
                 document.getElementById('w-vis').innerText = data.visibility_km !== undefined && data.visibility_km !== null 
@@ -573,6 +560,109 @@
             fetchWeatherData();
             setInterval(() => fetchWeatherData(), 600000); 
         });
+    </script>
+
+    <!-- 스틱 조작(Jog) 명령 전송 스크립트 -->
+    <script>
+        let jogInterval = null;
+
+        // 마우스를 누르면 0.2초 간격으로 이동 명령 지속 전송
+        function startJog(cmd) {
+            if (jogInterval) clearInterval(jogInterval);
+            sendCommand(cmd); // 즉시 1회 전송
+            jogInterval = setInterval(() => {
+                sendCommand(cmd);
+            }, 200);
+        }
+
+        // 마우스를 떼거나 영역을 벗어나면 정지 명령(RC_STOP) 전송
+        function stopJog() {
+            if (jogInterval) {
+                clearInterval(jogInterval);
+                jogInterval = null;
+                sendCommand('RC_STOP');
+            }
+        }
+    </script>
+
+    <!-- 조종패드 자유 드래그 및 토글 기능 스크립트 -->
+    <script>
+        const gamepad = document.getElementById('virtual-gamepad');
+        const header = document.getElementById('gamepad-header');
+        const body = document.getElementById('gamepad-body');
+        const toggleBtn = document.getElementById('btn-toggle-gamepad');
+
+        let isDragging = false;
+        let currentX, currentY, initialMouseX, initialMouseY;
+
+        // 1. 드래그 시작 (헤더를 마우스로 눌렀을 때)
+        header.addEventListener('mousedown', (e) => {
+            if(e.target.tagName.toLowerCase() === 'button') return; // 버튼 클릭은 무시
+            
+            isDragging = true;
+            
+            // 핵심: 지도 영역에 갇히지 않도록 position을 fixed로 강제 변환
+            const rect = gamepad.getBoundingClientRect();
+            gamepad.style.position = 'fixed';
+            gamepad.style.left = rect.left + 'px';
+            gamepad.style.top = rect.top + 'px';
+            gamepad.style.bottom = 'auto'; // 하단 고정 해제
+            gamepad.style.right = 'auto';
+
+            initialMouseX = e.clientX;
+            initialMouseY = e.clientY;
+            currentX = rect.left;
+            currentY = rect.top;
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // 2. 드래그 중
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            e.preventDefault(); // 텍스트 선택 등 방해 동작 방지
+            
+            const dx = e.clientX - initialMouseX;
+            const dy = e.clientY - initialMouseY;
+            gamepad.style.left = (currentX + dx) + 'px';
+            gamepad.style.top = (currentY + dy) + 'px';
+        }
+
+        // 3. 드래그 종료
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        // 4. 숨기기/펼치기 토글 기능
+        window.toggleGamepad = function() {
+            if (body.style.display === 'none') {
+                body.style.display = 'flex';
+                toggleBtn.innerText = '－';
+                header.style.borderRadius = '8px 8px 0 0'; // 모서리 둥글기 원상복구
+            } else {
+                body.style.display = 'none';
+                toggleBtn.innerText = '＋';
+                header.style.borderRadius = '8px'; // 닫혔을 때 전체 둥글게
+            }
+        };
+
+        // 5. 초기 위치로 복귀 기능 (↺ 버튼)
+        window.resetGamepadPosition = function() {
+            // 인라인으로 부여된 fixed 및 위치 스타일을 모두 제거하고 원래 CSS 속성으로 되돌림
+            gamepad.style.position = '';
+            gamepad.style.left = '';
+            gamepad.style.top = '';
+            gamepad.style.bottom = '';
+            gamepad.style.right = '';
+            
+            // 만약 닫혀있었다면 자동으로 열어줌
+            body.style.display = 'flex';
+            toggleBtn.innerText = '－';
+            header.style.borderRadius = '8px 8px 0 0';
+        };
     </script>
 </body>
 </html>

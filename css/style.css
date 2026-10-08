@@ -47,13 +47,14 @@ body {
     min-height: 0;         /* 💡 내부 캔버스 때문에 패널이 무한히 늘어나는 현상 차단 */
 }
 
-/* [좌측 드론 패널] - 화면이 작아지면 위아래 구조로 떨어짐 */
+/* [좌측 드론 패널] - 조종기가 찌그러지지 않게 넉넉한 너비 확보 */
 .left { 
-    flex-basis: 280px;  
-    min-width: 250px;   
+    flex-basis: 340px;     /* 기본 너비를 늘려줌 */
+    min-width: 340px;      /* 창이 좁아져도 조종기가 찌그러지지 않는 최소 방어선 */
+    max-width: 380px;      /* 화면이 태평양처럼 넓어져도 혼자 다 차지하지 않게 막음 */
     height: 100%;
-    min-height: 400px;     /* 줄바꿈 시 유지할 최소 높이 */
-} 
+    min-height: 400px;     
+}
 
 /* [중앙 영상 패널] */
 .center { 
@@ -357,53 +358,105 @@ h3 {
 }
 
 /* =========================================================================
-   🎮 가상 조종기 (Gamepad / D-Pad) 스타일
+   🎮 가상 조종기 (드래그, 접기, 그리드 정돈 완벽 통합본)
    ========================================================================= */
+
+/* 1. 조종기 전체 컨테이너 */
 .virtual-gamepad {
-    display: flex;
-    justify-content: center; /* 양끝으로 밀어내지 않고 중앙으로 모음 */
-    align-items: center;
-    gap: 6px;                /* 패드 사이의 간격 */
-    background: #060b0f;
-    padding: 10px 4px;       /* 좌우 여백을 최소화하여 공간 확보 */
+    position: absolute;
+    bottom: 15px;
+    left: 10px;
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.85); 
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     border-radius: 8px;
-    border: 1px solid #1e293b;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0; /* 패딩을 없애고 헤더/바디로 나눔 */
+    width: auto; 
+    margin: 0;
     box-sizing: border-box;
 }
 
+/* 2. 드래그용 상단 헤더 */
+.gamepad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 8px 12px;
+    border-radius: 8px 8px 0 0;
+    cursor: grab;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    user-select: none; /* 드래그 시 글자 선택 방지 */
+}
+.gamepad-header:active { cursor: grabbing; }
+
+/* 3. 헤더 조작 버튼 (복귀, 숨기기) - 크기 및 클릭 영역 확대 */
+.gamepad-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 18px;         /* 글자 크기: 14px -> 18px 확대 */
+    cursor: pointer;
+    padding: 6px 10px;       /* 마우스로 클릭하기 쉽도록 여백(클릭 판정 영역) 확대 */
+    margin: 0;
+    line-height: 1;
+    font-weight: bold;
+    transition: 0.2s;
+    width: auto;
+    border-radius: 4px;      /* 마우스 오버 시 예쁘게 보이도록 모서리 둥글기 추가 */
+}
+.gamepad-btn:hover { 
+    color: #38bdf8; 
+    background: rgba(255, 255, 255, 0.1); /* 마우스 올렸을 때 버튼 영역이 눈에 보이게 강조 */
+}
+
+/* 4. 기존 조종기 요소들을 담는 바디 영역 */
+.gamepad-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 15px;
+}
+
+/* 5. 각 영역(스틱/버튼)을 감싸는 컨테이너 */
 .pad-container {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
+/* 6. 라벨 텍스트 */
 .pad-label {
-    font-size: 10px; 
+    font-size: 11px;
     color: #94a3b8;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     font-weight: bold;
-    letter-spacing: -0.5px;
     white-space: nowrap;
+    text-align: center;
 }
 
+/* ✨ 7. 십자키 버튼 3x3 그리드 배열 (모양 깨짐 해결) ✨ */
 .d-pad {
     display: grid;
-    grid-template-columns: repeat(3, 26px);
-    grid-template-rows: repeat(3, 26px);
-    gap: 2px;
+    grid-template-columns: repeat(3, 24px); 
+    grid-template-rows: repeat(3, 24px);
+    gap: 3px;
 }
 
-/* 십자키 버튼 기본 스타일 */
+/* 8. 십자키 화살표 버튼 디자인 */
 .pad-btn {
     background: #1e293b;
     color: #cbd5e1;
     border: 1px solid #334155;
     border-radius: 6px;
-    margin: 0 !important; /* 기존 버튼 마진 덮어쓰기 */
+    margin: 0 !important;
     padding: 0;
-    font-size: 13px;
+    font-size: 11px; /* 화살표 크기 */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -412,14 +465,12 @@ h3 {
     box-shadow: 0 3px 5px rgba(0,0,0,0.3);
 }
 
-/* 버튼 마우스 오버 */
 .pad-btn:hover {
     background: #27374d;
     color: #38bdf8;
     border-color: #38bdf8;
 }
 
-/* 버튼 눌렀을 때 (쫀득한 게임패드 효과) */
 .pad-btn:active {
     background: #0ea5e9;
     color: white;
@@ -428,19 +479,57 @@ h3 {
     box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
 }
 
-/* =========================================================================
-   가상 조종기 - 중앙 시스템 제어 버튼 레이아웃
-   ========================================================================= */
+/* 9. 십자키 중앙 장식 */
+.pad-center {
+    background: radial-gradient(circle, #475569 20%, #1e293b 80%);
+    border-radius: 50%;
+    margin: 3px;
+    border: 1px solid #0f172a;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* 10. 중앙 시스템 제어 영역 고정폭 */
 .pad-center-controls {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 0;               /* 기존 margin 삭제 (gap으로 대체) */
+    width: 84px; 
+    flex-shrink: 0;
 }
 
-/* 중앙 버튼 누를 때 눌리는 애니메이션 효과 */
+/* 11. 중앙 시스템 제어 버튼 세부 정돈 */
 .pad-center-controls button {
+    padding: 7px 0 !important;
+    font-size: 10px !important;
+    margin: 0 !important;
+    width: 100%;
+    border-radius: 4px !important;
+    transition: all 0.1s ease;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+}
+.pad-center-controls button:active {
+    transform: scale(0.92) translateY(2px);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+}
+
+/* 5. 중앙 시스템 제어 영역 고정폭 할당 (양쪽 십자키를 밀어내지 않게 함) */
+.pad-center-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 84px; /* 무한정 늘어나지 않도록 너비 고정 */
+    flex-shrink: 0;
+}
+
+/* 6. 중앙 버튼들 강제 정돈 (HTML 인라인 스타일 무시하고 예쁘게 맞춤) */
+.pad-center-controls button {
+    padding: 7px 0 !important;
+    font-size: 10px !important;
+    margin: 0 !important;
+    width: 100%;
+    border-radius: 4px !important;
     transition: all 0.1s ease;
     box-shadow: 0 3px 5px rgba(0,0,0,0.3);
 }
@@ -448,4 +537,66 @@ h3 {
 .pad-center-controls button:active {
     transform: scale(0.92) translateY(2px);
     box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+}
+
+/* =========================================================================
+   ✨ AI 영상 경고 오버레이 (HUD) - 하단 배치 및 폰트 축소 버전
+   ========================================================================= */
+.ai-video-overlay {
+    position: absolute;
+    bottom: 20px;          /* 기존 top에서 bottom으로 변경하여 하단에 배치 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.85); /* 관제창 UI와 어울리는 어두운 반투명 배경 */
+    color: #f87171;        /* 눈이 편안한 부드러운 경고 레드 컬러 */
+    padding: 6px 16px;     /* 패딩을 줄여서 자막스럽게 슬림하게 조정 */
+    border-radius: 4px;    
+    font-size: 13px;       /* 채팅창 글씨 크기(약 13px)와 동일하게 축소 */
+    font-weight: bold;
+    z-index: 1000;         
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    pointer-events: none;  
+    white-space: nowrap;   /* 글씨가 찌그러지지 않고 한 줄로 예쁘게 출력되도록 설정 */
+    
+    /* 부드럽게 나타나고 사라지는 효과 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s;
+}
+
+/* 알림이 활성화되었을 때의 상태 */
+.ai-video-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ==========================================
+   ✨ AI 탐지 객체 말풍선 라벨 스타일
+   ========================================== */
+.ai-person-tag {
+    position: absolute;
+    background: rgba(239, 68, 68, 0.9); /* 눈에 띄는 붉은색 반투명 배경 */
+    color: white;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    transform: translate(-50%, -100%); /* 박스 바로 윗쪽에 위치하도록 조정 */
+    z-index: 50;
+    transition: all 0.1s ease-out; /* 부드럽게 따라오도록 설정 */
+}
+
+/* ==========================================
+   웨이포인트 완료 버튼 위 십자선 숨김 및 커서 수정
+   ========================================== */
+#map:has(#waypoint-btn-container:hover) .crosshair-x,
+#map:has(#waypoint-btn-container:hover) .crosshair-y {
+    display: none !important;
+}
+
+#waypoint-btn-container button {
+    cursor: pointer !important;
 }

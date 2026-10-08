@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
 venv/
+logs/
+*.BIN
+terrain/
+*.parm
+*.tlog
+*.raw
+*.sdp
