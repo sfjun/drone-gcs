@@ -1,28 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <!-- 1. Cesium 스타일시트 로드 -->
-    <link rel="stylesheet" href="/cesium/Widgets/widgets.css">
-
-    <!-- 2. CesiumJS static 파일들의 Base URL 지정 -->
-    <script>
-        window.CESIUM_BASE_URL = '/cesium/';
-    </script>
-
-    <!-- 3. Cesium 라이브러리 로드 -->
-    <script src="/cesium/Cesium.js"></script>
+    <title>Hybrid Web GCS - Vworld Online Master</title>
+    
+    <!-- 오프라인 엔진 통제 및 난독화 탈출을 위한 로컬 세슘 파일 로드 -->
+    <script src="./Build/Cesium/Cesium.js"></script>
+    <link href="./Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    
+    <style>
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
+        #cesiumContainer { width: calc(100% - 320px); height: 100%; float: left; }
+        
+        /* 🚀 프로페셔널 GCS 컨트롤러 대시보드 사이드바 디자인 */
+        .gcs-sidebar {
+            width: 320px; height: 100%; float: right; background: #2c3e50; color: #ecf0f1;
+            box-sizing: border-box; padding: 20px; display: flex; flex-direction: column;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.3); z-index: 99; position: relative;
+        }
+        .gcs-sidebar h3 { margin-top: 0; border-bottom: 2px solid #34495e; padding-bottom: 10px; color: #3498db; }
+        .hud-box { background: #34495e; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 5px solid #2ecc71; }
+        .hud-box span { display: block; font-size: 11px; color: #bdc3c7; text-transform: uppercase; }
+        .hud-box strong { font-size: 20px; color: #2ecc71; font-family: monospace; }
+        
+        .btn-mode-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .btn-mode { padding: 12px; font-weight: bold; cursor: pointer; border-radius: 5px; border: 1px solid #34495e; background: #34495e; color: #fff; transition: 0.2s; }
+        .btn-mode.active { background: #3498db; border-color: #3498db; box-shadow: 0 0 10px rgba(52,152,219,0.5); }
+        
+        .io-zone { background: #1a252f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; }
+        .io-zone label { font-weight: bold; display: block; margin-bottom: 5px; color: #95a5a6; }
+        
+        .wp-list-title { font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #abc; display: block; }
+        .wp-container { flex: 1; overflow-y: auto; background: #1a252f; border-radius: 6px; padding: 8px; margin-bottom: 15px; border: 1px solid #34495e; }
+        .wp-item { background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #3498db; font-size: 12px; }
+        .wp-item input[type="number"] { width: 55px; background: #1a252f; border: 1px solid #34495e; color: #2ecc71; text-align: center; border-radius: 3px; font-weight: bold; }
+        .btn-del { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        
+        .btn-send { background: #9b59b6; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; width: 100%; }
+    </style>
 </head>
 <body>
-    
-</body>   
-    <!-- 지구가 그려질 영역 -->
-    <div id="cesiumContainer" style="width: 100%; height: 100vh;"></div>
 
-    <script>
-        // 4. 3D 지구 생성
-        const viewer = new Cesium.Viewer('cesiumContainer');
-    </script>
+    <!-- 좌측 메인 3D 지도 영역 -->
+    <div id="cesiumContainer"></div>
+
+    <!-- 우측 임무 관제 탑 HUD 사이드바 패널 -->
+    <div class="gcs-sidebar">
+        <h3>GCS Control Box</h3>
+        
+        <!-- 실시간 줌 고도 추적 인디케이터 -->
+        <div class="hud-box">
+            <span>Adaptive Alt (줌 기준 고도)</span>
+            <strong><span id="lbl_zoom_alt">150</span> m</strong>
+        </div>
+
+        <!-- 하이브리드 모드 체인저 토글 버튼 -->
+        <div class="btn-mode-group">
+            <button id="btn_2d" class="btn-mode active" onclick="switchGcsMode('2D')">1. 2D 설계</button>
+            <button id="btn_3d" class="btn-mode" onclick="switchGcsMode('3D')">2. 3D 편집</button>
+        </div>
+
+        <!-- 외부 JSON 파일 복원 인터페이스 -->
+        <div class="io-zone">
+            <label>📂 Mission JSON 파일 로드</label>
+            <input type="file" id="file_import" accept=".json" onchange="importMissionJSON(event)" style="color:#bdc3c7; width:100%; font-size:11px;">
+        </div>
+
+        <!-- 실시간 노드 리스트 (수정/삭제) -->
+        <span class="wp-list-title">📋 비행 노드 리스트 (실시간 편집)</span>
+        <div id="wp_list_container" class="wp-container">
+            <span style="color:#7f8c8d; display:block; text-align:center; padding-top:40px; font-size:12px;">지도를 클릭하거나<br>JSON 파일을 불러오세요.</span>
+        </div>
+
+        <!-- 파일 내보내기 다운로드 단추 -->
+        <button class="btn-send" onclick="exportMissionJSON()">💾 임무 경로 JSON 다운로드</button>
+    </div>
+
+    <!-- 비즈니스 로직 스크립트 분리 연결 -->
+    <script src="./js/main.js"></script>
+    <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1></script>
+</body>
 </html>

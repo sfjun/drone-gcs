@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>VWorld WebGL 3D API 3.0 Sample</title>
+        <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script>
+        
+        <style type="text/css">
+            table{
+                border-collapse: separate;
+                border-spacing: 0;
+                text-align: left;
+                line-height: 1.5;
+                border-top: 1px solid #ccc;
+                border-left: 1px solid #ccc;
+                margin: 20px 10px;
+            }
+            table th{
+                width: 150px;
+                padding: 10px;
+                font-weight: bold;
+                vertical-align: top;
+                border-right: 1px solid #ccc;
+                border-bottom: 1px solid #ccc;
+                border-top: 1px solid #fff;
+                border-left: 1px solid #fff;
+                background: #eee;
+            }
+            table td{
+                padding: 10px;
+                vertical-align: top;
+                border-right: 1px solid #ccc;
+                border-bottom: 1px solid #ccc;
+            }
+
+            /* =============================================================
+            [index.html에서 가져온 GCS 관제 창 전용 STYLE 정보]
+            ============================================================= */
+            .gcs-sidebar {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                z-index: 99;
+                width: 320px;
+                max-height: calc(100% - 40px);
+                background: rgba(44, 62, 80, 0.95);
+                color: #ecf0f1;
+                box-sizing: border-box;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                font-family: sans-serif;
+                overflow-y: auto;
+                }
+                .gcs-sidebar h3 { margin-top: 0; border-bottom: 2px solid #34495e; padding-bottom: 10px; color: #3498db; font-size: 20px; }
+                .section-title { font-weight: bold; font-size: 12px; margin-top: 5px; margin-bottom: 6px; color: #abc; display: block; text-transform: uppercase; }
+
+                .hud-box { background: #34495e; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 5px solid #2ecc71; }
+                .hud-box span { display: block; font-size: 11px; color: #bdc3c7; text-transform: uppercase; }
+                .hud-box strong { font-size: 20px; color: #2ecc71; font-family: monospace; }
+
+                .btn-mode-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+                .btn-mode { padding: 12px; font-weight: bold; cursor: pointer; border-radius: 5px; border: 1px solid #34495e; background: #34495e; color: #fff; font-size: 12px; transition: 0.2s; }
+                .btn-mode.active { background: #3498db; border-color: #3498db; box-shadow: 0 0 10px rgba(52,152,219,0.5); }
+
+                .io-zone { background: #1a252f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; }
+                .io-zone label { font-weight: bold; display: block; margin-bottom: 5px; color: #95a5a6; }
+
+                .wp-container { flex: 1; min-height: 150px; overflow-y: auto; background: #1a252f; border-radius: 6px; padding: 8px; margin-bottom: 15px; border: 1px solid #34495e; }
+                .wp-item { background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #3498db; font-size: 12px; }
+                .wp-item input[type="number"] { width: 55px; background: #1a252f; border: 1px solid #34495e; color: #2ecc71; text-align: center; border-radius: 3px; font-weight: bold; }
+                .btn-del { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+
+                .btn-send { background: #9b59b6; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+                .btn-send:hover { background: #8e44ad; }
+        </style>     
+    </head>
+
+    <body oncontextmenu="return false;">
+    <div style="display: flex;">
+        <!-- 맵 영역 지정 -->
+        <div style="float: left; width: 100%">
+            <div id="vmap" style="width: 100%; height: 700px;"></div>
+                
+            <div class="gcs-sidebar">
+                <h3>Map Board</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; padding: 5px 0;">
+                    
+                    <!-- 1. 연속지적도 컨트롤러 큰 체크박스 (wfsSample 기반 싱크 완료) -->
+                    <label class="gcs-control-label" style="display: flex; align-items: center; cursor: pointer; user-select: none; font-size: 13px; font-weight: bold;">
+                        <input type="checkbox" id="chk_jijeok_wfs" onchange="handleJiJeokIntegratedToggle(this)" style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;" />
+                        <span style="color: #f1c40f;">연속지적도 (WMS/WFS)</span>
+                    </label>
+
+                    <!-- 2. 소방방재 레이어 컨트롤러 큰 체크박스 (toggleFireWMS 기반 싱크 완료) -->
+                    <label class="gcs-control-label" style="display: flex; align-items: center; cursor: pointer; user-select: none; font-size: 13px; font-weight: bold;">
+                        <input type="checkbox" id="chk_disaster_wms" onchange="toggleFireWMS(this)" style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;" />
+                        <span style="color: #ff7675;">소방방재 건물 레이어</span>
+                    </label>
+
+                    <!-- 3. 기존 소방/소화전 레이어 UI 브릿지 (checkLayer 연동 완료) -->
+                    <label class="gcs-control-label" style="display: flex; align-items: center; cursor: pointer; user-select: none; font-size: 12px; color: #bdc3c7;">
+                        <input type="checkbox" id="chk_fire_hydrant" onchange="checkLayer(this, '소방/소화전 레이어 명칭')" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;" />
+                        <span style="color: #e84118;">소방/소화전 레이어</span>
+                    </label>
+
+                    <!-- 4. 가로 정렬 레이아웃: 건물 레이어와 건물상세팝업 체크박스 나란히 배치 -->
+                    <div style="display: flex; align-items: center; gap: 15px; width: 100%;">
+                        <!-- 건물 3D 메쉬 레이어 제어 스위치 -->
+                        <label class="gcs-control-label" style="display: flex; align-items: center; cursor: pointer; user-select: none; font-size: 13px; font-weight: bold; flex: 1;">
+                            <input type="checkbox" id="chk_building_mesh" checked onchange="checkLayer(this, 'lt_c_spbd')" style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;" />
+                            <span style="color: #9b59b6;">건물 레이어</span>
+                        </label>
+                        
+                        <!-- 🎯 [요청 기능] 마우스 1초 호버 팝업 및 고정핀 작동 On/Off 스위치 (디폴트 OFF) -->
+                        <label class="gcs-control-label" style="display: flex; align-items: center; cursor: pointer; user-select: none; font-size: 13px; font-weight: bold; flex: 1;">
+                            <input type="checkbox" id="chk_building_popup_gate" onchange="window.toggleBuildingPopupEngine(this)" style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;" />
+                            <span style="color: #2ecc71;">건물상세팝업</span>
+                        </label>
+                    </div>
+                    
+                
+                    <!-- 히든 WFS 쿼리 서브밋 폼 프로토콜 (구조 및 속성값 100% 원본 유지) -->
+                    <form id="wfsForm" style="display: none;">
+                        <input type="hidden" name="key" value="CBDA8338-FEF2-34AE-9B04-D31B3597153F">
+                        <input type="hidden" name="SERVICE" value="WFS">
+                        <input type="hidden" name="version" value="1.1.0">
+                        <input type="hidden" name="request" value="GetFeature">
+                        <input type="hidden" name="TYPENAME" value="lp_pa_cbnd_bubun">
+                        <input type="hidden" name="OUTPUT" value="text/javascript">
+                        <input type="hidden" name="SRSNAME" value="EPSG:4326">
+                        <input type="hidden" name="BBOX" value="">
+                    </form>
+
+                    <!-- 연속지적도 실시간 데이터 파싱 검색 결과 출력 스크롤 뷰포트 (어두운 박스 스타일 적용) -->
+                    <div style="background: #1a252f; border-radius: 4px; padding: 10px; font-size: 11px; border: 1px solid #2c3e50;">
+                        <span style="font-weight: bold; color: #3498db; display: block; margin-bottom: 6px;">* 연속지적도 검색 결과 *</span>
+                        <div style="max-height: 90px; overflow-y: auto; padding-right: 5px;">
+                            <ul id="resultDiv" style="margin: 0; padding-left: 15px; color: #2ecc71; line-height: 1.5;"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📊 섹션 2: 실시간 줌 고도 추적 인디케이터 HUD -->
+                <div class="hud-box">
+                    <span>Adaptive Alt (줌 기준 고도)</span>
+                    <strong><span id="lbl_zoom_alt">150</span> m</strong>
+                </div>
+
+                <!-- 🎛️ 섹션 3: 하이브리드 모드 체인저 토글 버튼 그룹 -->
+                <div class="btn-mode-group">
+                    <button id="btn_2d" class="btn-mode active" onclick="switchGcsMode('2D')">1. 2D 설계</button>
+                    <button id="btn_3d" class="btn-mode" onclick="switchGcsMode('3D')">2. 3D 편집</button>
+                </div>
+
+                <!-- 📂 섹션 4: 외부 JSON 파일 복원 인터페이스 -->
+                <div class="io-zone">
+                    <label>📂 Mission JSON 파일 로드</label>
+                    <input type="file" id="file_import" accept=".json" onchange="importMissionJSON(event)" style="color:#bdc3c7; width:100%; font-size:11px; cursor: pointer;">
+                </div>
+
+                <!-- 📋 섹션 5: 실시간 노드 리스트 테이블 (수정/삭제) -->
+                <span class="section-title">📋 비행 노드 리스트 (실시간 편집)</span>
+                <div id="wp_list_container" class="wp-container">
+                    <span style="color:#7f8c8d; display:block; text-align:center; padding-top:40px; font-size:12px;">지도를 클릭하거나<br>JSON 파일을 불러오세요.</span>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- 🎯 [vwsamle2.html] 조종사 요청 사양 반영 - 순정 버튼 글자 축소 및 체크박스 일렬 배치 완결본 -->
+                <!-- ========================================================================= -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    
+                    <!-- 🟢 1. 기존 클래스 명품 디자인 스타일링을 100% 원본 그대로 유지한 메인 단추 -->
+                    <button class="btn-primary" onclick="window.startGcsDroneSimulation()" style="flex: 1; margin: 0; background-color: #2ecc71 !important; border-color: #2ecc71 !important; color: #fff; font-weight: bold; font-size: 13px; height: 36px; cursor: pointer; border-radius: 4px;">시뮬레이션 가동</button>
+                    
+                    <!-- 📺 2. HTML 네이티브 표준으로 깔끔하게 한 줄 우측 정렬 결합한 디폴트 체크박스 -->
+                    <label style="display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: bold; margin-left: 15px; cursor: pointer; user-select: none; white-space: nowrap; font-family: 'Malgun Gothic', sans-serif;">
+                        <input type="checkbox" id="gcs_popup_video_checkbox" checked style="width: 16px; height: 16px; cursor: pointer; margin: 0;" />
+                        팝업화면
+                    </label>
+                   
+                </div>    
+                <!-- 💾 파트 2: 줄바꿔서 깔끔하게 하단단에 연동 주입한 임무 경로 JSON 내보내기 단추 -->
+                <div style="width: 100%; margin-bottom: 10px;">
+                    <!-- 💾 섹션 6: 파일 내보내기 다운로드 단추 -->
+                    <button class="btn-send" onclick="exportMissionJSON()" style="width: 100%; height: 36px; font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 4px;">💾 임무 경로 JSON 다운로드</button>
+                </div>                          
+            
+            
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <!-- 기존에 가설되어 있는 우클릭 컨텍스트 메뉴의 <div id="gcs_context_menu"> 내부를 찾으세요. -->
+    <!-- 각각의 버튼 리스트(li 또는 button) 내부 onclick 스크립트 인자값을 아래 변수명으로 일렬 강제 싱크합니다. -->
+
+    <div id="gcs_context_menu" style="position: absolute; display: none; z-index: 100000;">
+        <ul style="list-style: none; margin: 0; padding: 5px; background: #1e272e; border: 1px solid #3c6382; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6);">
+            
+            <!-- 🛸 1. 홈 설정 버튼 최종 완치 -->
+            <li style="padding: 8px 12px; color: #fff; cursor: pointer; font-family: 'Malgun Gothic', sans-serif; font-size: 13px;" 
+                onclick="if(typeof window.triggerGcsCommand === 'function') { window.triggerGcsCommand('home', window.gcsLastRightClickLon, window.gcsLastRightClickLat, 0.0); document.getElementById('gcs_context_menu').style.display = 'none'; }">🛸 홈 설정</li>
+            
+            <!-- 📍 2. 경유지 추가 버튼 최종 완치 -->
+            <li style="padding: 8px 12px; color: #fff; cursor: pointer; font-family: 'Malgun Gothic', sans-serif; font-size: 13px;" 
+                onclick="if(typeof window.triggerGcsCommand === 'function') { window.triggerGcsCommand('waypoint', window.gcsLastRightClickLon, window.gcsLastRightClickLat, 150.0); document.getElementById('gcs_context_menu').style.display = 'none'; }">📍 경유지 추가</li>
+            
+            <!-- 🎯 3. 목적지 설정 버튼 최종 완치 -->
+            <li style="padding: 8px 12px; color: #fff; cursor: pointer; font-family: 'Malgun Gothic', sans-serif; font-size: 13px;" 
+                onclick="if(typeof window.triggerGcsCommand === 'function') { window.triggerGcsCommand('destination', window.gcsLastRightClickLon, window.gcsLastRightClickLat, 150.0); document.getElementById('gcs_context_menu').style.display = 'none'; }">🎯 목적지 설정</li>
+                
+        </ul>
+    </div>
+ 
+    <script type="text/javascript" src="./samle.js"></script>
+    <script type="text/javascript" src="./fire.js"></script>
+    <script type="text/javascript" src="./simul.js"></script>
+        
+    </body>
+</html>

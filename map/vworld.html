@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Web GCS - Vworld 3D v2.0</title>
+    
+    <!-- [💡 교정 1] 국토교통부 브이월드 WebGL 3D 2.0 공식 필수 스타일시트(CSS) 정확한 경로 반영 -->
+    <link rel="stylesheet" href="https://vworld.kr" type="text/css">
+    
+    <!-- 국토교통부 브이월드 3D API 메인 엔진 원천 로드 -->
+    <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=2.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1&domain=http://127.0.0.1:5500"></script>
+    
+    <style>
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: 'Malgun Gothic', sans-serif;
+        }
+        /* 지도 레이아웃 컨테이너 */
+        #vworld_map_container {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
+        }
+        /* 우측 임무 관제 패널 대시보드 */
+        .gcs-advanced-panel {
+            position: absolute; top: 20px; right: 20px; z-index: 99;
+            background: #ffffff; width: 320px; padding: 18px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); pointer-events: auto;
+        }
+        .gcs-advanced-panel h3 { margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 5px; font-size: 16px; }
+        .toggle-mode-container { display: flex; margin-bottom: 12px; background: #f0f0f0; padding: 3px; border-radius: 5px; }
+        .toggle-mode-container button {
+            flex: 1; border: none; padding: 8px; cursor: pointer; font-weight: bold; background: transparent; border-radius: 4px; transition: all 0.2s;
+        }
+        .active-sim { background-color: #9c27b0 !important; color: white !important; }
+        .active-fc { background-color: #d32f2f !important; color: white !important; }
+        
+        .mode-switch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+        .mode-switch-grid button { padding: 10px; font-weight: bold; cursor: pointer; background: #fff; border: 1px solid #ccc; border-radius: 4px; }
+        .mode-switch-grid button.active-view { background: #007bff; color: #fff; border-color: #007bff; }
+
+        .zoom-info-bar { background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 12px; border-left: 4px solid #2196f3; }
+        .wp-list-box { max-height: 150px; overflow-y: auto; background: #fafafa; border: 1px solid #ddd; padding: 5px; border-radius: 4px; margin-bottom: 12px; font-size: 12px; }
+        
+        .btn-action-block {
+            width: 100%; color: #fff; background: #9c27b0; border: none; padding: 12px;
+            font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        /* 좌측 실시간 스크롤 눈높이 알림창 */
+        .camera-altitude-indicator {
+            position: absolute; bottom: 20px; left: 20px; z-index: 99;
+            background: rgba(0, 0, 0, 0.75); color: #00ffcc; padding: 10px 15px; border-radius: 4px;
+            font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #00ffcc;
+            box-shadow: 0 0 10px rgba(0,255,204,0.3); pointer-events: none;
+        }
+        .gcs-search-box {
+            position: absolute; top: 20px; left: 20px; z-index: 99;
+            background: #ffffff; padding: 6px; border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; gap: 4px;
+        }
+        .gcs-search-box input {
+            width: 180px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px;
+        }
+        .gcs-search-box button {
+            background: #007bff; color: #fff; border: none; padding: 6px 12px;
+            border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 13px;
+        }
+
+        /* 검색창 컨테이너 */
+        .gcs-search-container {
+            position: relative; 
+            width: 100%; /* 상위 레이아웃 박스 눈금선에 맞춤 */
+            box-sizing: border-box;
+        }
+        
+        /* 📌 입력창 박스 크기만큼만 가로폭을 강제 제한하는 드롭다운 스타일 */
+        .poi-result-list {
+            display: none;       /* 기본 숨김 */
+            position: absolute;
+            top: 60px;           /* 좌측 상단 입력창 바로 밑 경계면에 밀착 (20px + 입력창높이) */
+            left: 20px;          /* 좌측 상단 입력창의 시작점(20px)과 칼같이 일치 */
+            width: 255px;        /* ★ 중요: 입력창과 버튼을 합친 전체 가로 폭 크기로 강제 고정 */
+            max-height: 250px;   /* 세로 노출 길이 제한 */
+            overflow-y: auto;    /* 내용이 많아지면 내부 스크롤 가동 */
+            background: #ffffff;
+            border: 1px solid #dcdcdc;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            border-radius: 4px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+            z-index: 99999;      /* 지도 레이어 및 타 컨테이너보다 무조건 위로 배치 */
+            box-sizing: border-box; /* 패딩이 가로폭을 넘지 않도록 안전 가이드 */
+        }
+
+        /* 내부 아이템 텍스트 가독성 눈금선 정렬 */
+        .poi-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f1f1f1;
+            cursor: pointer;
+            text-align: left; /* 미션 컨트롤 내 좌측 칼정렬 */
+        }
+        .poi-item:hover { background-color: #f7f9fc; }
+        .poi-address { font-size: 11px; color: #777777; margin-top: 3px; }
+        /* 안내 메시지용 스타일 */
+        .poi-item.no-result, .poi-item.loading, .poi-item.error {
+            color: #666;
+            text-align: center;
+            cursor: default;
+            padding: 20px;
+        }
+
+        /* 내부 타이틀 및 주소 */
+        .poi-info { display: flex; align-items: center; gap: 6px; }
+        .poi-title { color: #333; }
+        .poi-address { font-size: 12px; color: #888; margin-top: 4px; padding-left: 48px; }
+
+        /* 결과 타입별 배지 */
+        .poi-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #fff;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .badge-place { background-color: #2196F3; }   /* 장소: 파랑 */
+        .badge-road { background-color: #4CAF50; }    /* 도로명: 초록 */
+        .badge-parcel { background-color: #FF9800; }  /* 지번: 주황 */
+    </style>
+</head>
+<body>
+    <!-- 📌 좌측 상단 통합 검색 영역 최종 마크업 -->
+    <div class="gcs-search-container">
+        <div class="gcs-search-box">
+            <input type="text" id="txt_search_keyword" placeholder="장소 또는 주소 입력..." onkeydown="if(event.keyCode==13) GcsFinalPoiSearcher.executeSearch()">
+            <button onclick="GcsFinalPoiSearcher.executeSearch()">검색</button>
+        </div>
+        <!-- 입력창 바로 밑 눈금선 정렬 드롭다운 결과창 -->
+        <ul id="poi_result_list" class="poi-result-list"></ul>
+    </div>
+
+    <!-- 1. 지도가 바인딩될 공간 -->
+    <div id="vworld_map_container"></div>
+     
+    <!-- 2. 눈높이 인디케이터 (좌하단) -->
+    <div class="camera-altitude-indicator">
+        <div style="font-weight:bold; color:#fff; margin-bottom:4px; font-size:11px; text-transform:uppercase; letter-spacing:1px;">📷 Camera Altitude</div>
+        <div>MSL (해발고도): <span id="txt_camera_alt_msl" style="font-weight:bold; font-size:15px;">-</span> m</div>
+        <div style="margin-top:2px; font-size:11px; color:#aaa;">AGL (지상고도): <span id="txt_camera_alt_agl">-</span> m</div>
+    </div>
+
+    <!-- =============================================================================
+     🛸 [GCS Dashboard] 모든 기존 기능 항목을 100% 보존한 움직이는 미션 컨트롤 박스
+     ============================================================================= -->
+    <div id="gcs_mission_control" class="gcs-box" style="position: absolute; z-index: 9999; top: 120px; left: 450px; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 340px; overflow: hidden; font-family: 'Malgun Gothic', sans-serif;">
+        
+        <!-- 📌 드래그 핸들이 될 상단 타이틀 바 영역 -->
+        <div id="gcs_drag_handle" style="background: #2b364b; color: #fff; padding: 12px 15px; cursor: move; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+            <span style="font-weight: bold; font-size: 14px;">🛸 Mission Control (GCS)</span>
+            
+            <!-- 우측 컨트롤 버튼 모음 -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- 고정/해제 버튼 -->
+                <button id="btn_gcs_lock" title="위치 고정/해제" style="background: none; border: none; color: #aaa; cursor: pointer; font-size: 13px; padding: 2px; line-height: 1;">🔓</button>
+                <!-- 최소화/최대화 버튼 -->
+                <button id="btn_gcs_toggle" title="최소화/최대화" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 15px; padding: 2px; font-weight: bold; line-height: 1;">−</button>
+            </div>
+        </div>
+
+        <!-- 📌 접히고 펴질 실제 미션 컨트롤 본문 컨텐츠 영역 (기존 UI 항목 완벽 이식) -->
+        <div id="gcs_content_body" style="padding: 15px; max-height: 85vh; overflow-y: auto; transition: max-height 0.2s ease-in-out;">
+            
+            <!-- [항목 1] 시뮬레이터 / 실제비행 스위칭 탭 버튼 -->
+            <div style="display: flex; gap: 5px; margin-bottom: 12px;">
+                <button style="background: #8e24aa; color: white; flex: 1; border: none; padding: 8px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer;">시뮬레이터(SITL)</button>
+                <button style="background: #eee; color: #333; flex: 1; border: none; padding: 8px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;">실제 비행 FC</button>
+            </div>
+            
+            <!-- [항목 2] 현재 줌 기준 설정 고도 안내 문구 -->
+            <p style="font-size: 12px; color: #444; margin-bottom: 12px; border-bottom: 1px dashed #eee; padding-bottom: 8px;">
+                현재 줌 기준 설정 고도 (마우스 스크롤 연동) <strong style="color: #007bff; font-size: 14px; margin-left: 5px;">150 m</strong>
+            </p>
+            
+            <!-- [항목 3] 1. 2D 평면 설계 / 2. 3D 고도 튜닝 메인 뷰 모드 버튼 (기능 복구 완료) -->
+            <div style="display: flex; gap: 6px; margin-bottom: 15px;">
+                <button id="btn_view_2d" class="active-view" onclick="start2DDrawingMode()" style="flex: 1; padding: 10px 5px; font-size: 12px; border: 1px solid #ddd; background: #fff; border-radius: 4px; cursor: pointer;">1. 2D 평면 설계</button>
+                <button id="btn_view_3d" onclick="convertTo3DViewMode()" style="flex: 1; padding: 10px 5px; font-size: 12px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 4px; font-weight: bold; cursor: pointer;">2. 3D 고도 튜닝</button>
+            </div>
+            
+            <!-- [항목 4] 안전 가이드 공역 표출 영역 -->
+            <div style="margin-bottom: 12px; background: #f8f9fa; padding: 8px 10px; border-radius: 4px;">
+                <div style="font-size: 11px; font-weight: bold; color: #555; margin-bottom: 4px;">🛡️ 안전 가이드 공역 표출</div>
+                <label style="font-size: 12px; color: #333; display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="chk_airspace" style="margin-right: 6px;"> 비행제한/금지구역 WMS 켜기
+                </label>
+            </div>
+
+            <!-- [항목 5] 3D 인프라 레이어 제어 영역 -->
+            <div style="margin-bottom: 12px; background: #f8f9fa; padding: 8px 10px; border-radius: 4px;">
+                <div style="font-size: 11px; font-weight: bold; color: #555; margin-bottom: 4px;">🏢 3D 인프라 레이어 제어</div>
+                <label style="font-size: 12px; color: #333; display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="chk_buildings" checked style="margin-right: 6px;" onchange="toggleVworld3DBuildings(this.checked)"> 3D 건물 레이어 켜기 (Layer 3)
+                </label>
+            </div>
+
+            <!-- [항목 6] 임무 파일 백업 및 로드 영역 -->
+            <div style="margin-bottom: 15px; border: 1px solid #e0e0e0; padding: 10px; border-radius: 4px;">
+                <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px;">📂 임무 파일 백업 및 로드</div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input type="file" id="file_mission_load" style="font-size: 11px; width: 100%;">
+                    <button onclick="exportMissionJSON()" style="background: #4caf50; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">JSON 미션 파일 내보내기</button>
+                </div>
+            </div>
+
+            <!-- [항목 7] 웨이포인트 동적 목록 컨테이너 -->
+            <div style="margin-bottom: 15px;">
+                <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📋 웨이포인트 목록 (수정/삭제)</span>
+                </div>
+                <!-- 핵심 동적 노드가 들어오는 곳으로, 내부 문구와 ID 스타일을 완벽 유지합니다 -->
+                <div id="wp_list_container" style="border: 1px solid #ddd; border-radius: 4px; min-height: 60px; max-height: 180px; overflow-y: auto; padding: 8px; background: #fafafa;">
+                    <span style="color:#aaa; display:block; text-align:center; padding:15px 0; font-size:11px;">지도를 클릭하거나 파일을 로드하세요.</span>
+                </div>
+            </div>
+
+            <!-- [항목 8] 최하단 시뮬레이터 미션 전송 버튼 -->
+            <button id="btn_send_mission" style="background: #6a1b9a; color: white; border: none; width: 100%; padding: 12px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                🤖 시뮬레이터(SITL)로 미션 전송
+            </button>
+
+        </div>
+    </div>
+
+    <!-- 📌 [Layer 2 통합 완결] 공역 및 소방안전 가이드 연동 체크박스 마크업 -->
+    <div class="zoom-info-bar" style="background: #eef2f7; border-left: 4px solid #007bff; padding: 12px; border-radius: 5px; margin-bottom: 12px;">
+        <label style="font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
+            <input type="checkbox" style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleDroneRestrictionZones(this.checked)">
+            🛡️ 안전 가이드 공역 / 소방차 전용구역 켜기 (Layer 2)
+        </label>
+    </div>
+
+    <!-- [💡 교정 3] 브이월드 지도 엔진 인스턴스가 생성된 후 제어 스크립트가 실행되도록 defer 속성을 제거하고 본문 최하단에 배치 -->
+    <script src="gcs_control.js"></script>
+</body>
+</html>

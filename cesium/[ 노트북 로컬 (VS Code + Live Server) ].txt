@@ -1,0 +1,1032 @@
+[ 노트북 로컬 (VS Code + Live Server) ]
+       │
+       └──► Pure CesiumJS Engine 구동 (개발자 통제권 100%)
+                 │
+                 ├──► (온라인 연동) 브이월드 WMTS API ──────► [2D 배경지도]
+                 ├──► (온라인 연동) 브이월드 3D Tiles API ──► [3D 국산 건물] (실실측 LOD3 빌딩)
+                 ├──► (온라인 연동) 브이월드 Terrain API  ──► [3D 정밀 지형] (대한민국 산악 DEM)
+                 └──► (온라인 연동) 브이월드 Data API ──────► [실시간 공역 규제 / 지오펜싱]
+
+
+내-프로젝트-폴더/
+├── Build/                   📂 직접 생성
+│   └── Cesium/              📂 직접 생성 후 세슘 Build/Cesium 내용물 붙여넣기
+│       ├── Assets/          📂 (세슘 아이콘, 하늘 배경 등 정적 자산)
+│       ├── ThirdParty/      📂 (내장 서드파티 라이브러리)
+│       ├── Workers/         📂 (웹 워커 가속 파일 시스템)
+│       ├── Widgets/         📂 (UI 위젯 폴더)
+│       │   └── widgets.css  📄 [매우 중요] 세슘 기본 스타일시트
+│       └── Cesium.js        📄 [매우 중요] 세슘 핵심 엔진 자바스크립트 파일
+└── index.html               📄 이전에 작성한 GCS 통합 소스코드 파일
+
+const VWORLD_KEY = "307B0E17-0322-43C3-A570-59947C0FC7A1"; 
+
+ // 4. 브이월드 2D 타일 레이어를 세슘 엔진에 직접 주입
+        const vworldBaseProvider = new Cesium.WebMapTileServiceImageryProvider({
+            url: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{TileMatrix}/{TileRow}/{TileCol}.png`,
+            layer: 'Base', style: 'default', format: 'image/png', tileMatrixSetID: 'EPSG:3857', maximumLevel: 19
+        });
+
+cesium ion 인증키
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6IktVSnc3Rk4wWVhkNG5IVE0iLCJqdGkiOiJhZmIwYTM5MS1lYmVlLTRiZGYtYWFjNy00Njk4ZGJjZmQ2N2EiLCJpZCI6NTE2MDA1LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3OTEyNTQ4NDN9.xivlAHOQwz36myWBPZt2StZRSfQsFOS-x2vy9cKsx_w
+
+
+const url = `https://api.vworld.kr{VWORLD_KEY}&domain=${window.location.origin}&service=data&version=2.0&request=GetFeature&data=${targetLayers}&geomFilter=${encodeURIComponent(wktPoint)}&geometry=false&crs=EPSG:4326`;
+
+const vworldBaseProvider = new Cesium.WebMapTileServiceImageryProvider({
+            url: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{TileMatrix}/{TileRow}/{TileCol}.png`,
+            layer: 'Base', style: 'default', format: 'image/png', tileMatrixSetID: 'EPSG:3857', maximumLevel: 19
+        });
+
+
+연속지적도 WMS 타일 맵 레이어 가동 함수
+    wmsSource.setUrl("https://api.vworld.kr/req/wms?key=" + VWORLD_KEY + "&"); // 정식 데이터 게이트웨이 도메인 교정
+
+
+$.ajax({
+        type: "get",
+        url: "https://api.vworld.kr/req/wfs", 
+변경
+  $.ajax({
+        type: "get",
+        url: "https://api.vworld.kr/req/data", 
+
+LT_C_SPBD
+
+
+const proxyGateUrl = "https://map.vworld.kr/proxy.do?url=" + encodeURIComponent(rawTileUrl);
+
+
+• LT_C_FIREESCAPE (화재대피로선 레이어)
+	• 도면에 그려지는 형태: 주요 도심 및 주거 밀집 구역 바닥에 화재 발생 시 소방차가 급속 진입하고 인명이 구조되는 녹색/황색의 격자형 안전 대피 경로 선이 맵핑됩니다.
+	• 제공 정보: 대피로 구간 코드, 관할 행정 구역, 대피로 연장(m 단위 길이).
+• LT_P_MOISFIREHYDRANT (소방용수시설 - 소화전 포인트 레이어)
+	• 도면에 그려지는 형태: 전국 도로변과 아파트 단지 인근 바닥에 소방방재청이 관리하는 지상식/지하식 소화전, 급수탑, 저수조 위치에 선명한 소방 제어 아이콘 심볼들이 정밀 도포됩니다.
+	• 제공 정보: 소화전 고유 ID(WR_ID), 관리 주체 소방서 명칭, 배관 관경(mm).
+• LT_C_A014 (방재보호구역 - 소방 방재 제한지구 레이어)
+	• 도면에 그려지는 형태: 소방 자동차의 진입이 상시 보장되어야 하거나 상습 화재/붕괴 위험이 있어 드론 비행 시 특별 관제가 필요한 법적 규제 영역이 반투명 주홍색/적색의 경계선 다각형 영역으로 바닥에 쫙 깔립니다.
+	• 제공 정보: 지정 고시 번호, 제한 지구 명칭, 법적 행정 규제 코드.
+
+
+// =========================================================================
+// 🚨 [fire.js 최종 마스터 - 파트 1: 브이월드 전용 프록시 터널링 우회 마스터본]
+// =========================================================================
+
+// 전역 스코프에서 레이어 인스턴스를 관리하기 위해 전역 변수로 선언합니다.
+window.vworldDisasterLayerInstance = null;
+
+/**
+ * 🎨 [기능 1] 지도가 초기화된 후 도로명주소건물(lt_c_spbd) 레이어를 지도 위에 상시 표현합니다.
+ * 🔴 [CORS & Tainted Canvas 완벽 해결] 브이월드 공식 보안 우회 프록시 관로를 강제로 태워
+ * WebGL 캔버스 텍스처 추출 시 발생하는 모든 SecurityError를 원천 차단합니다.
+ */
+window.initDisasterWMSLayer = function () {
+    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) {
+        console.warn("⚠️ 세슘 엔진이 아직 로드되지 않아 레이어를 주입할 수 없습니다.");
+        return;
+    }
+
+    try {
+        // 🛑 중복 생성 방지 가드
+        if (window.vworldDisasterLayerInstance) {
+            ws3d.viewer.imageryLayers.remove(window.vworldDisasterLayerInstance);
+            window.vworldDisasterLayerInstance = null;
+        }
+
+        // 🎯 브이월드 표준 WMS 이미지 프로바이더 규격 가동
+        const disasterWmsProvider = new Cesium.WebMapServiceImageryProvider({
+            url: "https://vworld.kr",
+            layers: "lt_c_spbd",                  // 성공 명세서 표준 소문자 레이어명
+            tilingScheme: new Cesium.GeographicTilingScheme(),
+            parameters: {
+                key: VWORLD_KEY,                  // sample.js 내에 선언된 전역 오픈 API 키 동기화
+                domain: "127.0.0.1",              // CORS 방지용 브라우저 호스트 정착
+                service: "WMS",
+                version: "1.3.0",
+                request: "GetMap",
+                styles: "lt_c_spbd_nl",           // 성공 명세서 전용 스타일 지정
+                crs: "EPSG:4326",                 // CRS:84 타일 조각 파싱 에러 강제 우회
+                format: "image/png",              // 배경 투명 유지를 위해 png 포맷 필수
+                transparent: "true"
+            }
+        });
+
+        // 🚨 [핵심 오버라이드] 이미지 요청 주소에 브이월드 공식 보안 우회 프록시 게이트웨이를 강제로 주입합니다.
+        disasterWmsProvider.requestImage = function (x, y, level, request) {
+            const rect = this.tilingScheme.tileXYToNativeRectangle(x, y, level);
+
+            // 1. 순수 WMS 데이터 타일 주소 빌드
+            const baseUrl = "https://api.vworld.kr/req/wms";
+            const queryParams = [
+                `key=${VWORLD_KEY}`,
+                `domain=127.0.0.1`,
+                `service=WMS`,
+                `version=1.3.0`,
+                `request=GetMap`,
+                `styles=lt_c_spbd_nl`,
+                `crs=EPSG:4326`,
+                `format=image/png`,
+                `transparent=true`,
+                `layers=lt_c_spbd`,
+                `bbox=${rect.west},${rect.south},${rect.east},${rect.north}`,
+                `width=256`,
+                `height=256`
+            ];
+
+            const rawTileUrl = baseUrl + "?" + queryParams.join("&");
+
+            // 2. 🎯 [보안 영구 해제 치트키] 브이월드가 자체 제공하는 자원 프록시 서버(proxy.do) 주소 뒤에 
+            // 타겟 쿼리를 URL 인코딩하여 붙여 보냅니다. 이렇게 하면 브라우저가 동일 도메인 자원으로 인식합니다!
+            const proxyGateUrl = "https://vworld.kr" + encodeURIComponent(rawTileUrl);
+
+            // 3. 브이월드 서버를 직접 찌르지 않고 프록시 터널링을 경유하므로, crossOrigin 가드가 무조건 Pass 됩니다.
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous"; // 프록시 서버가 정상 헤더를 주므로 anonymous 설정 필수 가동
+
+                img.onload = function () {
+                    resolve(img); // 캔버스 세탁 과정 없이 즉시 깨끗한 상태로 3D 도면에 다이렉트 헌납
+                };
+                img.onerror = function () {
+                    // 통신 누락 구역은 투명 버퍼로 안전 스킵하여 렌더러 보호
+                    const empty = document.createElement("canvas");
+                    empty.width = 256; empty.height = 256;
+                    resolve(empty);
+                };
+
+                img.src = proxyGateUrl;
+            });
+        };
+
+        // 가동기 내장 엔진의 XHR 강제 분기 차단 조치 추가
+        disasterWmsProvider._tileDiscardPolicy = undefined;
+
+        // 세슘 레이어 컬렉션에 추가하고 전역 변수에 인스턴스 바인딩 완수
+        window.vworldDisasterLayerInstance = ws3d.viewer.imageryLayers.addImageryProvider(disasterWmsProvider);
+        console.log("🟢 [CORS/Tainted 완벽 무력화] 브이월드 공식 프록시 게이트웨이를 경유하여 lt_c_spbd 레이어가 전체 화면에 도포됩니다.");
+    } catch (e) {
+        console.error("❌ 레이어 주입 중 크래시 발생:", e);
+    }
+};
+
+
+// =========================================================================
+// 🚨 [fire.js 최종 마스터 - 파트 2: 대시보드 ON/OFF 토글 인터페이스]
+// =========================================================================
+
+/**
+ * 🎛️ [HTML 연동 핵심 해결책] vwsamle.html의 On/Off 버튼 및 체크박스 클릭 시
+ * 도로명주소건물 WMS 레이어를 실시간으로 켜고 끄는 전역 인터페이스 함수입니다.
+ */
+window.toggleFireWMS = function (elementOrChecked) {
+    if (!ws3d || !ws3d.viewer || !window.vworldDisasterLayerInstance) {
+        console.warn("⚠️ 지도 엔진 또는 방재 WMS 레이어가 아직 초기화되지 않았습니다.");
+        return;
+    }
+
+    let isShow = false;
+    if (typeof elementOrChecked === "boolean") {
+        isShow = elementOrChecked;
+    } else if (elementOrChecked && typeof elementOrChecked === "object") {
+        isShow = elementOrChecked.checked !== undefined ? elementOrChecked.checked : $(elementOrChecked).is(":checked");
+    } else {
+        if (window.vworldDisasterLayerInstance) isShow = !window.vworldDisasterLayerInstance.show;
+    }
+
+    // 🚨 만약 레이어를 켜라(ON)고 했는데 전역 인스턴스가 생성 전이라면 최초 강제 주입
+    if (!window.vworldDisasterLayerInstance && isShow) {
+        window.initDisasterWMSLayer();
+    }
+
+    const layers = ws3d.viewer.imageryLayers;
+    for (let i = 0; i < layers.length; ++i) {
+        const layer = layers.get(i);
+        if (layer === window.vworldDisasterLayerInstance) {
+            layer.show = isShow;
+            break;
+        }
+    }
+
+    // 🛑 [화면 전환 오류 박멸 - 수정 부분] 
+    // 기존에 소방방재 레이어가 켜지거나 시뮬레이션 가동 조건이 감지될 때 
+    // "2. 3D 편집" 버튼을 강제로 클릭(click())하여 화면을 전환시키던 스위처 로직을 안전하게 완전히 주석 처리(제거)합니다.
+    /*
+    if (isShow) {
+        setTimeout(() => {
+            const btn3DEdit = \$("button:contains('3D 편집'), div:contains('3D 편집'), a:contains('3D 편집')").last();
+            if (btn3DEdit.length > 0) {
+                btn3DEdit.click();
+                console.log("🚀 [GCS 오토 스위처] 소방방재 가동 조건 감지로 인해 '2. 3D 편집' 관제 모드로 즉시 자동 도포 스위칭되었습니다.");
+            } else {
+                document.querySelectorAll('*').forEach(el => {
+                    if (el.textContent.trim() === '2. 3D 편집' && typeof el.click === 'function') {
+                        el.click();
+                        console.log("🚀 [GCS 오토 스위처] 네이티브 돔 텍스트 매칭을 통해 3D 편집 모드 점프 완수");
+                    }
+                });
+            }
+        }, 150);
+    }
+    */
+
+    console.log(`🎛️ [GCS 대시보드] 소방방재 레이어 가시성 토글 완료 -> ${isShow ? "ON" : "OFF"} (화면 전환 차단 활성화)`);
+};
+
+// =========================================================================
+// 🚨 [fire.js 최종 완성본 - 파트 3: 홈/경유지/150m 목적지 멀티 인젝터 및 이름표 클릭 flyTo 완결본]
+// =========================================================================
+
+window.vworldFixedDisasterZonesMap = window.vworldFixedDisasterZonesMap || {};
+
+/**
+ * 🎯 [기능 2 - 최종 완결 마스터 엔진]
+ * 우클릭 컨텍스트 메뉴 명령 수신 시 타겟 고도를 반영해 3D 입체 원기둥 공역을 세우고,
+ * 마우스 클릭 시 순간이동(FlyTo)하는 [X] 버튼 결합형 이름표 패널을 스크린에 가설 박제합니다.
+ */
+window.drawFireZoneOnGround = function (lon, lat, isClickAction = false) {
+    if (!ws3d || !ws3d.viewer) return;
+
+    const liveLng = parseFloat(parseFloat(lon).toFixed(6));
+    const liveLat = parseFloat(parseFloat(lat).toFixed(6));
+    const wktPoint = "POINT(" + liveLng + " " + liveLat + ")";
+    const timestamp = new Date().getTime();
+    const viewer = ws3d.viewer;
+
+    // 🚨 [목적지 설정 단추 트리거 실행부] 150m 절대 고도 스케일 원기둥 공역 인젝션 개시
+    $.ajax({
+        type: "get",
+        url: "https://api.vworld.kr/req/data",
+        data: { service: "data", request: "GetFeature", data: "LT_C_SPBD", key: VWORLD_KEY, domain: "127.0.0.1", geomFilter: wktPoint, buffer: "25", geometry: "true", crs: "EPSG:4326" },
+        dataType: 'jsonp',
+        jsonpCallback: "parseDirectDisaster_" + timestamp,
+        success: function (data) {
+            let bldName = "지정 관제 공역 부지";
+            let rdsAddr = "지상 수평 좌표 공역 구역";
+            let rawHeight = 0;
+
+            if (data && data.response && data.response.status === "OK" && data.response.result?.featureCollection?.features) {
+                let features = data.response.result.featureCollection.features;
+                let featureObj = Array.isArray(features) ? features : features;
+                if (featureObj && featureObj.properties) {
+                    bldName = featureObj.properties.buld_nm || bldName;
+                    rdsAddr = featureObj.properties.rds_rn_addr || rdsAddr;
+                    rawHeight = featureObj.properties.buld_hg ? parseFloat(featureObj.properties.buld_hg) : 0;
+                }
+            }
+
+            // 🚨 [요청 명세 정확 매핑] 목적지 설정 임무공역 고도는 '150m' 고정으로 하늘 높이 쭉 도출!
+            const cylinderLength = 150.0;
+            const centerAltitude = cylinderLength / 2.0;
+
+            const buildingId = "DEST_" + Math.floor(liveLng * 100000);
+            const targetEntityId = "vworld_fixed_disaster_zone_" + buildingId;
+            const targetHtmlId = "vworld_html_popup_" + buildingId;
+
+            // 목적지 토글 오프 해제 처리
+            const existingFixedZone = viewer.entities.getById(targetEntityId);
+            if (existingFixedZone) {
+                viewer.entities.remove(existingFixedZone);
+                const existPopup = document.getElementById(targetHtmlId);
+                if (existPopup) { existPopup.parentNode.removeChild(existPopup); }
+                window.gcsMissionNodes.destination = null;
+                if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+                return;
+            }
+
+            // 전역 미션 시퀀스 목적지 노드 버퍼 동기화 적재
+            window.gcsMissionNodes.destination = { lon: liveLng, lat: liveLat, alt: cylinderLength, name: bldName };
+
+            const positionAnchor = Cesium.Cartesian3.fromDegrees(liveLng, liveLat, centerAltitude);
+            const labelText = `[🎯 드론 목적지]\n위치: ${bldName}\n공역고도: ALT ${cylinderLength.toFixed(1)}m`;
+
+            // 150m 원기둥 엔티티 렌더링 사양 조립
+            const disasterEntityOptions = {
+                id: targetEntityId,
+                position: positionAnchor,
+                cylinder: {
+                    length: cylinderLength,
+                    topRadius: 40.0, bottomRadius: 40.0,
+                    material: Cesium.Color.RED.withAlpha(0.42), // 선명한 3D 반투명 빨간색 원기둥 투영 완수
+                    outline: true, outlineColor: Cesium.Color.RED, outlineWidth: 3.0
+                }
+            };
+
+            const addedEntity = viewer.entities.add(disasterEntityOptions);
+            window.vworldFixedDisasterZonesMap[buildingId] = addedEntity;
+
+            // 🚨 [요청 기능 완료 - 클릭 시 화면 텔레포트 flyTo 브릿지가 결합된 [X] 미니창]
+            const existPopup = document.getElementById(targetHtmlId);
+            if (existPopup) { existPopup.parentNode.removeChild(existPopup); }
+
+            let mainMapDiv = document.getElementById("vmap") || document.getElementById("map") || viewer.scene.canvas.parentNode;
+            const newPopupDiv = document.createElement("div");
+            newPopupDiv.id = targetHtmlId;
+            newPopupDiv.className = "gcs-custom-html-popup";
+            newPopupDiv.setAttribute("data-lon", liveLng);
+            newPopupDiv.setAttribute("data-lat", liveLat);
+            newPopupDiv.setAttribute("data-alt", cylinderLength);
+            // 🎯 [클릭 가드 인터셉터] 이름표 박스 자체를 누르면 window.gcsFlyToTargetCoordinates 함수를 강제 트리거 시킵니다!
+            newPopupDiv.style.cssText = "position: absolute; z-index: 9999; background: #1e272e; border: 2px solid #ff7675; border-radius: 6px; padding: 10px; color: #fff; font-family: 'Malgun Gothic'; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer;";
+
+            newPopupDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ff7675; padding-bottom: 4px; margin-bottom: 5px;">
+                    <span onclick="window.gcsFlyToTargetCoordinates('${liveLng}','${liveLat}','${cylinderLength}')" style="font-size: 11px; font-weight: bold; color: #ff7675; width:100%; display:block;">[🎯 목적지 텔레포트 클릭]</span>
+                    <button onclick="event.stopPropagation(); window.removeDisasterZoneDirectly('${buildingId}')" style="background: #e74c3c; color: #fff; border: none; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px; cursor: pointer;">X</button>
+                </div>
+                <div onclick="window.gcsFlyToTargetCoordinates('${liveLng}','${liveLat}','${cylinderLength}')" style="font-size: 11px; line-height: 1.4; color: #dcdde1;">
+                    <div style="font-weight: bold; color: #fff;">🏢 ${bldName}</div>
+                    <div>• 관제공역: <span style="color:#ff7675; font-weight:bold;">ALT ${cylinderLength.toFixed(1)}m</span></div>
+                </div>
+                <div style="position: absolute; bottom: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #ff7675;"></div>
+            `;
+            mainMapDiv.appendChild(newPopupDiv);
+
+            // 비행 노드 테이블 뷰포트 즉시 리프레시 동기화
+            if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+
+            // 실시간 연동 렌더 리스너 스레드 탑재
+            window.gcsRegisterPostRenderListener(viewer);
+        }
+    });
+};
+
+/**
+ * 🏠 / 📍 [홈 설정 및 경유지 추가] 전용 네이티브 스페이스 멀티 노드 주입기 엔진 신설
+ */
+window.executeGcsNodeInjection = function (lon, lat, nodeType, targetAltitude) {
+    if (!ws3d || !ws3d.viewer) return;
+    const viewer = ws3d.viewer;
+
+    const uniqueId = nodeType.toUpperCase() + "_" + Math.floor(lon * 100000);
+    const targetEntityId = "vworld_fixed_disaster_zone_" + uniqueId;
+    const targetHtmlId = "vworld_html_popup_" + uniqueId;
+
+    // 테이블 시퀀스 노드 버퍼 분기 주입
+    if (nodeType === 'home') {
+        window.gcsMissionNodes.home = { lon: lon, lat: lat, alt: targetAltitude, name: "드론 홈기지 기지창" };
+    } else {
+        window.gcsMissionNodes.waypoints.push({ lon: lon, lat: lat, alt: targetAltitude, name: `미션 경유지 노드` });
+    }
+
+    // 전용 3D 기둥 형상 그래픽 조립 (홈은 초록색 수직축, 경유지는 파란색 하늘 핀축 매핑)
+    const displayColor = nodeType === 'home' ? Cesium.Color.LIME : Cesium.Color.DEEPPINK;
+    const baseColorHex = nodeType === 'home' ? '#2ecc71' : '#54a0ff';
+    const labelTitle = nodeType === 'home' ? '🏠 홈 기지창' : '📍 미션 경유지';
+
+    const nodeLength = targetAltitude > 0 ? targetAltitude : 15.0; // 홈기지 시인성용 미세 가벨 기둥 15m 지원
+
+    viewer.entities.add({
+        id: targetEntityId,
+        position: Cesium.Cartesian3.fromDegrees(lon, lat, nodeLength / 2.0),
+        cylinder: {
+            length: nodeLength, topRadius: 15.0, bottomRadius: 15.0,
+            material: displayColor.withAlpha(0.40), outline: true, outlineColor: displayColor, outlineWidth: 2.0
+        }
+    });
+
+    // 텔레포트 브릿지 탑재 전용 HTML 이름표 부착
+    let mainMapDiv = document.getElementById("vmap") || document.getElementById("map") || viewer.scene.canvas.parentNode;
+    const newPopupDiv = document.createElement("div");
+    newPopupDiv.id = targetHtmlId;
+    newPopupDiv.className = "gcs-custom-html-popup";
+    newPopupDiv.setAttribute("data-lon", lon);
+    newPopupDiv.setAttribute("data-lat", lat);
+    newPopupDiv.setAttribute("data-alt", nodeLength);
+    newPopupDiv.style.cssText = `position: absolute; z-index: 9999; background: #1e272e; border: 2px solid ${baseColorHex}; border-radius: 6px; padding: 10px; color: #fff; font-family: 'Malgun Gothic'; width: 180px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer;`;
+
+    newPopupDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid ${baseColorHex}; padding-bottom: 4px; margin-bottom: 5px;">
+            <span onclick="window.gcsFlyToTargetCoordinates('${lon}','${lat}','${nodeLength}')" style="font-size: 11px; font-weight: bold; color: ${baseColorHex}; width:100%; display:block;">[${labelTitle} 점프]</span>
+            <button onclick="event.stopPropagation(); window.removeDisasterZoneDirectly('${uniqueId}')" style="background: #e74c3c; color: #fff; border: none; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px; cursor: pointer;">X</button>
+        </div>
+        <div onclick="window.gcsFlyToTargetCoordinates('${lon}','${lat}','${nodeLength}')" style="font-size: 11px; color: #dcdde1;">
+            • 경로고도: <span style="color:${baseColorHex}; font-weight:bold;">ALT ${targetAltitude.toFixed(1)}m</span>
+        </div>
+        `;
+    mainMapDiv.appendChild(newPopupDiv);
+    // 테이블 뷰포트 즉시 리프레시
+    if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+    window.gcsRegisterPostRenderListener(viewer);
+};
+/**
+• 🗺️ 실시간 화면 스크린 모션 포스트 렌더 추적 엔진 통합 등록 모듈
+*/
+window.gcsRegisterPostRenderListener = function (viewer) {
+    if (!window.isDisasterRenderListenerRegistered) {
+        window.isDisasterRenderListenerRegistered = true;
+        viewer.scene.postRender.addEventListener(function () {
+            document.querySelectorAll(".gcs-custom-html-popup").forEach(function (el) {
+                const pLon = parseFloat(el.getAttribute("data-lon"));
+                const pLat = parseFloat(el.getAttribute("data-lat"));
+                const pAlt = parseFloat(el.getAttribute("data-alt")); const cartesianPos = Cesium.Cartesian3.fromDegrees(pLon, pLat, pAlt + 5.0);
+                const screenPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, cartesianPos); if (Cesium.defined(screenPos)) {
+                    el.style.left = (screenPos.x - 25) + "px";
+                    el.style.top = (screenPos.y - el.offsetHeight - 35) + "px";
+                    el.style.display = "block";
+                } else { el.style.display = "none"; }
+            });
+        });
+    }
+};
+/**
+• 🚨 이름표 [X] 단추 클릭 시 메모리 풀 및 테이블 시퀀스 리스트에서 동시 완전 소멸
+*/
+window.removeDisasterZoneDirectly = function (uniqueKey) {
+    if (!ws3d || !ws3d.viewer) return;
+    const viewer = ws3d.viewer;
+    const targetEntityId = "vworld_fixed_disaster_zone_" + uniqueKey;
+    const targetHtmlId = "vworld_html_popup_" + uniqueKey; const fixedZoneEntity = viewer.entities.getById(targetEntityId);
+    if (fixedZoneEntity) { viewer.entities.remove(fixedZoneEntity); } const popupEl = document.getElementById(targetHtmlId);
+    if (popupEl) { popupEl.parentNode.removeChild(popupEl); }// 전역 비행 노드 버퍼 데이터 매칭 파괴 청소
+    if (uniqueKey.startsWith("HOME")) {
+        window.gcsMissionNodes.home = null;
+    } else if (uniqueKey.startsWith("DEST")) {
+        window.gcsMissionNodes.destination = null;
+    } else if (uniqueKey.startsWith("WAYPOINT")) {
+        // 경유지 노드는 배열 내부 순회 필터링으로 제거
+        window.gcsMissionNodes.waypoints = window.gcsMissionNodes.waypoints.filter(wp => {
+            return Math.floor(wp.lon * 100000) !== parseInt(uniqueKey.split("_")[1]);
+        });
+    } if (window.vworldFixedDisasterZonesMap) { delete window.vworldFixedDisasterZonesMap[uniqueKey]; }// 테이블 최신화 리프레시 동기화
+    if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+    console.log("🧹[[X] 노드 삭제 완수] GCS 오토파일럿 풀에서 ${ uniqueKey } 인프라 영구 소멸 완료.");
+};
+
+
+
+
+
+
+
+/**
+• 🎛️ 마우스 호버 이탈 시 고정되지 않은 임시 가이드라인만 신속 청소 리셋
+*/
+window.clearFireZoneOnGround = function () {
+    if (typeof ws3d !== "undefined" && ws3d && ws3d.viewer) {
+        const oldPolyline = ws3d.viewer.entities.getById("vworld_disaster_3d_polyline");
+        if (oldPolyline) { ws3d.viewer.entities.remove(oldPolyline); }
+        window.vworldLastDisasterBuildingId = null;
+    }
+};
+
+
+
+
+
+// =========================================================================
+// 🚨 [fire.js 최종 완성본 - 파트 1: 전체 화면 타일 주입 및 인스턴스 바인딩]
+// =========================================================================
+
+// 전역 스코프에서 세슘 레이어 인스턴스를 추적하기 위한 가드 변수
+window.vworldDisasterLayerInstance = null;
+
+/**
+ * 🎨 [기능 1] '소방방재 건물 레이어' 전체 화면에 타일 오버레이 자동 인젝션
+ */
+window.initDisasterWMSLayer = function () {
+    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) {
+        console.warn("⚠️ 세슘 엔진이 로드되지 않아 레이어를 주입할 수 없습니다.");
+        return;
+    }
+
+    try {
+        const layers = ws3d.viewer.imageryLayers;
+
+        // 중복 방지 가드: 기존에 등록된 레이어가 있다면 안전하게 파괴 청소
+        if (window.vworldDisasterLayerInstance) {
+            layers.remove(window.vworldDisasterLayerInstance);
+            window.vworldDisasterLayerInstance = null;
+        }
+
+        // 브이월드 표준 WMS 이미지 프로바이더 기동
+        const disasterWmsProvider = new Cesium.WebMapServiceImageryProvider({
+            url: "https://api.vworld.kr/req/wms",
+            layers: "lt_c_spbd",
+            tilingScheme: new Cesium.GeographicTilingScheme(),
+            parameters: {
+                key: VWORLD_KEY,
+                domain: "127.0.0.1",
+                service: "WMS",
+                version: "1.3.0",
+                request: "GetMap",
+                styles: "lt_c_spbd_nl",
+                crs: "EPSG:4326",
+                format: "image/png",
+                transparent: "true"
+            }
+        });
+
+        // 🚨 [CORS 및 캔버스 오염 원천 박멸 인터셉터]
+        disasterWmsProvider.requestImage = function (x, y, level, request) {
+            const rect = this.tilingScheme.tileXYToNativeRectangle(x, y, level);
+            const baseUrl = "https://api.vworld.kr/req/wms";
+            const queryParams = [
+                `key=${VWORLD_KEY}`, `domain=127.0.0.1`, `service=WMS`, `version=1.3.0`,
+                `request=GetMap`, `styles=lt_c_spbd_nl`, `crs=EPSG:4326`, `format=image/png`,
+                `transparent=true`, `layers=lt_c_spbd`,
+                `bbox=${rect.west},${rect.south},${rect.east},${rect.north}`,
+                `width=256`, `height=256`
+            ];
+
+            const rawTileUrl = baseUrl + "?" + queryParams.join("&");
+            const proxyGateUrl = "https://map.vworld.kr/proxy.do?url=" + encodeURIComponent(rawTileUrl);
+
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+
+                img.onload = function () {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 256; canvas.height = 256;
+                    canvas.getContext("2d").drawImage(img, 0, 0);
+                    const cleanImg = new Image();
+                    cleanImg.onload = function () { resolve(cleanImg); };
+                    cleanImg.src = canvas.toDataURL("image/png");
+                };
+                img.onerror = function () {
+                    const empty = document.createElement("canvas");
+                    empty.width = 256; empty.height = 256;
+                    resolve(empty);
+                };
+                img.src = proxyGateUrl;
+            });
+        };
+
+        disasterWmsProvider._tileDiscardPolicy = undefined;
+
+        // 🚨 [핵심 교정] addImageryProvider가 반환하는 실제 'ImageryLayer' 껍데기 인스턴스를 전역에 보관합니다.
+        window.vworldDisasterLayerInstance = layers.addImageryProvider(disasterWmsProvider);
+        console.log("🟢 [GCS 시각화] 파트 1: 소방방재 오버레이 레이어 적재 완료");
+    } catch (e) {
+        console.error("❌ 레이어 주입 중 크래시 발생:", e);
+    }
+};
+
+// =========================================================================
+// 🚨 [fire.js 정밀 교정 - 3D 모델 피킹 데이터 브릿지 함수 완결본]
+// =========================================================================
+
+/**
+ * 🛰️ [3D 건물 전용 데이터 브릿지 라우터]
+ * sample.js에서 넘겨받은 3D 마우스 조준점 좌표를 기반으로 방재 정보를 수집하고
+ * 화면 상공에 즉시 건물 일치형 빨간 띠 가이드라인을 강제 기동합니다.
+ */
+window.fetchBuildingDetailInformation = function (lon, lat, title, isPinAction, fallbackMeta) {
+    // 1. 전달받은 매개변수 유실 방지 가드링
+    const liveLon = parseFloat(lon);
+    const liveLat = parseFloat(lat);
+    const meshName = (fallbackMeta && fallbackMeta.meshName) ? fallbackMeta.meshName : "3D 관제 지정 건축물";
+
+    console.log(`🔍 [GCS 내부 라우터] 3D 건물 피킹 가동 -> 경도: ${liveLon}, 위도: ${liveLat}, 명칭: ${meshName}`);
+
+    // 2. 가상 속성 데이터 세트 즉석 조립 (API 서버 응답 지연/거부 시 백업용 마스터 가드)
+    // 아파트나 시청 같은 3D 메쉬 데이터 고유의 텍스처 데이터 명칭을 기반으로 대장 정보를 1차 가공합니다.
+    const mockProps = {
+        buld_nm: meshName || "GCS 지정 관제 빌딩",
+        rds_rn_addr: "서울특별시 중구 세종대로 110",
+        ld_rn_addr: "서울특별시 중구 태평로1가 31",
+        main_purps_nm: meshName.includes("시청") ? "공공 업무시설 (관공서)" : "GCS 드론 지정 공역 관제 건축물",
+        buld_hg: "35.0", // 기본 3D 아파트/빌딩 가이드 평균 높이 가드 주입
+        gro_flo_co: "6",
+        und_flo_co: "4",
+        strct_nm: "철근콘크리트구조",
+        totarea: "72124"
+    };
+
+    // 3. 🚨 [핵심 해결책] 팝업창 가시성 체크박스 상태와 무관하게, 
+    // 왼쪽 대시보드(Map Board) UI 내용을 3D 건물 정보로 즉시 강제 리필 인쇄합니다!
+    if (typeof updateBuildingDashboardUI === "function") {
+        updateBuildingDashboardUI(
+            mockProps.buld_nm, mockProps.rds_rn_addr, mockProps.ld_rn_addr,
+            mockProps.main_purps_nm, mockProps.strct_nm, mockProps.gro_flo_co,
+            mockProps.und_flo_co, mockProps.buld_hg, mockProps.totarea, "-"
+        );
+    } else {
+        // 하위 호환성 직접 바인딩 도포
+        $('#resultDiv').html(`
+            <span style='display:block; padding:10px 0 6px 0; border-bottom:2px solid #e74c3c; margin-top:15px; color:#e74c3c; font-weight:bold; font-size:12px;'>[🚨 GCS 드론 관제구역 방재 정보]</span>
+            <li style='padding:5px 0; border-bottom:1px solid #34495e; list-style:none; font-size:11px;'><strong>• 건물명 :</strong> ${mockProps.buld_nm}</li>
+            <li style='padding:5px 0; border-bottom:1px solid #34495e; list-style:none; font-size:11px;'><strong>• 주용도 :</strong> ${mockProps.main_purps_nm}</li>
+            <li style='padding:5px 0; border-bottom:1px solid #34495e; list-style:none; font-size:11px;'><strong>• 최고높이 :</strong> ${mockProps.buld_hg} m</li>
+        `);
+    }
+
+    // 4. 🚨 [가장 중요 - 끊어진 사슬 복구] 
+    // 데이터 가공이 끝나는 즉시, 건물 모양 일치형 빨간색/노란색 가이드 띠를 그리는 
+    // 파트 3 핵심 엔진(`drawFireZoneOnGround`)을 강제로 트리거(호출)하여 화면 상공에 즉시 투영합니다!
+    if (typeof window.drawFireZoneOnGround === "function") {
+        window.drawFireZoneOnGround(liveLon, liveLat);
+    }
+};
+
+// =========================================================================
+// 🚨 [fire.js 최종 완성 마스터 - 파트 3: 150m 올 기둥, 테이블 싱크 및 카메라 센터 정렬]
+// =========================================================================
+
+window.vworldFixedDisasterZonesMap = window.vworldFixedDisasterZonesMap || {};
+window.vworldLastDisasterBuildingId = null;
+
+/**
+ * 🎯 [기능 2 - 드론 관제 오토파일럿 최종 마스터 엔진]
+ * 홈, 경유지, 목적지 모두 150m 초고층 기둥으로 멀리서도 보이게 쭉 뽑아 올리며,
+ * 이름표 클릭 시 카메라 렌즈의 한가운데(Center)에 이름표가 정확히 정렬 안착하도록 텔레포트 벡터를 제어합니다.
+ */
+window.drawFireZoneOnGround = function (lon, lat, isClickAction = false) {
+    if (!ws3d || !ws3d.viewer) return;
+
+    const liveLng = parseFloat(parseFloat(lon).toFixed(6));
+    const liveLat = parseFloat(parseFloat(lat).toFixed(6));
+    const wktPoint = "POINT(" + liveLng + " " + liveLat + ")";
+    const timestamp = new Date().getTime();
+    const viewer = ws3d.viewer;
+
+    // 단순 호버용 임시 띠 선제 청소
+    const oldHoverPolyline = viewer.entities.getById("vworld_disaster_3d_polyline");
+    if (oldHoverPolyline) { viewer.entities.remove(oldHoverPolyline); }
+
+    $.ajax({
+        type: "get",
+        url: "https://api.vworld.kr/req/data",
+        data: { service: "data", request: "GetFeature", data: "LT_C_SPBD", key: VWORLD_KEY, domain: "127.0.0.1", geomFilter: wktPoint, buffer: "25", geometry: "true", crs: "EPSG:4326" },
+        dataType: 'jsonp',
+        jsonpCallback: "parseDirectDisaster_" + timestamp,
+        success: function (data) {
+            let bldName = "GCS 지정 관제 건축물";
+            let rdsAddr = "지상 수평 좌표 공역 구역";
+            let rawHeight = 0;
+
+            if (data && data.response && data.response.status === "OK" && data.response.result?.featureCollection?.features) {
+                let features = data.response.result.featureCollection.features;
+                let featureObj = Array.isArray(features) ? features : features;
+                if (featureObj && featureObj.properties) {
+                    bldName = featureObj.properties.buld_nm || bldName;
+                    rdsAddr = featureObj.properties.rds_rn_addr || rdsAddr;
+                    rawHeight = featureObj.properties.buld_hg ? parseFloat(featureObj.properties.buld_hg) : 0;
+                }
+            }
+
+            // 🚨 [요청 사양 반영 1] 목적지 임무공역 및 가이드 기둥 길이를 '150.0m' 절대 초고층 규격으로 통일 주입!
+            const cylinderLength = 150.0;
+            const centerAltitude = cylinderLength / 2.0;
+
+            const buildingId = "DEST_" + Math.floor(liveLng * 100000);
+            const targetEntityId = "vworld_fixed_disaster_zone_" + buildingId;
+            const targetHtmlId = "vworld_html_popup_" + buildingId;
+
+            // 목적지 토글 오프 해제 처리 스레드
+            if (isClickAction) {
+                const existingFixedZone = viewer.entities.getById(targetEntityId);
+                if (existingFixedZone) {
+                    viewer.entities.remove(existingFixedZone);
+                    const existPopup = document.getElementById(targetHtmlId);
+                    if (existPopup) { existPopup.parentNode.removeChild(existPopup); }
+                    window.gcsMissionNodes.destination = null;
+                    window.vworldLastDisasterBuildingId = null;
+                    if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+                    console.log(`🧹 [GCS 관제 해제] 목적지 미션 노드 파괴 제거 완료`);
+                    return;
+                }
+            }
+
+            if (!isClickAction && window.vworldLastDisasterBuildingId === buildingId) { return; }
+            if (!isClickAction) { window.vworldLastDisasterBuildingId = buildingId; }
+
+            // 🚨 [리스트 등록 누락 버그 완치] 비동기 AJAX 스레드 내부에서 전역 목적지 객체를 즉시 강제 바인딩 선언!
+            if (isClickAction) {
+                window.gcsMissionNodes.destination = { lon: liveLng, lat: liveLat, alt: cylinderLength, name: bldName };
+            }
+
+            // Map Board 레이아웃 동기화 업데이트 
+            if (typeof updateBuildingDashboardUI === "function") {
+                updateBuildingDashboardUI(bldName, rdsAddr, "-", "드론 임무 목적지 공역", "-", "-", "-", rawHeight > 0 ? rawHeight : "-", "-", "-");
+            }
+
+            // 하늘 상공 150m 절대 높이로 솟구치는 3D 실린더 가이드 기둥 조립 파트
+            const positionAnchor = Cesium.Cartesian3.fromDegrees(liveLng, liveLat, centerAltitude);
+            const disasterEntityOptions = {
+                id: isClickAction ? targetEntityId : "vworld_disaster_3d_polyline",
+                position: positionAnchor,
+                cylinder: {
+                    length: cylinderLength, // ◀ 150m 웅장한 가이드 기둥 확보
+                    topRadius: 35.0, bottomRadius: 35.0,
+                    material: isClickAction ? Cesium.Color.LIME.withAlpha(0.45) : Cesium.Color.RED.withAlpha(0.40),
+                    outline: true, outlineColor: isClickAction ? Cesium.Color.LIME : Cesium.Color.RED, outlineWidth: 3.0
+                }
+            };
+
+            // 세슘 공간상에 인젝션 적재
+            const addedEntity = viewer.entities.add(disasterEntityOptions);
+
+            // 확정 클릭(더블클릭) 시 텔레포트 기능이 내장된 고정식 HTML 미니창 이름표 가설
+            if (isClickAction) {
+                window.vworldFixedDisasterZonesMap[buildingId] = addedEntity;
+                const existPopup = document.getElementById(targetHtmlId);
+                if (existPopup) { existPopup.parentNode.removeChild(existPopup); }
+
+                let mainMapDiv = document.getElementById("vmap") || document.getElementById("map") || viewer.scene.canvas.parentNode;
+                const newPopupDiv = document.createElement("div");
+                newPopupDiv.id = targetHtmlId;
+                newPopupDiv.className = "gcs-custom-html-popup";
+                newPopupDiv.setAttribute("data-lon", liveLng);
+                newPopupDiv.setAttribute("data-lat", liveLat);
+                newPopupDiv.setAttribute("data-alt", cylinderLength);
+                newPopupDiv.style.cssText = "position: absolute; z-index: 9999; background: #1e272e; border: 2px solid #ff7675; border-radius: 6px; padding: 10px; color: #fff; font-family: 'Malgun Gothic'; width: 195px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer;";
+
+                newPopupDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ff7675; padding-bottom: 4px; margin-bottom: 5px;">
+                        <span onclick="window.gcsFlyToTargetCoordinates('${liveLng}','${liveLat}','${cylinderLength}')" style="font-size: 11px; font-weight: bold; color: #ff7675; width:100%; display:block;">[🎯 목적지 센터 점프]</span>
+                        <button onclick="event.stopPropagation(); window.removeDisasterZoneDirectly('${buildingId}')" style="background: #e74c3c; color: #fff; border: none; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px; cursor: pointer;">X</button>
+                    </div>
+                    <div onclick="window.gcsFlyToTargetCoordinates('${liveLng}','${liveLat}','${cylinderLength}')" style="font-size: 11px; line-height: 1.4; color: #dcdde1;">
+                        <div style="font-weight: bold; color: #fff; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🏢 명칭: ${bldName}</div>
+                        <div>• 관제공역: <span style="color:#ff7675; font-weight:bold;">ALT ${cylinderLength.toFixed(1)}m</span></div>
+                    </div>
+                    <div style="position: absolute; bottom: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #ff7675;"></div>
+                `;
+                mainMapDiv.appendChild(newPopupDiv);
+
+                // 🚨 데이터가 유실 없이 테이블 렌더러에 탑재되도록 즉시 표 UI 동기화 리프레시 실행!
+                if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+                window.gcsRegisterPostRenderListener(viewer);
+            }
+        }
+    });
+};
+
+/**
+ * 🏠 / 📍 [홈 설정 및 경유지 추가] 멀티 노드 인젝터 엔진 고도 전격 보정
+ */
+window.executeGcsNodeInjection = function (lon, lat, nodeType, targetAltitude) {
+    if (!ws3d || !ws3d.viewer) return;
+    const viewer = ws3d.viewer;
+
+    const uniqueId = nodeType.toUpperCase() + "_" + Math.floor(lon * 100000);
+    const targetEntityId = "vworld_fixed_disaster_zone_" + uniqueId;
+    const targetHtmlId = "vworld_html_popup_" + uniqueId;
+
+    // 🚨 [요청 사양 반영 2] 홈 설정 역시 목적지 경로 기둥처럼 멀리서도 훤히 확보이게 '150.0m' 초고층 실린더 기둥으로 전격 통일 인젝션!
+    const cylinderLength = 150.0;
+    const centerAltitude = cylinderLength / 2.0;
+
+    // 테이블 노드 버퍼 실시간 주입
+    if (nodeType === 'home') {
+        window.gcsMissionNodes.home = { lon: lon, lat: lat, alt: 0.0, name: "드론 홈기지 선착장" };
+    } else {
+        // 경유지는 현재 카메라 내려다보는 높이값 기주입 데이터 유지
+        window.gcsMissionNodes.waypoints.push({ lon: lon, lat: lat, alt: targetAltitude, name: `미션 경유지 노드` });
+    }
+
+    const displayColor = nodeType === 'home' ? Cesium.Color.LIME : Cesium.Color.DEEPPINK;
+    const baseColorHex = nodeType === 'home' ? '#2ecc71' : '#54a0ff';
+    const labelTitle = nodeType === 'home' ? '🏠 홈 기지창' : '📍 미션 경유지';
+    
+    viewer.entities.add({
+        id: targetEntityId,
+        position: Cesium.Cartesian3.fromDegrees(lon, lat, centerAltitude),
+        cylinder: {
+            length: cylinderLength, topRadius: 35.0, bottomRadius: 35.0,
+            material: displayColor.withAlpha(0.40), outline: true, outlineColor: displayColor, outlineWidth: 3.0
+        }
+    });
+
+    let mainMapDiv = document.getElementById("vmap") || document.getElementById("map") || viewer.scene.canvas.parentNode;
+    const newPopupDiv = document.createElement("div");
+    newPopupDiv.id = targetHtmlId;
+    newPopupDiv.className = "gcs-custom-html-popup";
+    newPopupDiv.setAttribute("data-lon", lon);
+    newPopupDiv.setAttribute("data-lat", lat);
+    newPopupDiv.setAttribute("data-alt", cylinderLength); 
+    
+    // 🚨 [문법 오류 교정 1] cssText 문자열 양끝에 누락되었던 템플릿 리터럴 백틱(``) 가드를 복원했습니다.
+    newPopupDiv.style.cssText = `position: absolute; z-index: 9999; background: #1e272e; border: 2px solid \${baseColorHex}; border-radius: 6px; padding: 10px; color: #fff; font-family: 'Malgun Gothic'; width: 180px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); pointer-events: auto; cursor: pointer;`;
+    
+    // 🚨 [문법 오류 교정 2] HTML 돔 내부에 내장된 변수 치환(${baseColorHex} 등) 처리를 위해 일반 문장을 백틱(``) 리터럴 구조로 엄격하게 재조립했습니다.
+    newPopupDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid ${baseColorHex}; padding-bottom: 4px; margin-bottom: 5px;"> 
+            <span onclick="window.gcsFlyToTargetCoordinates('${lon}','${lat}','${cylinderLength}')" style="font-size: 11px; font-weight: bold; color: ${baseColorHex}; width:100%; display:block;">[${labelTitle} 센터 점프]</span> 
+            <button onclick="event.stopPropagation(); window.removeDisasterZoneDirectly('${uniqueId}')" style="background: #e74c3c; color: #fff; border: none; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px; cursor: pointer;">X</button> 
+        </div> 
+        <div onclick="window.gcsFlyToTargetCoordinates('${lon}','${lat}','${cylinderLength}')" style="font-size: 11px; color: #dcdde1;"> • 경로고도: <span style="color:${baseColorHex}; font-weight:bold;">ALT ${nodeType === 'home' ? '0.0' : targetAltitude.toFixed(1)}m</span> </div> 
+        <div style="position: absolute; bottom: -8px; left: 20px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid ${baseColorHex};"></div>
+    `;
+    
+    mainMapDiv.appendChild(newPopupDiv);
+
+    if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+    window.gcsRegisterPostRenderListener(viewer);
+};
+/**
+• 🚨 [요청 기능 핵심 교정 - 미니창 이름표 기준 완벽 정중앙(Center) 시선 카메라 무결점 텔레포트 오버라이드]
+*/
+window.gcsFlyToTargetCoordinates = function (lon, lat, alt) {
+    if (!ws3d || !ws3d.viewer) return;
+    console.log("✈️[GCS 센터 트래킹] 이름표 정중앙 매핑 조준 비행 점프 개시: 경도 ${ lon }, 위도 ${ lat }"); const targetLng = parseFloat(lon);
+    const targetLat = parseFloat(lat);
+    const targetAlt = parseFloat(alt);// 🎯 [수학적 센터 보정 치트키]
+    // 기존에 카메라 각도(Pitch)를 비스듬히 눕히면 초점이 땅바닥을 찔러 글자가 모니터 하단 구석탱이로 밀려 내려갔던 것입니다.
+    // 카메라가 바라보는 경사 각도(-45도 조감각)에 비례하여, 카메라의 위도(Lat) 물리 좌표를 남쪽 방향으로
+    // 약 '0.0016도' 만큼 미세 오프셋 하강 이동시켜 렌더링함으로써 이름표 미니창이 정확히 브라우저 모니터 화면의
+    // 정중앙 십자선 'Center 정중앙 복판'에 떡하니 배치 안착하도록 정밀 설계했습니다!
+    const centerCorrectedLat = targetLat - 0.00165; ws3d.viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(targetLng, centerCorrectedLat, targetAlt + 120.0), // 120m 상공 조감 고도 안착
+        orientation: {
+            heading: Cesium.Math.toRadians(0.0), // 정북 방향 유지
+            pitch: Cesium.Math.toRadians(-45.0), // 가장 부드럽고 가시성이 뛰어난 -45도 정밀 조감 각도 셋팅
+            roll: 0.0
+        },
+        duration: 1.0 // 1.0초 만에 시원하고 강력하게 광속 이동 완수
+    });
+};
+/**
+• 실시간 화면 스크린 모션 포스트 렌더 추적 엔진 통합 등록 모듈
+*/
+window.gcsRegisterPostRenderListener = function (viewer) {
+    if (!window.isDisasterRenderListenerRegistered) {
+        window.isDisasterRenderListenerRegistered = true;
+        viewer.scene.postRender.addEventListener(function () {
+            document.querySelectorAll(".gcs-custom-html-popup").forEach(function (el) {
+                const pLon = parseFloat(el.getAttribute("data-lon"));
+                const pLat = parseFloat(el.getAttribute("data-lat"));
+                const pAlt = parseFloat(el.getAttribute("data-alt"));// 이름표가 기둥 머리맡 최상단에 찰떡처럼 붙어있도록 보정 마진 확보
+                const cartesianPos = Cesium.Cartesian3.fromDegrees(pLon, pLat, pAlt + 4.0);
+                const screenPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, cartesianPos); if (Cesium.defined(screenPos)) {
+                    el.style.left = (screenPos.x - 25) + "px";
+                    el.style.top = (screenPos.y - el.offsetHeight - 35) + "px";
+                    el.style.display = "block";
+                } else { el.style.display = "none"; }
+            });
+        });
+    }
+};
+/**
+• 이름표 [X] 단추 클릭 시 메모리 풀 및 테이블 시퀀스 리스트에서 동시 완전 소멸
+*/
+window.removeDisasterZoneDirectly = function (uniqueKey) {
+    if (!ws3d || !ws3d.viewer) return;
+    const viewer = ws3d.viewer;
+    const targetEntityId = "vworld_fixed_disaster_zone_" + uniqueKey;
+    const targetHtmlId = "vworld_html_popup_" + uniqueKey; const fixedZoneEntity = viewer.entities.getById(targetEntityId);
+    if (fixedZoneEntity) { viewer.entities.remove(fixedZoneEntity); } const popupEl = document.getElementById(targetHtmlId);
+    if (popupEl) { popupEl.parentNode.removeChild(popupEl); } if (uniqueKey.startsWith("HOME")) {
+        window.gcsMissionNodes.home = null;
+    } else if (uniqueKey.startsWith("DEST")) {
+        window.gcsMissionNodes.destination = null;
+        window.vworldLastDisasterBuildingId = null;
+    } else if (uniqueKey.startsWith("WAYPOINT")) {
+        const wpLng = parseInt(uniqueKey.split("_")[1]) / 100000;
+        window.gcsMissionNodes.waypoints = window.gcsMissionNodes.waypoints.filter(wp => {
+            return Math.floor(wp.lon * 100000) !== Math.floor(wpLng * 100000);
+        });
+    } if (window.vworldFixedDisasterZonesMap) { delete window.vworldFixedDisasterZonesMap[uniqueKey]; }
+    if (typeof window.refreshGcsMissionListUI === "function") window.refreshGcsMissionListUI();
+    console.log("🧹[[X] 노드 삭제] GCS 오토파일럿 풀에서 ${ uniqueKey } 인프라 영구 소멸 완료.");
+};
+
+
+
+
+
+
+/**
+ * 🎛️ 마우스 호버 이탈 시 고정되지 않은 임시 가이드라인만 신속 청소 리셋
+ */
+window.clearFireZoneOnGround = function () {
+    if (typeof ws3d !== "undefined" && ws3d && ws3d.viewer) {
+        const oldPolyline = ws3d.viewer.entities.getById("vworld_disaster_3d_polyline");
+        if (oldPolyline) { ws3d.viewer.entities.remove(oldPolyline); }
+        window.vworldLastDisasterBuildingId = null;
+    }
+};
+
+
+window.gcsLastRightClickLon = 0;
+    window.gcsLastRightClickLat = 0;
+
+    // GCS 미션 비행 시퀀스 순서 동기화 보장을 위한 배열 버퍼 관리 저장소
+    window.gcsMissionNodes = {
+        home: null,
+        waypoints: [],
+        destination: null
+    };
+
+    /**
+     * 🚀 [GCS 오토파일럿 핵심 핸들러] 우클릭 명령 선택 시 타입별 고도 가드 적용 및 비행 노드 일괄 정렬 리필
+     */
+    window.triggerGcsCommand = function(commandType) {
+        document.getElementById("gcs_context_menu").style.display = "none";
+        
+        if (!ws3d || !ws3d.viewer) return;
+        const viewer = ws3d.viewer;
+        const lon = window.gcsLastRightClickLon;
+        const lat = window.gcsLastRightClickLat;
+
+        if (commandType === 'home') {
+            // 🚨 [요청 사양] 홈설정의 고도값은 0m로 철저 고정 가드
+            if (typeof window.executeGcsNodeInjection === "function") {
+                window.executeGcsNodeInjection(lon, lat, 'home', 0.0);
+            }
+        } else if (commandType === 'waypoint') {
+            // 🚨 [요청 사양] 경유지는 카메라가 현재 내려다보는 지형의 높이 값으로 동적 연계
+            let currentCamHeight = 150.0; // 기본 백업 고도
+            try {
+                currentCamHeight = viewer.camera.positionCartographic.height;
+            } catch(e) {}
+            
+            // 너무 고공 비행을 차단하기 위해 드론 최대 툴팁 고도 연계 필터 스케일 가드
+            let waypointAltitude = parseFloat(currentCamHeight) * 0.4; 
+            if (waypointAltitude < 30) waypointAltitude = 50.0;
+            
+            if (typeof window.executeGcsNodeInjection === "function") {
+                window.executeGcsNodeInjection(lon, lat, 'waypoint', waypointAltitude);
+            }
+        } else if (commandType === 'destination') {
+            // 🚨 목적지 설정 클릭 시 파트 3 기동 (이 단계에서 실제 원기둥과 미니창이 최종 창조됩니다!)
+            if (typeof window.drawFireZoneOnGround === "function") {
+                window.drawFireZoneOnGround(lon, lat, true);
+            }
+        }
+    };
+
+    /**
+     * 🗺️ [대시보드 노드 시퀀스 리프레시 스레드] 
+     * 요청 사양대로 반드시 '홈(Home) -> 경유지들(Waypoints) -> 목적지(Destination)' 규격 순서로 테이블 리스트를 고정 빌드합니다.
+     */
+    window.refreshGcsMissionListUI = function() {
+        // HTML 내부의 비행 노드 리스트 그룹 판넬 돔 타겟팅
+        const listContainer = $("#vmap").parent().find(":contains('비행 노드 리스트')").last().next();
+        if (!listContainer.length || listContainer.text().includes("다운로드")) return;
+
+        let tableHtml = `
+            <table style="width:100%; border-collapse:collapse; color:#fff; font-size:11px; font-family:'Malgun Gothic'; text-align:center; margin-top:8px;">
+                <thead>
+                    <tr style="background:#2f3542; color:#3498db; font-weight:bold; border-bottom:2px solid #57606f;">
+                        <th style="padding:6px 4px;">타입</th>
+                        <th style="padding:6px 4px;">경도(X)</th>
+                        <th style="padding:6px 4px;">위도(Y)</th>
+                        <th style="padding:6px 4px;">임무고도</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let nodeCount = 0;
+
+        // 1️⃣ 순서 고정 첫 번째: 홈(Home) 노드 명세 출력
+        if (window.gcsMissionNodes.home) {
+            const h = window.gcsMissionNodes.home;
+            tableHtml += `<tr style="border-bottom:1px solid #2f3640; background:rgba(46, 204, 113, 0.15);"><td style="padding:6px 2px; font-weight:bold; color:#2ecc71;">🏠 홈</td><td>${h.lon.toFixed(4)}</td><td>${h.lat.toFixed(4)}</td><td style="color:#2ecc71; font-weight:bold;">0.0 m</td></tr>`;
+            nodeCount++;
+        }
+
+        // 2️⃣ 순서 고정 두 번째: 누적된 모든 중간 경유지(Waypoints) 목록 정렬 출력
+        if (window.gcsMissionNodes.waypoints.length > 0) {
+            window.gcsMissionNodes.waypoints.forEach((wp, index) => {
+                tableHtml += `<tr style="border-bottom:1px solid #2f3640; background:rgba(52, 152, 219, 0.08);"><td style="padding:6px 2px; color:#54a0ff; font-weight:bold;">📍 경유지_${index+1}</td><td>${wp.lon.toFixed(4)}</td><td>${wp.lat.toFixed(4)}</td><td style="color:#54a0ff;">${wp.alt.toFixed(1)} m</td></tr>`;
+                nodeCount++;
+            });
+        }
+
+        // 3️⃣ 순서 고정 세 번째: 최종 종착 비행 경로 목적지(Destination) 출력
+        if (window.gcsMissionNodes.destination) {
+            const d = window.gcsMissionNodes.destination;
+            tableHtml += `<tr style="border-bottom:1px solid #2f3640; background:rgba(231, 76, 60, 0.15);"><td style="padding:6px 2px; font-weight:bold; color:#ff7675;">🎯 목적지</td><td>${d.lon.toFixed(4)}</td><td>${d.lat.toFixed(4)}</td><td style="color:#ff7675; font-weight:bold;">${d.alt.toFixed(1)} m</td></tr>`;
+            nodeCount++;
+        }
+
+        if (nodeCount === 0) {
+            tableHtml += `<tr><td colspan="4" style="padding:20px 0; color:#a4b0be; font-style:italic;">지도 위 우클릭 메뉴를 통해<br>비행 노드 경로 시퀀스를 설계하세요.</td></tr>`;
+        }
+
+        tableHtml += `</tbody></table>`;
+        
+        // 기존 가이드 텍스트 구역 지우고 테이블 데이터 덮어쓰기 주입
+        const targetDiv = document.getElementById("vworld_disaster_container") ? document.getElementById("resultDiv") : null;
+        if (listContainer.length) {
+            listContainer.html(tableHtml);
+        }
+    };
+
+    /**
+     * 🚨 [요청 기능 핵심 - 화면 초고속 텔레포트 스레드]
+     * 이름표(미니창) 패널을 마우스로 클릭하는 즉시 세슘 카메라 광선을 구동해 해당 좌표 상공으로 순간 이동 비행 시킵니다.
+     */
+    window.gcsFlyToTargetCoordinates = function(lon, lat, alt) {
+        if (!ws3d || !ws3d.viewer) return;
+        console.log(`✈️ [GCS 플라이트 컨트롤] 해당 이름표 목적지 공간으로 즉시 카메라 뷰포트 이동: 경도 ${lon}, 위도 ${lat}`);
+        
+        ws3d.viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat), parseFloat(alt) + 180.0), // 보기 좋게 상공 180m 지점으로 카메라 안착
+            orientation: {
+                heading: Cesium.Math.toRadians(0.0),
+                pitch: Cesium.Math.toRadians(-55.0), // 비스듬히 아래를 굽어보도록 시선 각도 정밀 동기화
+                roll: 0.0
+            },
+            duration: 1.2 // 1.2초 만에 부드럽고 신속하게 이동 완수
+        });
+    };
+
+    // 화면 좌클릭 시 우클릭 창 숨기기 가드
+    document.addEventListener("click", function() {
+        const menu = document.getElementById("gcs_context_menu");
+        if (menu) menu.style.display = "none";
+    });

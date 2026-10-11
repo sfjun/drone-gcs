@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesium GCS - VS Code Live Server Mode</title>
+    
+    <!-- 1. VS Code 환경을 위해 세슘 표준 라이브러리 및 CSS를 CDN으로 다이렉트 주입 -->
+    <!-- <script src="https://cesium.com"></script>
+    <link href="https://cesium.com" rel="stylesheet"> -->
+    <script src="./Build/Cesium/Cesium.js"></script>
+    <link href="./Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    
+    <style>
+        html, body, #cesiumContainer {
+            width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+        }
+        /* 우측 상단 관제 HUD 패널 디자인 */
+        .gcs-panel {
+            position: absolute; top: 20px; right: 20px; z-index: 99;
+            background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: sans-serif; width: 260px;
+        }
+        .gcs-panel h4 { margin: 0 0 10px 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        .info-box { background: #f0f4f8; padding: 10px; font-size: 13px; margin-bottom: 12px; border-radius: 4px; border-left: 4px solid #007bff; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        button { padding: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: #fff; }
+        button.active { background: #007bff; color: #fff; border: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 3D 세슘 가상 지구가 렌더링될 영역 -->
+    <div id="cesiumContainer"></div>
+
+    <!-- 관제 HUD 패널 UI -->
+    <div class="gcs-panel">
+        <h4>🛸 GCS Live Server Core</h4>
+        <div class="info-box">
+            현재 줌 축척 고도: <strong id="lbl_zoom_alt">150</strong> m
+        </div>
+        <div class="btn-group">
+            <button id="btn_2d" class="active" onclick="changeEngineMode('2D')">1. 2D 설계</button>
+            <button id="btn_3d" onclick="changeEngineMode('3D')">2. 3D 편집</button>
+        </div>
+    </div>
+
+    <script>
+        // 2. 브이월드 API 인증키 입력 (본인의 발급 키를 기입하세요)
+        const VWORLD_KEY = "307B0E17-0322-43C3-A570-59947C0FC7A1"; 
+        
+        let currentCameraAltitude = 150;
+        let isDrawingMode = true; // 디폴트: 2D 평면 지정 모드 활성화
+
+        // 3. CDN 기반 순수 세슘 뷰어 로컬 초기화
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: false, baseLayerPicker: false, timeline: false, 
+            animation: false, navigationHelpButton: false, homeButton: false, sceneModePicker: false
+        });
+
+        // 4. 브이월드 2D 타일 레이어를 세슘 엔진에 직접 주입
+        const vworldBaseProvider = new Cesium.WebMapTileServiceImageryProvider({
+            url: `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{TileMatrix}/{TileRow}/{TileCol}.png`,
+            layer: 'Base', style: 'default', format: 'image/png', tileMatrixSetID: 'EPSG:3857', maximumLevel: 19
+        });
+        viewer.imageryLayers.addImageryProvider(vworldBaseProvider);
+
+        // 초기 카메라 위치를 대한민국 상공으로 강제 포커싱
+        viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(127.0276, 37.4979, 2000.0)
+        });
+
+        // 5. [요구사항 구현] 마우스 스크롤 줌 레벨에 의한 카메라 높이를 실시간 가시화 및 캡처
+        viewer.camera.changed.addEventListener(() => {
+            const cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.position);
+            if (cartographic) {
+                currentCameraAltitude = cartographic.height;
+                document.getElementById("lbl_zoom_alt").innerText = Math.round(currentCameraAltitude).toLocaleString();
+            }
+        });
+
+        // 6. 2D 평면 설계뷰 ↔ 3D 입체 편집뷰 엔진 전환 스위치 (Live Server용 window 바인딩)
+        window.changeEngineMode = function(mode) {
+            const btn2d = document.getElementById("btn_2d");
+            const btn3d = document.getElementById("btn_3d");
+
+            if (mode === '2D') {
+                isDrawingMode = true;
+                btn2d.className = "active"; btn3d.className = "";
+                viewer.scene.mode = Cesium.SceneMode.SCENE2D; // 완전 평면 모드 기하 고정
+            } else {
+                isDrawingMode = false; // 3D 자유 회전 줌 시 기체 높이가 왜곡되는 링크 차단용 락
+                btn2d.className = ""; btn3d.className = "active";
+                viewer.scene.mode = Cesium.SceneMode.SCENE3D; // 3D 입체 구체 모드로 전환
+                
+                // 자연스러운 3D 투시를 위해 카메라 피치를 -45도 버드아이 각도로 전환 플라이
+                viewer.camera.flyTo({
+                    destination: viewer.camera.position,
+                    orientation: { heading: viewer.camera.heading, pitch: Cesium.Math.toRadians(-45), roll: 0.0 }
+                });
+            }
+        }
+
+        // 7. 마우스 클릭 시 실시간 멀티 공역 규제(지오펜싱) 안전 검증 후 웨이포인트(Z축 기둥 포함) 생성
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(async (clickEvent) => {
+            if (!isDrawingMode) return; // 3D 편집 튜닝 모드일 때는 마우스 클릭 생성 비활성화
+
+            const cartesian = viewer.scene.pickPosition(clickEvent.position);
+            if (!Cesium.defined(cartesian)) return;
+
+            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            const lon = Cesium.Math.toDegrees(cartographic.longitude);
+            const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+            // 🌐 실시간 공역 체크 (비행금지구역/제한구역 지오펜싱 검증)
+            let isSecure = await checkAirspaceSafety(lon, lat);
+            if (!isSecure) {
+                alert("❌ [진입 거부] 법적 비행금지/제한구역 내부이므로 해당 웨이포인트를 배치할 수 없습니다.");
+                return;
+            }
+
+            // 🌟 2D 화면 줌 상태의 카메라 고도값을 드론 초기 설정 고도로 직관적 자동 연동 주입!
+            const initialDroneAlt = currentCameraAltitude;
+
+            // 순수 세슘 엔티티 문법을 사용해 가상 마커 구체와 지상 바닥 지지 점선 기둥 동시 드로잉
+            viewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(lon, lat, initialDroneAlt),
+                point: {
+                    pixelSize: 12, color: Cesium.Color.fromCssString("#00ffcc"),
+                    outlineColor: Cesium.Color.BLACK, outlineWidth: 2
+                },
+                label: {
+                    text: `WP_${viewer.entities.values.length + 1} (${Math.round(initialDroneAlt)}m)`,
+                    font: '12px sans-serif', verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    pixelOffset: new Cesium.Cartesian2(0, -10)
+                },
+                polyline: {
+                    positions: [
+                        Cesium.Cartesian3.fromDegrees(lon, lat, 0), // 바닥점
+                        Cesium.Cartesian3.fromDegrees(lon, lat, initialDroneAlt) // 비행 상공점
+                    ],
+                    width: 2, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.YELLOW })
+                }
+            });
+
+            console.log(`[WP 배치] 경도:${lon.toFixed(5)}, 위도:${lat.toFixed(5)}, 고도:${initialDroneAlt.toFixed(1)}m`);
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+        // 🌐 브이월드 2D 데이터 오픈 API 연동 실시간 다중 공역 검증 함수
+        async function checkAirspaceSafety(lon, lat) {
+            const wktPoint = `POINT(${lon} ${lat})`;
+            const targetLayers = "LT_C_AISPRHC,LT_C_AISRESC"; 
+            const url = `https://api.vworld.kr{VWORLD_KEY}&domain=${window.location.origin}&service=data&version=2.0&request=GetFeature&data=${targetLayers}&geomFilter=${encodeURIComponent(wktPoint)}&geometry=false&crs=EPSG:4326`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.response && data.response.status === "OK" && data.response.record && data.response.record.total > 0) {
+                    return false; // 중첩 구역 발견 시 탈락
+                }
+            } catch (e) { console.error("공역 검증 통신 오류:", e); }
+            return true; // 통과
+        }
+    </script>
+    <script src="./js/cs_live.js"></script>
+    
+</body>
+</html>
