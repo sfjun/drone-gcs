@@ -114,7 +114,9 @@ vw.ws3dInitCallBack = function() {
             document.body.style.cursor = "default";
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    // 🎯 [원천 봉쇄 가드 2 - 무결점 3중 피킹 및 중복 매핑 완전 청소 블록]
+        // =========================================================================
+    // 🎯 [완치 통합 교체부] 우클릭 메뉴 항목 클릭 시 데이터 파이프라인 강제 결착 스레드
+    // =========================================================================
     handler.setInputAction(function (rightClickEvent) {
         if (!rightClickEvent.position) return;
         
@@ -122,7 +124,7 @@ vw.ws3dInitCallBack = function() {
         const globe = scene.globe;
         const camera = scene.camera;
         
-        // 3D 지형/옥상 오차를 제어하는 3중 앵커 피킹 연산
+        // 3D 공간 마우스 정밀 좌표 피킹 연산
         let pickedCartesian = scene.pickPosition(contextMousePosition);
         if (!Cesium.defined(pickedCartesian)) {
             const pickRay = camera.getPickRay(contextMousePosition);
@@ -137,10 +139,10 @@ vw.ws3dInitCallBack = function() {
             var rawLon = Cesium.Math.toDegrees(cartographic.longitude);
             var rawLat = Cesium.Math.toDegrees(cartographic.latitude);
             
-            // 완벽한 숫자가 입고되었을 때만 커맨드 채널 개방
+            // 완벽한 유효 숫자가 수신되었을 때만 제어권 개방
             if (!isNaN(rawLon) && !isNaN(rawLat) && rawLon !== 0 && rawLat !== 0) {
                 
-                // 🚨 지동 설정 앵커 변수 싱크 일치 완수!!
+                // 전역 마우스 타겟 좌표 동기화
                 window.gcsLastRightClickLon = rawLon;
                 window.gcsLastRightClickLat = rawLat;
                 
@@ -152,10 +154,44 @@ vw.ws3dInitCallBack = function() {
                     ctxMenu.style.top = contextMousePosition.y + "px";
                     ctxMenu.style.display = "block"; 
                     console.log("📡 [GCS 래스터 가드] 드론 관제 메뉴창 단독 앵커 개방 완료");
+
+                    // 💥 [명령어 채널 복구 부 주입] 팝업된 DOM 메뉴 텍스트를 판독해 클릭 이벤트를 강제 바인딩합니다.
+                    const menuItems = ctxMenu.getElementsByTagName("div") || ctxMenu.getElementsByTagName("li") || ctxMenu.children;
+                    for (let item of menuItems) {
+                        // 1. 홈 설정 버튼 클릭 시 연동
+                        if (item.textContent.includes("홈 설정")) {
+                            item.style.cursor = "pointer";
+                            item.onclick = function(e) {
+                                e.stopPropagation();
+                                if (typeof window.triggerGcsCommand === "function") window.triggerGcsCommand("home");
+                                ctxMenu.style.display = "none";
+                            };
+                        }
+                        // 2. 경유지 추가 버튼 클릭 시 연동
+                        else if (item.textContent.includes("경유지 추가")) {
+                            item.style.cursor = "pointer";
+                            item.onclick = function(e) {
+                                e.stopPropagation();
+                                if (typeof window.triggerGcsCommand === "function") window.triggerGcsCommand("waypoint");
+                                ctxMenu.style.display = "none";
+                            };
+                        }
+                        // 3. 목적지 설정 버튼 클릭 시 연동
+                        else if (item.textContent.includes("목적지 설정")) {
+                            item.style.cursor = "pointer";
+                            item.onclick = function(e) {
+                                e.stopPropagation();
+                                if (typeof window.triggerGcsCommand === "function") window.triggerGcsCommand("destination");
+                                ctxMenu.style.display = "none";
+                            };
+                        }
+                    }
                 }
             }
         }
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+    // =========================================================================
+
 
     // 🎯 [원천 봉쇄 가드 3] 마우스 좌클릭 시 우리 관제창이 닫히도록 가드 동기화
     scene.canvas.addEventListener("mousedown", function (e) {
