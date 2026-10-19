@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>VWorld GCS 스마트 관제 시스템</title>
+    <!-- 브이월드 3D 지도 구동용 오픈 리소스 임포트 -->
+    <!-- <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script> -->
+    <script src="https://jquery.com"></script>
+    <script src="./three.min.js"></script>
+    <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script>
+    
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0f19; font-family: 'Malgun Gothic', sans-serif; }
+        #vmap { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* 왼쪽 사이드 패널 */
+        #gcs_sidebar { position: absolute; left: 15px; top: 15px; width: 290px; height: calc(100% - 30px); background: rgba(11, 15, 25, 0.94); border: 1px solid #233446; border-radius: 6px; z-index: 10; padding: 12px; box-sizing: border-box; color: #fff; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .sidebar-title { font-size: 14px; font-weight: bold; color: #00ffcc; border-bottom: 2px solid #233446; padding-bottom: 6px; margin-bottom: 10px; }
+        .gcs-btn { width: 100%; padding: 7px; margin-bottom: 6px; border: none; border-radius: 4px; background: #2980b9; color: #fff; font-weight: bold; cursor: pointer; font-size: 11px; transition: 0.2s; text-align: center; }
+        .gcs-btn:hover { background: #3498db; }
+        #wp_list_container { flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); border: 1px solid #1e272e; border-radius: 4px; padding: 4px; margin-bottom: 8px; }
+        
+        /* 🔍 검색 바 스타일 구조 상속 */
+        .search-box-container { background: rgba(255, 255, 255, 0.05); border: 1px solid #34495e; border-radius: 4px; padding: 6px; margin-bottom: 10px; display: flex; gap: 4px; }
+        .search-input { flex: 1; background: #111; border: 1px solid #444; color: #fff; padding: 4px 6px; font-size: 11px; border-radius: 3px; outline: none; }
+        .search-btn { background: #1abc9c; border: none; color: #fff; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 3px; cursor: pointer; }
+        .search-btn:hover { background: #16a085; }
+
+        /* 우클릭 컨텍스트 메뉴 */
+        #gcs_context_menu { display: none; position: absolute; background: #1b263b; border: 1px solid #415a77; border-radius: 4px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); padding: 4px 0; min-width: 110px; }
+        #gcs_context_menu div { padding: 6px 12px; color: #e0e1dd; cursor: pointer; font-size: 11px; }
+        #gcs_context_menu div:hover { background: #415a77; color: #fff; }
+        /* 🛸 2D / 3D 전환 버튼 그룹 공통 레이아웃 설계 */
+        .gcs-mode-btn-group {
+            display: flex !important;
+            gap: 8px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            margin-bottom: 8px !important;
+        }
+
+        /* 💥 최초 기본 버튼 상태 (차분한 다크 테마) */
+        .gcs-mode-btn-group .btn-mode {
+            flex: 1 !important;
+            width: 100% !important;
+            
+            /* 두께 및 타이포그래피 정밀 고정 */
+            padding: 12px 0 !important;
+            font-weight: bold !important;
+            font-size: 14px !important;
+            line-height: 1.2 !important;
+            border-radius: 6px !important;
+            text-align: center !important;
+            box-sizing: border-box !important;
+            cursor: pointer !important;
+            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+            
+            /* 비활성화 기본 색상 */
+            color: #95a5a6 !important;
+            background-color: #2c3e50 !important;
+            border: 1px solid #34495e !important;
+        }
+
+        /* 💥 활성화된 토글 버튼 상태 (민트 녹색 테마) */
+        /* 여백이나 두께(padding, border-width)는 건드리지 않고 오직 색상만 정밀 체인지 */
+        .gcs-mode-btn-group .btn-mode.active {
+            color: #ffffff !important;
+            background-color: #1abc9c !important;
+            border: 1px solid #16a085 !important;
+            box-shadow: 0 0 6px rgba(26, 188, 156, 0.3) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 🗺️ 브이월드 3D WebGL 지도 탑재 캔버스 -->
+    <div id="vmap"></div>
+
+        <!-- 📋 GCS 좌측 관제 사이드 바 영역 (오른쪽 플로팅 레이어 완치 스킨) -->
+    <div id="gcs_sidebar" style="position: absolute; left: 15px; top: 15px; width: 290px; height: calc(100% - 30px); background: rgba(11, 15, 25, 0.94); border: 1px solid #233446; border-radius: 6px; z-index: 10; padding: 12px; box-sizing: border-box; color: #fff; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <div class="sidebar-title">🚁 GCS 스마트 웨이포인트 관제</div>
+        
+        <!-- 🔍 [검색 기능 인터페이스] 주소 및 명칭 이동 서치 바 -->
+        <div class="search-box-container" style="margin-bottom: 12px; position: relative;">
+            <div style="display: flex; gap: 4px; width: 100%;">
+                <input type="text" id="gcs_search_keyword" class="search-input" placeholder="장소명, 주소 검색 이동..." onkeyup="if(event.keyCode===13) window.executeGcsSearch();">
+                <button class="search-btn" onclick="window.executeGcsSearch()">검색</button>
+            </div>
+
+            <!-- 💥 [오른쪽 플로팅 배치 완치] 검색 버튼 우측에 절대 좌표로 띄워 파묻힘을 100% 원천 차단하는 레이어 패널 -->
+            <div id="gcs_search_layer_popup" style="display: none; position: absolute; left: 275px; top: 0; width: 320px; max-height: 280px; background: rgba(16, 24, 40, 0.98); border: 2px solid #1abc9c; border-radius: 6px; box-shadow: 5px 5px 20px rgba(0,0,0,0.6); overflow: hidden; z-index: 9999;">
+                <div style="background: #111b27; padding: 6px 10px; font-size: 11px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid #233446; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🔍 통합 검색 결과 목록</span>
+                    <button onclick="document.getElementById('gcs_search_layer_popup').style.display='none';" style="background: none; border: none; color: #ef5350; cursor: pointer; font-weight: bold; font-size: 14px; padding: 0;">×</button>
+                </div>
+                <ul id="resultDiv" style="list-style: none; padding: 0; margin: 0; max-height: 240px; overflow-y: auto;">
+                    <li style="color: #7f8c8d; text-align: center; padding: 15px; font-size: 11px; list-style: none;">검색 결과가 여기에 표시됩니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 레이어 토글 세션 -->
+        <label style="font-size:11px; display:flex; align-items:center; gap:6px; margin-bottom:10px; color:#bdc3c7; cursor:pointer; user-select:none;">
+            <input type="checkbox" onchange="window.toggleFireWMS(this)"> 🔥 소방방재 건물 특수 레이어 켜기
+        </label>
+
+        <div class="gcs-mode-btn-group">
+            <!-- 2D 버튼: 초기 활성화 상태(active 클래스 포함) 및 필수 고유 ID 바인딩 -->
+            <button id="btn_2d" onclick="window.switchGcsMode('2D')" class="btn-mode active">
+                2D 설계 뷰
+            </button>
+            
+            <!-- 3D 버튼: 초기 비활성화 상태 및 필수 고유 ID 바인딩 -->
+            <button id="btn_3d" onclick="window.switchGcsMode('3D')" class="btn-mode">
+                3D 관제 편집
+            </button>
+        </div>
+
+
+        <button class="gcs-btn" onclick="document.getElementById('json_file_input').click()" style="background:#7f8c8d;">📂 Mission JSON 파일 로드</button>
+        <input type="file" id="json_file_input" accept=".json" onchange="window.importMissionJSON(event)" style="display:none;">
+
+        <div style="font-size: 11px; font-weight: bold; color: #a4b0be; margin-bottom: 5px;">📋 비행 노드 리스트 (실시간 편집)</div>
+        <div id="wp_list_container"></div>
+
+
+        <!-- 📐 [GCS 스마트 관제] 고도 자동 최적화 적용 선택 체크박스 UI 컴포넌트 -->
+        <div id="gcs_optimize_checkbox_wrapper" style="margin: 8px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-radius: 6px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; border: 1px solid #00ffcc; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <input type="checkbox" id="gcs_use_optimize_check" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #00ffcc; margin: 0;" />
+            <label for="gcs_use_optimize_check" style="color: #00ffcc; font-size: 13px; font-weight: bold; cursor: pointer; user-select: none; margin: 0; line-height: 1;">
+                경로상 지형·건물 고도 최적화
+            </label>
+        </div>
+
+
+        <!-- 💥 시작 버튼과 HUD 켜기 토글 스위치 나란히 병렬 한 줄 정렬 마감 -->
+        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+            <!-- <button class="gcs-btn" onclick="window.startGcsDroneSimulation()" style="flex: 1; background:#e67e22; font-size:12px; padding:10px; margin: 0;">🛸자율주행 시뮬레이션 시작</button> -->
+            <!-- 💥 [HTML 최종 바인딩 복원 마크업]: 클릭 신호 누수를 차단하고 자바스크립트 관제 엔진 함수를 다이렉트로 강제 점화! -->
+            <button onclick="window.startGcsDroneSimulation()" style="flex: 1; padding: 12px; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
+            <!-- <button onclick="window.startGcsSimulation()" style="flex: 1; padding: 12px; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;"> -->
+            ▶ 자율주행 시뮬레이션 시작
+            </button>      
+                 
+            <label style="font-size:11px; display:flex; align-items:center; gap:4px; color:#00ffcc; cursor:pointer; user-select:none; background: rgba(0,255,204,0.06); padding: 8px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.2); white-space: nowrap; height: 35px; box-sizing: border-box;">
+                <input type="checkbox" id="gcs_hud_use_toggle" onchange="var panel = document.getElementById('gcs_internal_hud_container') || document.getElementById('hud'); if(panel){ panel.style.display = this.checked ? 'block' : 'none'; }"> HUD
+            </label>
+        </div>      
+
+
+        <!-- 💥 하단 영역: 긴급중지 / 재시작 상태 유기형 무결성 통합 제어 버튼 -->
+        <button id="btn_emergency_toggle" onclick="window.toggleGcsDroneSimulationStatus()" style="width: 100% !important; padding: 12px !important; background-color: #c0392b; color: #ffffff !important; border: 1px solid #962d22 !important; border-radius: 6px !important; font-weight: bold !important; font-size: 14px !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; box-sizing: border-box !important; transition: background-color 0.2s ease !important;">
+            🛑 시뮬레이션 긴급중지/재시작
+        </button>
+        <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px;">💾 임무 경로 JSON 다운로드</button>
+    </div>
+
+    <!-- 🖱️ 우클릭 GCS 관제 컨텍스트 메뉴 -->
+    <div id="gcs_context_menu">
+        <div>🛸 홈 설정</div>
+        <div>📍 경유지 추가</div>
+        <div>🎯 목적지 설정</div>
+    </div>
+
+    <!-- 💥 [최대 보완] 확장된 3D 캔버스 높이를 감당하도록 min-height를 320px로 확장 변경 -->
+    <div id="gcs_internal_hud_container" style="position: fixed; right: 20px; bottom: 20px; width: 380px; height: auto; min-height: 320px; z-index: 10000; background: rgba(16, 23, 41, 0.95); border: 1px solid #2c3e50; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; display: none;">   
+        <!-- 1. HUD 드래그 제어 상단 헤더 타이틀바 명세 (중복 ID 완치 버전) -->
+        <div id="gcs_hud_header" style="background: #2c3e50; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #34495e; cursor: move; user-select: none;">
+            <span style="font-weight: bold; font-size: 13px; color: #00ffcc;">📸 GCS 스마트 미션 라이브 HUD</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <!-- <button id="btn_hud_view_swap" onclick="window.toggleGcsCameraViewMode();" style="background: #e67e22; border: none; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">🔄 점검 뷰 모드</button> -->
+                <button id="btn_hud_layout_swap" onclick="window.switchGcsMainWindowAndHud();" style="background: #2980b9; border: none; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">🔄화면스위칭</button>
+                <button onclick="var b=document.getElementById('gcs_hud_body_wrapper'); if(b){ b.style.display=b.style.display==='none'?'block':'none'; this.innerText=b.style.display==='none'?'🔼':'🔽'; }" style="background:none; border:none; color:#fff; cursor:pointer; font-size:12px; padding:0 4px;">🔽</button>
+                <button onclick="window.closeGcsHudPanelWithLayoutRestore();" style="background: none; border: none; color: #ef5350; cursor: pointer; font-weight: bold; font-size: 18px; padding:0 2px; line-height: 1;">×</button>
+            </div>
+        </div>
+
+        <!-- 접기/펼치기 및 스위칭 제어를 위한 통합 바디 래퍼 (그래프 + 상세정보 한몸 매립) -->
+        <div id="gcs_hud_body_wrapper" style="display: block;">
+            
+            <!-- 2. 3D 비행경로 레이더 그래프 코어 영역 -->
+            <div id="gcs_hud_body" style="padding: 10px; background: rgba(10, 15, 28, 0.6);">
+                <div style="font-size: 11px; color: #85929e; margin-bottom: 5px; font-weight: bold;">2D 비행경로 레이더</div>
+                <canvas id="gcs_hud_minimap_canvas" width="360" height="150" style="background: #0b0f19; border: 1px solid #1b263b; border-radius: 4px; display: block; width: 100%; box-sizing: border-box;"></canvas>
+            </div>
+
+            <!-- 3. 💥 [병합 결착] 드론 실시간 계기판 상세정보 패널 명세 (통합 포함 완료) -->
+            <div id="gcs_hud_details" style="padding: 12px 15px; background: rgba(15, 23, 42, 0.9); border-top: 1px solid #1e293b; font-family: 'Malgun Gothic', sans-serif;">
+                <div style="display: flex; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
+                    <span style="color: #38bdf8; font-size: 11px; font-weight: bold; margin-right: 6px;">📡 관제 상태:</span>
+                    <span id="hud_status_text" style="color: #fff; font-size: 11px; font-weight: bold;">대기중</span>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #94a3b8;">
+                    <tr style="height: 20px;">
+                        <td style="width: 40%; color: #cbd5e1;">✈️ 임무 단계:</td>
+                        <td id="hud_metric_stage" style="color: #34d399; font-weight: bold; text-align: right;">-</td>
+                    </tr>
+                    <tr style="height: 20px;">
+                        <td style="color: #cbd5e1;">📊 비행 고도:</td>
+                        <td style="color: #f59e0b; font-weight: bold; text-align: right;"><span id="hud_metric_alt">0</span> m</td>
+                    </tr>
+                    <tr style="height: 20px;">
+                        <td style="color: #cbd5e1;">🧭 방향각 (Yaw):</td>
+                        <td style="color: #a78bfa; font-weight: bold; text-align: right;"><span id="hud_metric_heading">0.0</span> °</td>
+                    </tr>
+                    <tr style="height: 20px;">
+                        <td style="color: #cbd5e1;">📍 실시간 좌표:</td>
+                        <td id="hud_metric_coords" style="color: #e2e8f0; text-align: right; font-size: 10px; font-family: monospace;">X: 0.00000, Y: 0.00000</td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 🔗 GCS 분할 경량화 모듈 멀티 로더 링크 -->
+    <script type="text/javascript" src="./gcs_engine.js"></script>
+    <script type="text/javascript" src="./gcs_view.js"></script>
+    <script type="text/javascript" src="./gcs_avoid.js"></script>
+    
+    <!-- <script type="module" src="./gcs_engine.js"></script>
+    <script type="module" src="./gcs_hud.js"></script> -->
+    
+    <script>
+        jQuery(document).ready(function() {
+            if (typeof window.renderWaypointListUI === "function") {
+                window.renderWaypointListUI();
+            }
+        });
+    </script>
+</body>
+</html>
