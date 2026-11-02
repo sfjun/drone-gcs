@@ -1,4 +1,54 @@
+(function injectGcsToastCss() {
+    var styleId = "gcs_toast_style_shield";
+    if (document.getElementById(styleId)) return;
+    var styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    styleEl.innerHTML = `
+        .gcs-system-toast {
+            position: fixed;
+            bottom: 12%;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(11, 15, 25, 0.92);
+            border-left: 4px solid #00ffcc;
+            border-right: 4px solid #00ffcc;
+            color: #ffffff;
+            padding: 14px 24px;
+            border-radius: 6px;
+            font-family: 'Malgun Gothic', sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 10000000;
+            box-shadow: 0 6px 25px rgba(0, 255, 204, 0.25);
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .gcs-system-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    `;
+    document.head.appendChild(styleEl);
+})();
 
+// 토스트 격발용 글로벌 유틸리티 함수 선언
+window.showGcsSystemToast = function(message) {
+    var toast = document.getElementById("gcs_runtime_toast_box");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "gcs_runtime_toast_box";
+        toast.className = "gcs-system-toast";
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = message;
+    toast.classList.add("show");
+    
+    if (window.gcsToastTimerId) clearTimeout(window.gcsToastTimerId);
+    window.gcsToastTimerId = setTimeout(function() {
+        toast.classList.remove("show");
+    }, 2800); // 2.8초 후 자동 소거
+};
 
 // =========================================================================
 // 🛸 [GCS 코어 인프라] gcs_engine.js - 구조 개선 리팩토링 본

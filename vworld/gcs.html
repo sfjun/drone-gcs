@@ -164,56 +164,68 @@
         <div>🎯 목적지 설정</div>
     </div>
 
-    <!-- 💥 [최대 보완] 확장된 3D 캔버스 높이를 감당하도록 min-height를 320px로 확장 변경 -->
-    <div id="gcs_internal_hud_container" style="position: fixed; right: 20px; bottom: 20px; width: 380px; height: auto; min-height: 320px; z-index: 10000; background: rgba(16, 23, 41, 0.95); border: 1px solid #2c3e50; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; display: none;">   
-        <!-- 1. HUD 드래그 제어 상단 헤더 타이틀바 명세 (중복 ID 완치 버전) -->
+    <!-- ========================================================================= -->
+    <!-- 🛰️ [GCS 레이더 전용 미니 HUD] 에러 차단막 및 레이더 100% 독점 마크업 -->
+    <!-- ========================================================================= -->
+    <div id="gcs_internal_hud_container" style="position: fixed; right: 20px; bottom: 20px; width: 380px; height: auto; min-height: 280px; z-index: 10000; background: rgba(16, 23, 41, 0.95); border: 1px solid #2c3e50; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; display: none;">   
+        <!-- HUD 상단 헤더 컨트롤 바 -->
         <div id="gcs_hud_header" style="background: #2c3e50; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #34495e; cursor: move; user-select: none;">
-            <span style="font-weight: bold; font-size: 13px; color: #00ffcc;">📸 GCS 스마트 미션 라이브 HUD</span>
+            <span style="font-weight: bold; font-size: 13px; color: #00ffcc;">🛰️ 3D TACTICAL RADAR</span>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <!-- <button id="btn_hud_view_swap" onclick="window.toggleGcsCameraViewMode();" style="background: #e67e22; border: none; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">🔄 점검 뷰 모드</button> -->
                 <button id="btn_hud_layout_swap" onclick="window.switchGcsMainWindowAndHud();" style="background: #2980b9; border: none; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">🔄화면스위칭</button>
                 <button onclick="var b=document.getElementById('gcs_hud_body_wrapper'); if(b){ b.style.display=b.style.display==='none'?'block':'none'; this.innerText=b.style.display==='none'?'🔼':'🔽'; }" style="background:none; border:none; color:#fff; cursor:pointer; font-size:12px; padding:0 4px;">🔽</button>
                 <button onclick="window.closeGcsHudPanelWithLayoutRestore();" style="background: none; border: none; color: #ef5350; cursor: pointer; font-weight: bold; font-size: 18px; padding:0 2px; line-height: 1;">×</button>
             </div>
         </div>
 
-        <!-- 접기/펼치기 및 스위칭 제어를 위한 통합 바디 래퍼 (그래프 + 상세정보 한몸 매립) -->
+        <!-- 통합 바디 래퍼: 오직 3D 레이더만 내부 공간을 통째로 독점합니다. -->
         <div id="gcs_hud_body_wrapper" style="display: block;">
-            
-            <!-- 2. 3D 비행경로 레이더 그래프 코어 영역 -->
-            <div id="gcs_hud_body" style="padding: 10px; background: rgba(10, 15, 28, 0.6);">
-                <div style="font-size: 11px; color: #85929e; margin-bottom: 5px; font-weight: bold;">2D 비행경로 레이더</div>
-                <canvas id="gcs_hud_minimap_canvas" width="360" height="150" style="background: #0b0f19; border: 1px solid #1b263b; border-radius: 4px; display: block; width: 100%; box-sizing: border-box;"></canvas>
+            <div id="gcs_hud_body" style="padding: 10px; background: rgba(10, 15, 28, 0.6); height: 230px;">
+                <canvas id="gcs_hud_minimap_canvas" width="360" height="220" style="background: #0b0f19; border: 1px solid #1b263b; border-radius: 4px; display: block; width: 100%; height: 100%; box-sizing: border-box;"></canvas>
             </div>
+        </div>
 
-            <!-- 3. 💥 [병합 결착] 드론 실시간 계기판 상세정보 패널 명세 (통합 포함 완료) -->
-            <div id="gcs_hud_details" style="padding: 12px 15px; background: rgba(15, 23, 42, 0.9); border-top: 1px solid #1e293b; font-family: 'Malgun Gothic', sans-serif;">
-                <div style="display: flex; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-                    <span style="color: #38bdf8; font-size: 11px; font-weight: bold; margin-right: 6px;">📡 관제 상태:</span>
-                    <span id="hud_status_text" style="color: #fff; font-size: 11px; font-weight: bold;">대기중</span>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #94a3b8;">
-                    <tr style="height: 20px;">
-                        <td style="width: 40%; color: #cbd5e1;">✈️ 임무 단계:</td>
-                        <td id="hud_metric_stage" style="color: #34d399; font-weight: bold; text-align: right;">-</td>
-                    </tr>
-                    <tr style="height: 20px;">
-                        <td style="color: #cbd5e1;">📊 비행 고도:</td>
-                        <td style="color: #f59e0b; font-weight: bold; text-align: right;"><span id="hud_metric_alt">0</span> m</td>
-                    </tr>
-                    <tr style="height: 20px;">
-                        <td style="color: #cbd5e1;">🧭 방향각 (Yaw):</td>
-                        <td style="color: #a78bfa; font-weight: bold; text-align: right;"><span id="hud_metric_heading">0.0</span> °</td>
-                    </tr>
-                    <tr style="height: 20px;">
-                        <td style="color: #cbd5e1;">📍 실시간 좌표:</td>
-                        <td id="hud_metric_coords" style="color: #e2e8f0; text-align: right; font-size: 10px; font-family: monospace;">X: 0.00000, Y: 0.00000</td>
-                    </tr>
-                </table>
-            </div>
-
+        <!-- 💥 [핵심 정합 1] 순정 엔진의 문자 대입 에러를 차단하기 위한 '숨은 참조용 가상 뼈대 인프라' -->
+        <div id="gcs_hud_details" style="display: none !important; visibility: hidden !important; height: 0px !important;">
+            <span id="hud_status_text">대기중</span>
+            <span id="hud_metric_stage">-</span>
+            <span id="hud_metric_alt">0</span>
+            <span id="hud_metric_heading">0.0</span>
+            <span id="hud_metric_coords">X: 0, Y: 0</span>
         </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- 📡 [대화면 전역 상황정보 패널] 실시간 텍스트가 완벽하게 동사출되는 상단 투사반 -->
+    <!-- ========================================================================= -->
+    <div id="gcs_main_screen_telemetry_panel" style="position: fixed; left: 20px; top: 80px; width: 320px; z-index: 5000; background: rgba(11, 19, 36, 0.95); border-left: 4px solid #38bdf8; border-radius: 0 6px 6px 0; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); padding: 15px; font-family: 'Malgun Gothic', sans-serif; display: none; pointer-events: auto;">
+        <div style="display: flex; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 6px;">
+            <span style="color: #38bdf8; font-size: 12px; font-weight: bold; margin-right: 6px;">📡 LIVE TELEMETRY STATUS:</span>
+            <span id="gcs_live_status" style="color: #fff; font-size: 12px; font-weight: bold;">대기중</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #94a3b8;">
+            <tr style="height: 24px;">
+                <td style="width: 45%; color: #cbd5e1; font-size: 12px;">✈️ 임무 단계:</td>
+                <td id="gcs_live_stage" style="color: #34d399; font-weight: bold; text-align: right; font-size: 12px;">-</td>
+            </tr>
+            <tr style="height: 24px;">
+                <td style="color: #cbd5e1; font-size: 12px;">📊 비행 고도:</td>
+                <td style="color: #f59e0b; font-weight: bold; text-align: right; font-size: 12px;"><span id="gcs_live_alt">0</span> m</td>
+            </tr>
+            <tr style="height: 24px;">
+                <td style="color: #cbd5e1; font-size: 12px;">🧭 방향각 (Yaw):</td>
+                <td style="color: #a78bfa; font-weight: bold; text-align: right; font-size: 12px;"><span id="gcs_live_heading">0.0</span> °</td>
+            </tr>
+            <tr style="height: 24px;">
+                <td style="color: #cbd5e1; font-size: 12px;">📍 실시간 좌표:</td>
+                <td id="gcs_live_coords" style="color: #e2e8f0; text-align: right; font-size: 10px; font-family: monospace;">X: 0.00000, Y: 0.00000</td>
+            </tr>
+        </table>
+    </div>
+
+
+
+
 
     <!-- 🔗 GCS 분할 경량화 모듈 멀티 로더 링크 -->
     <script type="text/javascript" src="./gcs_engine.js"></script>
