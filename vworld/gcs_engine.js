@@ -148,44 +148,44 @@ function gcsInitializeVWorldMap() {
 /**
  * WMS 게이트웨이 레이어 표준 초기화 가드
  */
-window.initDisasterWMSLayer = function () {
-    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
-    try {
-        window.GcsApp.state.vworldDisasterLayerInstance = ws3d.viewer.imageryLayers.addImageryProvider(
-            new Cesium.WebMapServiceImageryProvider({
-                url: "https://api.vworld.kr/req/wms",
-                layers: "lt_c_spbd",
-                parameters: {
-                    service: "WMS",
-                    version: "1.1.1",
-                    request: "GetMap",
-                    styles: "lt_c_spbd",
-                    format: "image/png",
-                    transparent: "true",
-                    apiKey: window.GcsApp.CONFIG.WMS_API_KEY
-                },
-                proxy: new Cesium.DefaultProxy("/proxy.do")
-            })
-        );
-        window.GcsApp.state.vworldDisasterLayerInstance.show = false;
-    } catch (e) { console.warn("⚠️ WMS 초기화 가드 작동:", e); }
-};
+// window.initDisasterWMSLayer = function () {
+//     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+//     try {
+//         window.GcsApp.state.vworldDisasterLayerInstance = ws3d.viewer.imageryLayers.addImageryProvider(
+//             new Cesium.WebMapServiceImageryProvider({
+//                 url: "https://api.vworld.kr/req/wms",
+//                 layers: "lt_c_spbd",
+//                 parameters: {
+//                     service: "WMS",
+//                     version: "1.1.1",
+//                     request: "GetMap",
+//                     styles: "lt_c_spbd",
+//                     format: "image/png",
+//                     transparent: "true",
+//                     apiKey: window.GcsApp.CONFIG.WMS_API_KEY
+//                 },
+//                 proxy: new Cesium.DefaultProxy("/proxy.do")
+//             })
+//         );
+//         window.GcsApp.state.vworldDisasterLayerInstance.show = false;
+//     } catch (e) { console.warn("⚠️ WMS 초기화 가드 작동:", e); }
+// };
 
-window.toggleFireWMS = function (elementOrChecked) {
-    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
-    if (!window.GcsApp.state.vworldDisasterLayerInstance) window.initDisasterWMSLayer();
+// window.toggleFireWMS = function (elementOrChecked) {
+//     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+//     if (!window.GcsApp.state.vworldDisasterLayerInstance) window.initDisasterWMSLayer();
 
-    var isShow = false;
-    if (typeof elementOrChecked === "boolean") {
-        isShow = elementOrChecked;
-    } else if (elementOrChecked && typeof elementOrChecked === "object") {
-        isShow = elementOrChecked.checked !== undefined ? elementOrChecked.checked : jQuery(elementOrChecked).is(":checked");
-    }
+//     var isShow = false;
+//     if (typeof elementOrChecked === "boolean") {
+//         isShow = elementOrChecked;
+//     } else if (elementOrChecked && typeof elementOrChecked === "object") {
+//         isShow = elementOrChecked.checked !== undefined ? elementOrChecked.checked : jQuery(elementOrChecked).is(":checked");
+//     }
 
-    if (window.GcsApp.state.vworldDisasterLayerInstance) {
-        window.GcsApp.state.vworldDisasterLayerInstance.show = isShow;
-    }
-};
+//     if (window.GcsApp.state.vworldDisasterLayerInstance) {
+//         window.GcsApp.state.vworldDisasterLayerInstance.show = isShow;
+//     }
+// };
 
 /**
  * 브이월드 WFS 전역 검색 결과 필지 명세 상세 분석 파이프라인
@@ -243,7 +243,7 @@ window.executeGcsSearch = function () {
 
     var requestData = {
         key: window.GcsApp.CONFIG.VWORLD_API_KEY,
-        domain: "127.0.0.1",
+        domain: window.location.hostname || "127.0.0.1", // 실시간 동적 도메인 매핑으로 고정 하드코딩 탈피
         service: "search",
         version: "2.0",
         request: "search",
@@ -1985,7 +1985,6 @@ vw.ws3dInitCallBack = function () {
         var m = document.getElementById("gcs_context_menu");
         if (m && e.button === 0) { m.style.display = "none"; scene.requestRender(); }
     });
-    if (typeof window.initDisasterWMSLayer === "function") window.initDisasterWMSLayer();
 };
 
 
@@ -2656,8 +2655,6 @@ window.switchGcsMode = function (mode) {
     }
 };
 
-
-setTimeout(function () { if (typeof ws3d !== "undefined" && ws3d.viewer) window.initDisasterWMSLayer(); }, 1000);
 
 // =========================================================================
 // 🛸 [GCS 마스터 가드] 지도 이동/회전 시 3D 삼각기둥 증발 버그 박멸 고정 엔진

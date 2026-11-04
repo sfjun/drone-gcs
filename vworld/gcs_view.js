@@ -886,6 +886,14 @@ window.gcsInjectSimulationHookInterval = setInterval(function () {
             window.isGcsDroneFlyingActive = true;
             console.log("🛸 [GCS 관제 핵심] 비행 항행 모드 기동 확인 ➡️ 정보 패널 락 해제.");
 
+            // =========================================================================
+            // 🔥 [자동 도로월 결착 수식] 시뮬레이션 시작 시 자석처럼 장벽 레이어를 즉시 가동시킵니다.
+            // =========================================================================
+            if (typeof window.gcsTriggerSimulationRoadWallForceEmit === "function") {
+                window.gcsTriggerSimulationRoadWallForceEmit();
+            }
+            // ===============================================================
+
             var optResult = window.gcsExecuteTerrainOptimizationReturnData();
             var finalTargetAlt = optResult ? optResult.recommendedSafeAltitude : 150.0;
 

@@ -100,8 +100,17 @@
         </div>
 
         <!-- 레이어 토글 세션 -->
-        <label style="font-size:11px; display:flex; align-items:center; gap:6px; margin-bottom:10px; color:#bdc3c7; cursor:pointer; user-select:none;">
+        <!-- <label style="font-size:11px; display:flex; align-items:center; gap:6px; margin-bottom:10px; color:#bdc3c7; cursor:pointer; user-select:none;">
             <input type="checkbox" onchange="window.toggleFireWMS(this)"> 🔥 소방방재 건물 특수 레이어 켜기
+        </label> -->
+        <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" onchange="toggleSidewalkObstacleLayer(this.checked)"> 인도/장애물 레이어 켜기
+        </label>
+
+        <!-- HTML 설정 판넬 내부에 삽입 -->
+        <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="gcs_streetlight_check" onchange="toggleStreetlightPoiLayer(this.checked)" />
+            <span>💡 실시간 공공 가로등 POI 표시</span>
         </label>
 
         <div class="gcs-mode-btn-group">
