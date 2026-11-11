@@ -104,44 +104,40 @@
             <input type="checkbox" onchange="window.toggleFireWMS(this)"> 🔥 소방방재 건물 특수 레이어 켜기
         </label> -->
         <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" onchange="toggleSidewalkObstacleLayer(this.checked)"> 인도/장애물 레이어 켜기
+                    <input type="checkbox" checked onchange="toggleSidewalkObstacleLayer(this.checked)"> 차도인도/철탑/대교
         </label>
 
         <!-- HTML 설정 판넬 내부에 삽입 -->
         <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="gcs_streetlight_check" onchange="toggleStreetlightPoiLayer(this.checked)" />
-            <span>💡 실시간 공공 가로등 POI 표시</span>
+            <input type="checkbox" id="gcs_streetlight_check" checked onchange="toggleStreetlightPoiLayer(this.checked)" />
+            <span>소방차전용구역</span>
         </label>
 
-        <div class="gcs-mode-btn-group">
-            <!-- 2D 버튼: 초기 활성화 상태(active 클래스 포함) 및 필수 고유 ID 바인딩 -->
-            <button id="btn_2d" onclick="window.switchGcsMode('2D')" class="btn-mode active">
-                2D 설계 뷰
-            </button>
-            
-            <!-- 3D 버튼: 초기 비활성화 상태 및 필수 고유 ID 바인딩 -->
-            <button id="btn_3d" onclick="window.switchGcsMode('3D')" class="btn-mode">
-                3D 관제 편집
-            </button>
+        <!-- 📐 [GCS 스마트 관제] 고도 자동 최적화 적용 선택 체크박스 UI 컴포넌트 -->
+        <!-- <div id="gcs_optimize_checkbox_wrapper" style="margin: 8px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-radius: 6px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; border: 1px solid #00ffcc; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"> -->
+        <div id="gcs_optimize_checkbox_wrapper">
+        
+            <!-- <input type="checkbox" id="gcs_use_optimize_check" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #00ffcc; margin: 0;" /> -->
+            <input type="checkbox" id="gcs_use_optimize_check" checked/>
+            <label for="gcs_use_optimize_check" style="color: #00ffcc; font-size: 13px; font-weight: bold; cursor: pointer; user-select: none; margin: 0; line-height: 1;">
+                경로상 지형·건물 고도 최적화
+            </label>
         </div>
+        
 
 
         
-
-        <button class="gcs-btn" onclick="document.getElementById('json_file_input').click()" style="background:#7f8c8d;">📂 Mission JSON 파일 로드</button>
-        <input type="file" id="json_file_input" accept=".json" onchange="window.importMissionJSON(event)" style="display:none;">
-
         <div style="font-size: 11px; font-weight: bold; color: #a4b0be; margin-bottom: 5px;">📋 비행 노드 리스트 (실시간 편집)</div>
         <div id="wp_list_container"></div>
 
 
-        <!-- 📐 [GCS 스마트 관제] 고도 자동 최적화 적용 선택 체크박스 UI 컴포넌트 -->
+        <!-- 📐 [GCS 스마트 관제] 고도 자동 최적화 적용 선택 체크박스 UI 컴포넌트
         <div id="gcs_optimize_checkbox_wrapper" style="margin: 8px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-radius: 6px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; border: 1px solid #00ffcc; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
             <input type="checkbox" id="gcs_use_optimize_check" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #00ffcc; margin: 0;" />
             <label for="gcs_use_optimize_check" style="color: #00ffcc; font-size: 13px; font-weight: bold; cursor: pointer; user-select: none; margin: 0; line-height: 1;">
                 경로상 지형·건물 고도 최적화
             </label>
-        </div>
+        </div> -->
 
 
         <!-- 💥 시작 버튼과 HUD 켜기 토글 스위치 나란히 병렬 한 줄 정렬 마감 -->
