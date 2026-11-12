@@ -398,451 +398,154 @@ window.renderGcsSearchResults = function (items) {
 
 
 
-/**
- * 🔒 [완치 포인트 1] 기존 UI 리렌더러 내의 출발지(Home) 사출 코드 리뉴얼
- * 기존 소스 파일의 renderWaypointListUI 함수 내부에서 Home 카드를 append/html 하는 구문을
- * 아래의 정방향 단일 고도 출력 명세 구조로 전면 교체해 주세요.
- */
-window.gcsRenderPureHomeCardTemplate = function (node) {
-    var isBuilding = (parseFloat(node.roofBase) > 0);
-    var baseHeightText = isBuilding
-        ? `건물고도: <strong style="color: #fffa65; font-size: 13px;">${node.roofBase}m</strong> <span style="font-size:10px; color:#95a5a6;"></span>`
-        : `지면고도: <strong style="color: #00ffcc; font-size: 13px;">${parseFloat(node.alt) - 60 > 0 ? Math.round(parseFloat(node.alt) - 60) : 86}m</strong> <span style="font-size:10px; color:#95a5a6;">(지상 높이)</span>`;
+// /**
+//  * 🔒 [완치 포인트 1] 기존 UI 리렌더러 내의 출발지(Home) 사출 코드 리뉴얼
+//  * 기존 소스 파일의 renderWaypointListUI 함수 내부에서 Home 카드를 append/html 하는 구문을
+//  * 아래의 정방향 단일 고도 출력 명세 구조로 전면 교체해 주세요.
+//  */
+// window.gcsRenderPureHomeCardTemplate = function (node) {
+//     var isBuilding = (parseFloat(node.roofBase) > 0);
+//     var baseHeightText = isBuilding
+//         ? `건물고도: <strong style="color: #fffa65; font-size: 13px;">${node.roofBase}m</strong>`
+//         : `지면고도: <strong style="color: #00ffcc; font-size: 13px;">${parseFloat(node.alt) - 60 > 0 ? Math.round(parseFloat(node.alt) - 60) : 86}m</strong> <span style="font-size:10px; color:#95a5a6;">(지상 높이)</span>`;
 
-    // 💥 [순정 원천 세척] 상단에 중복 주입되던 가짜 지면고도 라인을 아예 템플릿 뼈대에서 흔적도 없이 삭제했습니다.
-    var htmlString = `
-        <div id="card_waypoint_Home" class="gcs-waypoint-card active" style="padding: 10px; border-left: 4px solid #ff9f43; margin-bottom: 8px; background: rgba(30, 30, 30, 0.6); border-radius: 4px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #ff9f43; font-weight: bold; font-size: 14px;">▶ 출발지 (Home)</span>
-                <span class="badge" style="background: #ff9f43; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px;">관제 고정</span>
-            </div>
-            <div style="margin-top: 6px; font-size: 11px; color: #a4b0be;">사용자 설정 락온 공역</div>
-            <div style="margin-top: 4px; font-size: 11px; color: #bdc5cd; font-family: monospace;">X: ${parseFloat(node.lon).toFixed(6)} &nbsp; Y: ${parseFloat(node.lat).toFixed(6)}</div>
-            
-            <!-- 🔒 단 하나의 정방향 고도 명세판 배치 (항목값 깨짐 원천 박멸) -->
-            <div id="gcs_core_height_anchor_node" style="margin-top: 6px; font-size: 12px; color: #bdc3c7; line-height: 1.4;">
-                ${baseHeightText}
-            </div>
+//     // 💥 [관제 기획 의견 반영 : 8방위 절대 나침반 코드 수학적 즉시 피딩]
+//     var compassDirectionText = "방위 분석 중..";
+//     var list = (window.GcsApp && window.GcsApp.state) ? window.GcsApp.state.waypointList : (window.waypointList || []);
 
-            <!-- 🔒 관제고도 제어 및 실시간 수직 팽창 입력 컴포넌트 -->
-            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ecf0f1;">
-                <span>관제 고도:</span>
-                <input type="number" id="gcs_home_alt_input" value="${node.alt}" min="10" max="1000" step="5" 
-                       style="width: 70px; background: #2c3e50; border: 1px solid #34495e; color: #fff; font-weight: bold; font-size: 13px; text-align: center; border-radius: 3px; padding: 2px;" />
-                <span style="color: #2ecc71; font-weight: bold;">m</span>
-            </div>
-        </div>
-    `;
-    return htmlString;
+//     // 출발지(Home) 다음 노드(경유지 WP_1 또는 목적지 Destination)를 찾아 각도를 계산합니다.
+//     var nextNode = list.find(function(n) { return n && n.id !== "Home"; });
+
+//     if (node && nextNode && !isNaN(parseFloat(node.lon)) && !isNaN(parseFloat(nextNode.lon))) {
+//         var dLon = parseFloat(nextNode.lon) - parseFloat(node.lon);
+//         var dLat = parseFloat(nextNode.lat) - parseFloat(node.lat);
+
+//         // 정북(0도) 기점 시계방향 라디안 각도 역산 (Cesium 공간 정합 일치 수식)
+//         var angleRad = Math.atan2(dLon, dLat);
+//         var angleDeg = Math.round(angleRad * (180 / Math.PI));
+//         if (angleDeg < 0) angleDeg += 360; // 360도 체계 압착
+
+//         // 8방위 텍스트 스케줄러 매핑
+//         var directions = ["N (정북)", "NE (북동)", "E (정동)", "SE (남동)", "S (정남)", "SW (남서)", "W (정서)", "NW (북서)", "N (정북)"];
+//         var index = Math.round(angleDeg / 45);
+//         var bearingString = directions[index];
+
+//         compassDirectionText = `<span style="color: #fffa65; font-weight: bold;">${bearingString} ${angleDeg}°</span> 방향 진입 축`;
+//     } else {
+//         compassDirectionText = `<span style="color: #bdc3c7;">단일 공역 (대기 모드)</span>`;
+//     }
+
+//     var htmlString = `
+//         <div id="card_waypoint_Home" class="gcs-waypoint-card active" style="padding: 12px; border-left: 4px solid #ff9f43; margin-bottom: 8px; background: rgba(20, 24, 38, 0.96); border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+//             <div style="display: flex; justify-content: space-between; align-items: center;">
+//                 <span style="color: #ff9f43; font-weight: bold; font-size: 14px;">▶ 출발지 (Home)</span>
+//                 <span class="badge" style="background: #ff9f43; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold;">관제 고정</span>
+//             </div>
+
+//             <!-- 💥 [요구사항 피딩] 비행 진입 절대 나침반 방위 표기판 명세 배치 -->
+//             <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 11px; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255, 159, 67, 0.25);">
+//                 <span style="color: #ff9f43; font-weight: bold;">🧭 비행 방위 :</span>
+//                 <strong style="color: #ffffff; font-family: monospace; font-size:12px;">${compassDirectionText}</strong>
+//             </div>
+
+//             <div style="margin-top: 6px; font-size: 11px; color: #bdc5cd; font-family: monospace;">X: ${parseFloat(node.lon).toFixed(6)} &nbsp; Y: ${parseFloat(node.lat).toFixed(6)}</div>
+
+//             <div id="gcs_core_height_anchor_node" style="margin-top: 6px; font-size: 12px; color: #bdc3c7; line-height: 1.4;">
+//                 ${baseHeightText}
+//             </div>
+
+//             <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ecf0f1;">
+//                 <span>관제 고도:</span>
+//                 <input type="number" id="gcs_home_alt_input" value="${node.alt}" min="10" max="1000" step="5" 
+//                        style="width: 70px; background: #111; border: 1px solid #ff9f43; color: #fff; font-weight: bold; font-size: 13px; text-align: center; border-radius: 3px; padding: 2px;" />
+//                 <span style="color: #2ecc71; font-weight: bold;">m</span>
+//             </div>
+//         </div>
+//     `;
+//     return htmlString;
+// }; //방향각 전
+
+// =========================================================================
+// 🧭 [공통 유틸리티] 진북(True North) 0° 기준 시계방향(CW) 방위각 산출기
+// =========================================================================
+window.getGcsTrueNorthBearing = function (deg) {
+    // 0° ~ 359° 범위로 시계방향 정규화 (진북 = 0°, 정동 = 90°, 정남 = 180°, 정서 = 270°)
+    var cwDeg = Math.round(deg) % 360;
+    if (cwDeg < 0) cwDeg += 360;
+    
+    var directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"];
+    var compassCode = directions[Math.round(cwDeg / 45)];
+    
+    return {
+        code: compassCode,
+        deg: cwDeg,
+        rad: Cesium.Math.toRadians(cwDeg),
+        text: compassCode + " " + cwDeg + ".0°"
+    };
 };
 
 
 
-/**
- * 🛸 [GCS 스마트 관제 UI 파이프라인 - 삭제 시 목적지 변환 현상 원천 봉쇄 최종본]
- */
-// window.renderWaypointListUI = function () {
-//     var container = document.getElementById("wp_list_container") ||
-//         document.getElementById("gcs_waypoint_list_container") ||
-//         document.getElementById("waypoint_list");
-//     if (!container) return;
+// =========================================================================
+// 🚩 [출발지 전용 템플릿] '관제 고정' 완전 제거 및 '💾 저장' 버튼 영구 적용
+// =========================================================================
+window.gcsRenderPureHomeCardTemplate = function (node) {
+    var isBuilding = (parseFloat(node.roofBase) > 0);
+    var baseHeightText = isBuilding
+        ? `건물고도: <strong style="color: #fffa65; font-size: 13px;">${node.roofBase}m</strong>`
+        : `지면고도: <strong style="color: #00ffcc; font-size: 13px;">${parseFloat(node.alt) - 60 > 0 ? Math.round(parseFloat(node.alt) - 60) : 86}m</strong> <span style="font-size:10px; color:#95a5a6;">(지상 높이)</span>`;
 
-//     if (!window.GcsApp) window.GcsApp = { state: {} };
-//     if (!window.GcsApp.state) window.GcsApp.state = {};
-//     if (!Array.isArray(window.GcsApp.state.waypointList)) window.GcsApp.state.waypointList = [];
+    // 진북(0°) 기준 현재 드론 기수 방위각 산출
+    var currentHeadingDeg = 0;
+    if (node.heading_deg !== undefined && !isNaN(parseFloat(node.heading_deg))) {
+        currentHeadingDeg = parseFloat(node.heading_deg);
+    } else if (typeof ws3d !== "undefined" && ws3d && ws3d.viewer && ws3d.viewer.camera) {
+        currentHeadingDeg = Cesium.Math.toDegrees(ws3d.viewer.camera.heading);
+    }
 
-//     var list = window.GcsApp.state.waypointList;
-//     container.innerHTML = "";
-//     var defaultAlt = 150.0;
+    var cwDeg = Math.round(currentHeadingDeg) % 360;
+    if (cwDeg < 0) cwDeg += 360;
+    var directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"];
+    var compassCode = directions[Math.round(cwDeg / 45)];
+    var bearingText = compassCode + " " + cwDeg + ".0°";
 
-//     var savedHomeLock = localStorage.getItem("gcs_permanent_home_lock");
-//     var activeHome = null;
+    node.heading_deg = cwDeg;
+    node.heading_compass = compassCode;
+    node.heading_rad = Cesium.Math.toRadians(cwDeg);
 
-//     if (savedHomeLock) {
-//         var parsedHome = JSON.parse(savedHomeLock);
-//         var displayLocationName = parsedHome.buildingName || parsedHome.address || "사용자 지정";
-//         activeHome = {
-//             id: "Home",
-//             lon: parseFloat(parsedHome.lon),
-//             lat: parseFloat(parsedHome.lat),
-//             alt: parseFloat(parsedHome.alt || defaultAlt),
-//             address: displayLocationName
-//         };
-//     } else {
-//         var initLon = typeof NANGOK_LON !== "undefined" && NANGOK_LON ? NANGOK_LON : 126.919435;
-//         var initLat = typeof NANGOK_LAT !== "undefined" && NANGOK_LAT ? NANGOK_LAT : 37.460975;
-//         activeHome = { id: "Home", lon: initLon, lat: initLat, alt: defaultAlt, address: "난곡동 주민센터" };
-//     }
+    return `
+            <div id="card_waypoint_Home" class="gcs-waypoint-card active" 
+            onclick="window.focusGcsNodeOnMap(${node.lon}, ${node.lat}, ${parseFloat(node.roofBase) || 0});"
+            style="padding: 12px; border-left: 4px solid #f1c40f; margin-bottom: 8px; background: rgba(30, 39, 46, 0.95); border-radius: 6px; box-sizing: border-box; color: #ffffff; text-align: left; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="color: #f1c40f; font-weight: bold; font-size: 14px;">🚩 출발지 (Home)</span>
+                <button type="button" class="gcs-home-save-btn" onclick="event.stopPropagation(); window.saveGcsHomeCardDirectly();" style="background: #f1c40f; border: none; color: #000; cursor: pointer; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; z-index: 10; transition: 0.2s;">💾 저장</button>
+            </div>
+            
+            <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; background: rgba(0,0,0,0.45); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(241, 196, 15, 0.35); white-space: nowrap;">
+                <span style="color: #f1c40f; font-weight: bold;">🧭 기체기수:</span>
+                <strong style="color: #ffffff; font-family: monospace;">${bearingText}</strong>
+            </div>
 
-//     if (list.length === 0) {
-//         list.push(activeHome);
-//     } else {
-//         if (list[0] && list[0].id === "Home") {
-//             list[0].lon = activeHome.lon;
-//             list[0].lat = activeHome.lat;
-//             list[0].address = activeHome.address;
-//             if (!list[0].alt) list[0].alt = activeHome.alt;
-//         } else {
-//             list = list.filter(function (item) { return item && item.id !== "Home"; });
-//             list.unshift(activeHome);
-//         }
-//     }
+            <div style="margin-top: 6px; font-size: 11px; color: #bdc3c7; font-family: monospace;">X: ${parseFloat(node.lon).toFixed(6)} &nbsp; Y: ${parseFloat(node.lat).toFixed(6)}</div>
+            
+            <div id="gcs_core_height_anchor_node" style="margin-top: 6px; font-size: 12px; color: #bdc3c7; line-height: 1.4;">
+                ${baseHeightText}
+            </div>
 
-//     list = list.filter(function (wp) { return wp !== undefined && wp !== null; });
-//     window.GcsApp.state.waypointList = list;
-//     window.waypointList = list;
-
-//     // 비행 노드 리스트 UI 동적 카드 순회 사출
-//     list.forEach(function (wp, idx) {
-
-//         if (!wp || !wp.id) return;
-
-//         // =========================================================================
-//         // 💥 [3D 하이브리드 고도 연산 엔진 - 출발지 및 노드별 고도 파괴 방지 완치본]
-//         // =========================================================================
-//         var finalCalculatedHeight = 0;
-//         var heightLabelText = "지면고도"; 
-
-//         if (typeof ws3d !== "undefined" && ws3d && ws3d.viewer && ws3d.viewer.scene) {
-//             var scene = ws3d.viewer.scene;
-//             if (scene.globe) {
-//                 var radLon = Cesium.Math.toRadians(wp.lon);
-//                 var radLat = Cesium.Math.toRadians(wp.lat);
-//                 var cartoInstance = new Cesium.Cartographic(radLon, radLat);
-
-//                 // 1. 순수 바닥 지형 고도(Terrain Base) 산출
-//                 var pureTerrainHeight = scene.globe.getHeight(cartoInstance) || 0;
-//                 finalCalculatedHeight = Math.round(pureTerrainHeight);
-
-//                 // 2. 3D 타일즈 건물 옥상 높이 정밀 스캔 (pickPosition 에러 방어벽 구축)
-//                 var cartesianPos = Cesium.Cartesian3.fromDegrees(wp.lon, wp.lat, 0);
-//                 var screenPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(scene, cartesianPos);
-
-//                 // 만약 화면 좌표 변환이 올바르지 않다면 캔버스 중앙 가상 좌표를 백업으로 부여합니다.
-//                 if (!Cesium.defined(screenPos) || isNaN(screenPos.x) || isNaN(screenPos.y)) {
-//                     screenPos = new Cesium.Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2);
-//                 }
-
-//                 try {
-//                     var pickedPosition = scene.pickPosition(screenPos);
-//                     if (Cesium.defined(pickedPosition)) {
-//                         var surfaceCarto = Cesium.Cartographic.fromCartesian(pickedPosition);
-//                         var surfaceHeight = surfaceCarto.height;
-
-//                         // 취득된 높이가 순수 바닥 지형보다 2.5m 이상 높다면 인공 구조물(건물 옥상)로 확정
-//                         if (surfaceHeight > pureTerrainHeight + 2.5 && surfaceHeight < 2000) {
-//                             finalCalculatedHeight = Math.round(surfaceHeight);
-//                             heightLabelText = "건물고도"; 
-//                         }
-//                     }
-//                 } catch (e) {
-//                     // 예외 발생 시 순수 지형 고도로 안전 유도
-//                     finalCalculatedHeight = Math.round(pureTerrainHeight);
-//                     heightLabelText = "지면고도";
-//                 }
-//             }
-//         }
-
-//         // 💥 [수정 완치 포인트] 거꾸로 매칭되어 있던 레이블 타이틀 분기를 정방향으로 수선
-//         // 실제 노드가 건물 위(roofBase > 0)인지 맨땅 위인지 데이터 구조를 100% 반영하여 문구를 매칭합니다.
-//         var isBuildingNode = typeof wp.roofBase !== "undefined" && parseInt(wp.roofBase) > 0;
-//         heightLabelText = isBuildingNode ? "건물고도" : "지면고도";
-
-//         // 0m 이하로 파괴되는 현상을 막기 위한 난곡동 타겟 물리 범위 스냅 가드 (순정 보정 유지)
-//         if (finalCalculatedHeight <= 5 || finalCalculatedHeight > 2000) {
-//             finalCalculatedHeight = (wp.id === "Home") ? 110 : 90; 
-//         }
-
-//         var card = document.createElement("div");
-//         card.className = "gcs-waypoint-card" + (wp.id === "Home" ? " active" : "");
-//         card.id = "card_waypoint_" + wp.id;
-
-//         var themeColor = (wp.id === "Home") ? "#f1c40f" : (wp.id === "Destination") ? "#ef5350" : "#3498db";
-//         var borderStyle = "margin: 4px 0 6px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-left: 4px solid " + themeColor + "; border-radius: 6px; box-sizing: border-box; color: #ffffff; text-align: left; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s;";
-//         card.style.cssText = borderStyle;
-
-//         card.onmouseover = function () { this.style.background = "rgba(47, 54, 64, 0.95)"; };
-//         card.onmouseout = function () { this.style.background = "rgba(30, 39, 46, 0.95)"; };
-
-//         if (wp.id === "Home") {
-//             card.innerHTML = `
-//                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; pointer-events: none;">
-//                     <span style="font-weight: bold; color: ${themeColor}; font-size: 14px;">🚩 출발지 (Home)</span>
-//                     <span style="font-size: 11px; background: ${themeColor}; color: #000; padding: 2px 6px; border-radius: 10px; font-weight: bold;">관제 고정</span>
-//                 </div>
-//                 <div style="font-size: 12px; color: #bdc3c7; line-height: 1.5; pointer-events: none; margin-bottom: 6px;">
-//                     <div style="font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 12px;">${wp.address}</div>
-//                     <div style="display: flex; gap: 12px;">
-//                         <span>X: ${wp.lon.toFixed(6)}</span>
-//                         <span>Y: ${wp.lat.toFixed(6)}</span>
-//                     </div>
-//                 </div>
-//                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%;">
-//                     <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #bdc3c7; white-space: nowrap;">
-//                         <span>${heightLabelText}:</span>
-//                         <strong style="color: #fff; font-size: 12px;">${finalCalculatedHeight}m</strong>
-//                     </div>
-//                     <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-//                         <span style="font-weight: bold; color: #2ecc71; font-size: 12px;">관제 고도:</span>
-//                         <input type="number" id="gcs_home_alt_input" value="${Math.round(wp.alt)}" style="width: 50px; background: #111; color: #2ecc71; border: 1px solid #2ecc71; text-align: center; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 0;" />
-//                         <span style="color: #2ecc71; font-weight: bold; font-size: 12px;">m</span>
-//                     </div>
-//                 </div>
-//             `;
-
-//             var altInput = card.querySelector("#gcs_home_alt_input");
-//             if (altInput) {
-//                 var altEventHandler = function (e) {
-//                     e.stopPropagation();
-//                     var newAlt = parseFloat(this.value) || defaultAlt;
-//                     wp.alt = newAlt;
-//                     var currentLock = localStorage.getItem("gcs_permanent_home_lock");
-//                     if (currentLock) {
-//                         var parsed = JSON.parse(currentLock);
-//                         parsed.alt = newAlt;
-//                         localStorage.setItem("gcs_permanent_home_lock", JSON.stringify(parsed));
-//                     }
-//                     if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-//                 };
-//                 altInput.addEventListener("change", altEventHandler);
-//                 altInput.addEventListener("input", altEventHandler);
-//                 altInput.addEventListener("click", function (e) { e.stopPropagation(); });
-//             }
-
-//         } else {
-//             var cardTitle = wp.id.startsWith("WP_") ? "🛸 경유지 (" + wp.id + ")" : "🎯 목적지 (Destination)";
-
-//             // 💥 [인풋 박스 최종 실드] wp.alt 값이 NaN, undefined, 문자열 형태인 경우를 모두 스캔하여 150 정수로 복원
-//             var parsedAltInt = 150;
-//             if (wp && typeof wp.alt !== "undefined" && wp.alt !== null) {
-//                 var tempParsed = parseInt(wp.alt, 10);
-//                 if (!isNaN(tempParsed) && tempParsed > 0) {
-//                     parsedAltInt = tempParsed;
-//                 }
-//             }
-
-//             // 💥 [마크업 및 CSS 인프라 정밀 수선] 백틱 내부의 깨진 문자열 구조를 원본 규격과 싱크를 맞춰 완벽히 복구
-//             card.innerHTML = `
-//                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-//                     <span style="font-weight: bold; color: ${themeColor}; font-size: 13px; pointer-events: none;">${cardTitle}</span>
-//                     <button class="gcs-wp-delete-btn" style="background: #ef5350; border: none; color: #fff; cursor: pointer; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; transition: 0.2s; z-index: 10;">삭제 X</button>
-//                 </div>
-//                 <div style="font-size: 11px; color: #bdc3c7; line-height: 1.5; pointer-events: none; margin-bottom: 6px;">
-//                     <div style="display: flex; gap: 12px;">
-//                         <span>X: ${wp.lon.toFixed(6)}</span>
-//                         <span>Y: ${wp.lat.toFixed(6)}</span>
-//                     </div>
-//                 </div>
-//                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%;">
-//                     <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: #bdc3c7; white-space: nowrap;">
-//                         <span>${heightLabelText}:</span>
-//                         <strong style="color: #fff; font-size: 11px;">${finalCalculatedHeight}m</strong>
-//                     </div>
-//                     <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-//                         <span style="font-weight: bold; color: ${themeColor}; font-size: 11px;">관제 고도:</span>
-//                         <input type="number" class="gcs-node-alt-dynamic-input" value="${parsedAltInt}" style="width: 55px; background: #111; color: ${themeColor}; border: 1px solid ${themeColor}; text-align: center; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 0;" />
-//                         <span style="color: ${themeColor}; font-weight: bold; font-size: 11px;">m</span>
-//                     </div>
-//                 </div>
-//             `;
-
-//             // 개별 비행 노드 삭제 버튼 안전 결착 루프
-//             var delBtn = card.querySelector(".gcs-wp-delete-btn");
-//             if (delBtn) {
-//                 delBtn.addEventListener("click", function (e) {
-//                     e.stopPropagation();
-//                     var currentList = window.GcsApp.state.waypointList;
-//                     var findIdx = currentList.findIndex(function(item) { return item.id === wp.id; });
-//                     if (findIdx > -1) {
-//                         currentList.splice(findIdx, 1);
-//                         var cleanList = [];
-//                         var wpCounter = 1;
-
-//                         currentList.forEach(function (node) {
-//                             if (!node) return;
-//                             if (node.id === "Home") {
-//                                 cleanList.push(node);
-//                             } else {
-//                                 var finalId = node.id;
-//                                 if (node.id.startsWith("WP_") || node.id.startsWith("WP_TEMP_")) {
-//                                     finalId = "WP_" + wpCounter++;
-//                                 }
-//                                 cleanList.push({
-//                                     id: finalId,
-//                                     lon: node.lon,
-//                                     lat: node.lat,
-//                                     alt: node.alt || 150
-//                                 });
-//                             }
-//                         });
-//                         window.GcsApp.state.waypointList = cleanList;
-//                         window.waypointList = cleanList;
-//                         if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-//                         window.renderWaypointListUI();
-//                     }
-//                 });
-//             }
-
-//             // 💥 [인풋 체인지 인터록 복원] 사용자가 입력창 수치를 바꿨을 때 실시간 데이터 오버라이드 싱크 보장
-//             var nodeAltInput = card.querySelector(".gcs-node-alt-dynamic-input");
-//             if (nodeAltInput) {
-//                 var nodeAltHandler = function (e) {
-//                     e.stopPropagation();
-//                     var val = parseInt(this.value, 10) || defaultAlt;
-//                     wp.alt = val; // 배열 내부 원본 데이터 값 동기화
-//                     if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-//                 };
-//                 nodeAltInput.addEventListener("change", nodeAltHandler);
-//                 nodeAltInput.addEventListener("input", nodeAltHandler);
-//                 nodeAltInput.addEventListener("click", function(e) { e.stopPropagation(); });
-//             }
-//         }
-//         // 목록 카드 클릭 시 세슘 카메라 비행(flyTo) 바인딩
-//         card.addEventListener("click", function () {
-//             if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
-//             var mainViewer = ws3d.viewer;
-//             mainViewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-//             mainViewer.camera.flyTo({
-//                 destination: Cesium.Cartesian3.fromDegrees(wp.lon, wp.lat - 0.0012, finalCalculatedHeight + 250),
-//                 orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-40.0), roll: 0.0 },
-//                 duration: 0.6
-//             });
-//             if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-//         });
-//         container.appendChild(card);
-//     });
-// };
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ecf0f1;">
+                <span>관제 고도:</span>
+                <input type="number" id="gcs_home_alt_input" value="${Math.round(node.alt)}" min="10" max="1000" step="5" 
+                       onclick="event.stopPropagation();"
+                       style="width: 70px; background: #111; border: 1px solid #f1c40f; color: #fff; font-weight: bold; font-size: 13px; text-align: center; border-radius: 3px; padding: 2px;" />
+                <span style="color: #2ecc71; font-weight: bold;">m</span>
+            </div>
+        </div>
+    `;
+};
 
 
-// window.renderWaypointListUI = function () {
-//     var container = document.getElementById("wp_list_container") ||
-//         document.getElementById("gcs_waypoint_list_container") ||
-//         document.getElementById("waypoint_list");
-//     if (!container) return;
 
-//     if (!window.GcsApp) window.GcsApp = { state: {} };
-//     if (!window.GcsApp.state) window.GcsApp.state = {};
-//     if (!Array.isArray(window.GcsApp.state.waypointList)) window.GcsApp.state.waypointList = [];
-
-//     var list = window.GcsApp.state.waypointList;
-//     container.innerHTML = "";
-
-//     var mainViewer = (typeof ws3d !== "undefined" && ws3d && ws3d.viewer) ? ws3d.viewer : null;
-//     var scene = mainViewer ? mainViewer.scene : null;
-
-//     list.forEach(function (wp, idx) {
-//         if (!wp || !wp.id) return;
-
-//         var isBuildingNode = false;
-//         var finalCalculatedHeight = 0;
-//         var heightLabelText = "지면고도";
-
-//         var numLon = parseFloat(wp.lon);
-//         var numLat = parseFloat(wp.lat);
-
-//         if (scene && scene.globe) {
-//             var cartoInstance = Cesium.Cartographic.fromDegrees(numLon, numLat);
-//             var pureTerrainHeight = Math.round(scene.globe.getHeight(cartoInstance) || 0);
-//             if (pureTerrainHeight <= 0 || isNaN(pureTerrainHeight)) pureTerrainHeight = 86;
-
-//             // 💥 [복원 가드 1] 출발지(Home)이거나 주소에 건물 제원이 확보된 경우 건물 옥상 고도로 확정 인식!
-//             if (wp.id === "Home" || (wp.roofBase && parseInt(wp.roofBase) > 0)) {
-//                 finalCalculatedHeight = wp.roofBase && parseInt(wp.roofBase) > 0 ? Math.round(parseFloat(wp.roofBase)) : pureTerrainHeight;
-//                 isBuildingNode = (wp.roofBase && parseInt(wp.roofBase) > 0);
-//                 heightLabelText = isBuildingNode ? "건물고도" : "지면고도";
-//             } else {
-//                 finalCalculatedHeight = pureTerrainHeight;
-//                 wp.roofBase = 0;
-//                 isBuildingNode = false;
-//                 heightLabelText = "지면고도";
-//             }
-//         } else {
-//             finalCalculatedHeight = (wp.id === "Home") ? 110 : 90;
-//         }
-
-//         // 💥 관제고도 일괄 지정 압착 고정 [바닥고도 + 150m]
-//         var absoluteControlAlt = finalCalculatedHeight + 150;
-//         wp.alt = absoluteControlAlt;
-//         wp.altitude_Z = absoluteControlAlt;
-
-//         var card = document.createElement("div");
-//         card.className = "gcs-waypoint-card" + (wp.id === "Home" ? " active" : "");
-//         card.id = "card_waypoint_" + wp.id;
-
-//         var themeColor = (wp.id === "Home") ? "#f1c40f" : (wp.id === "Destination") ? "#ef5350" : "#3498db";
-//         var borderStyle = "margin: 4px 0 6px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-left: 4px solid " + themeColor + "; border-radius: 6px; box-sizing: border-box; color: #ffffff; text-align: left; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s;";
-//         card.style.cssText = borderStyle;
-
-//         var cardTitle = wp.id === "Home" ? "🚩 출발지 (Home)" : (wp.id === "Destination" ? "🎯 목적지 (Destination)" : "🛸 경유지 (" + wp.id + ")");
-//         var deleteBtnHtml = (wp.id === "Home") ?
-//             `<span class="badge" style="font-size: 10px; background: #f1c40f; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold;">관제 고정</span>` :
-//             `<button class="gcs-wp-delete-btn" style="background: #ef5350; border: none; color: #fff; cursor: pointer; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; z-index: 10;">삭제 X</button>`;
-
-//         var labelStyleColor = isBuildingNode ? "#fffa65" : "#00ffcc";
-//         var displayAddress = wp.address || (wp.id === "Home" ? "사용자 설정 락온 공역 출발지" : "자연 평지 공역");
-
-//         card.innerHTML = `
-//             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-//                 <span style="font-weight: bold; color: ${themeColor}; font-size: 14px;">${cardTitle}</span>
-//                 ${deleteBtnHtml}
-//             </div>
-//             <div style="font-size: 12px; color: #bdc3c7; line-height: 1.5; margin-bottom: 6px;">
-//                 <div style="font-weight: bold; color: #fff; margin-bottom: 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">지점: ${displayAddress}</div>
-//                 <div style="display: flex; gap: 12px; font-family: monospace;">
-//                     <span>X: ${numLon.toFixed(6)}</span>
-//                     <span>Y: ${numLat.toFixed(6)}</span>
-//                 </div>
-//             </div>
-//             <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%;">
-//                 <div id="gcs_core_height_anchor_node" style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #bdc3c7; white-space: nowrap;">
-//                     <span>${heightLabelText}:</span>
-//                     <strong style="color: ${labelStyleColor}; font-size: 13px;">${finalCalculatedHeight}m</strong>
-//                 </div>
-//                 <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-//                     <span style="font-weight: bold; color: ${themeColor}; font-size: 12px;">관제 고도:</span>
-//                     <input type="number" class="gcs-node-alt-dynamic-input" value="${absoluteControlAlt}" style="width: 55px; background: #111; color: ${themeColor}; border: 1px solid ${themeColor}; text-align: center; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 0;" readonly />
-//                     <span style="color: ${themeColor}; font-weight: bold; font-size: 12px;">m</span>
-//                 </div>
-//             </div>
-//         `;
-
-//         var delBtn = card.querySelector(".gcs-wp-delete-btn");
-//         if (delBtn) {
-//             delBtn.addEventListener("click", function (e) {
-//                 e.stopPropagation();
-//                 var currentList = window.GcsApp.state.waypointList;
-//                 var findIdx = currentList.findIndex(function (item) { return item.id === wp.id; });
-//                 if (findIdx > -1) {
-//                     currentList.splice(findIdx, 1);
-//                     var cleanList = []; var wpCounter = 1;
-//                     currentList.forEach(function (node) {
-//                         if (!node) return;
-//                         if (node.id === "Home") cleanList.push(node);
-//                         else {
-//                             var finalId = node.id === "Destination" ? "Destination" : "WP_" + wpCounter++;
-//                             cleanList.push({ id: finalId, lon: node.lon, lat: node.lat, alt: node.alt, roofBase: node.roofBase, address: node.address });
-//                         }
-//                     });
-//                     window.GcsApp.state.waypointList = cleanList; window.waypointList = cleanList;
-//                     if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-//                     window.renderWaypointListUI();
-//                 }
-//             });
-//         }
-
-//         card.addEventListener("click", function () {
-//             if (!mainViewer) return;
-//             mainViewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-//             mainViewer.camera.flyTo({
-//                 destination: Cesium.Cartesian3.fromDegrees(numLon, numLat - 0.0012, finalCalculatedHeight + 250),
-//                 orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-40.0), roll: 0.0 },
-//                 duration: 0.6
-//             });
-//         });
-
-//         container.appendChild(card);
-//     });
-// };
 
 
 /**
@@ -1286,156 +989,227 @@ window.GcsApp.state.gcsSelectedFeature = null;
 
 
 window.triggerGcsCommand = function (numLon, numLat, actionType) {
-if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
-var mainViewer = ws3d.viewer;
-var scene = mainViewer.scene;
-var currentAction = (typeof actionType === "string") ? actionType.toLowerCase().trim() : "waypoint";
-var list = window.GcsApp?.state?.waypointList || window.waypointList || [];
-if (!Array.isArray(list)) list = [];
-numLon = parseFloat(numLon);
-numLat = parseFloat(numLat);
-var targetPixelX = window.gcsCurrentMouseX || (scene.canvas.clientWidth / 2);
-var targetPixelY = window.gcsCurrentMouseY || (scene.canvas.clientHeight / 2);
-var isGcsMousePickingError = false;
-var roofBaseHeightToSave = 0;
-var isActuallyBuilding = false;
-if (isNaN(numLon) || isNaN(numLat) || numLon === 0 || numLat === 0) {
-isGcsMousePickingError = true;
-}
-if (isGcsMousePickingError === false) {
-var rect = scene.canvas.getBoundingClientRect();
-var windowPosition = new Cesium.Cartesian2(targetPixelX - rect.left, targetPixelY - rect.top);
-var pickedFeature = scene.pick(windowPosition);
-var isValid3DBuildingTileset = false;
-if (Cesium.defined(pickedFeature)) {
-if (pickedFeature.primitive && !(pickedFeature.primitive instanceof Cesium.Globe) && !(pickedFeature.primitive instanceof Cesium.Polyline) && !(pickedFeature.primitive instanceof Cesium.Label)) {
-isValid3DBuildingTileset = true;
-}
-if (pickedFeature.content || pickedFeature.getProperty) {
-isValid3DBuildingTileset = true;
-}
-}
-var isBuildingHighlightLayerActive = (window.GcsApp?.state?.isRightClickOnBuilding === true || window.GcsApp?.state?.isBuildingHighlighted === true || document.body.classList.contains("gcs-building-selected"));
-if ((isValid3DBuildingTileset === true || isBuildingHighlightLayerActive === true) && window.GcsApp?.state?.lastRightClickRoofHeight > 0) {
-roofBaseHeightToSave = parseFloat(window.GcsApp.state.lastRightClickRoofHeight);
-isActuallyBuilding = true;
-} else if (scene.globe) {
-var cartoTmp = new Cesium.Cartographic(Cesium.Math.toRadians(numLon), Cesium.Math.toRadians(numLat));
-var exactGroundHeight = Math.round(scene.globe.getHeight(cartoTmp) || 0);
-// 💥 [공중부양 결함 완치 실드 1]: 세슘이 계산한 실제 지표면 높이가 비정상적인 값(0 이하)이거나 수식 누락일 경우 즉시 오류 레이칭 격발!
-if (exactGroundHeight <= 0 || isNaN(exactGroundHeight)) {
-isGcsMousePickingError = true;
-} else {
-roofBaseHeightToSave = exactGroundHeight;
-isActuallyBuilding = false;
-if (window.GcsApp && window.GcsApp.state) {
-window.GcsApp.state.isRightClickOnBuilding = false;
-}
-}
-}
-roofBaseHeightToSave = Math.round(roofBaseHeightToSave);
-// 💥 [공중부양 결함 완치 실드 2]: 바닥 고도가 5m 미만의 유령 공백이거나 비정상 고고도인 경우 물리 레이캐스팅 실패로 간주하고 칼같이 차단!
-if (isNaN(roofBaseHeightToSave) || roofBaseHeightToSave <= 5 || roofBaseHeightToSave > 2000) {
-isGcsMousePickingError = true;
-}
-}
-// 💥 [자동 실행 차단 브레이크]: 허공이나 매핑 오류 영역을 찍으면 컨펌창도 띄우지 않고 즉시 자동 폐기 처리합니다!
-if (isGcsMousePickingError === true) {
-var oldMouseToast = document.getElementById("gcs_mouse_error_toast");
-if (oldMouseToast) oldMouseToast.remove();
-var mouseToast = document.createElement("div");
-mouseToast.id = "gcs_mouse_error_toast";
-mouseToast.style.cssText = "position: fixed; left: " + (targetPixelX + 15) + "px; top: " + (targetPixelY + 15) + "px; background: rgba(239, 83, 80, 0.98); color: #ffffff; padding: 10px 18px; border-radius: 4px; font-family: 'Malgun Gothic', sans-serif; font-size: 13px; font-weight: bold; z-index: 100000000; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid #ff3333; pointer-events: none;";
-mouseToast.innerHTML = "⚠️ 공중부양 유령 좌표 감지: 자동 등록이 무효화되었습니다.";
-document.body.appendChild(mouseToast);
-setTimeout(function() { if (mouseToast) mouseToast.remove(); }, 2500);
-console.log("❌ [GCS 차단 실드] 허공 또는 매핑 실패 구역(공중부양) 픽킹 시도를 자동 차단했습니다.");
-scene.requestRender();
-return;
-}
+    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+    var mainViewer = ws3d.viewer;
+    var scene = mainViewer.scene;
 
-var targetNodeTypeName = (currentAction.indexOf("home") !== -1) ? "출발지 (Home)" : ((currentAction.indexOf("destination") !== -1) ? "목적지 (Destination)" : "경유지 (Waypoint)");
-var detectedLayerTypeString = isActuallyBuilding ? "🏢 [건물 옥상 고도] 감지 성공" : "🏞️ [자연 평지 지면] 감지 성공";
-var userConfirmMessage = "🛰️ GCS 실시간 공역 피킹 검착 보고\n\n" +
-"▶ 추가 대상: " + targetNodeTypeName + "\n" +
-"▶ 감지 레이어: " + detectedLayerTypeString + "\n" +
-"▶ 감지 바닥 높이: " + roofBaseHeightToSave + "m\n\n" +
-"프로그램이 판단한 위 제원이 실제 지형 구조와 일치합니까?\n" +
-"[확인]을 누르면 공역 카드가 생성되며, [취소] 시 즉시 무효화됩니다.";
-// var isUserConfirmed = confirm(userConfirmMessage);
-// if (isUserConfirmed === false) {
-// console.log("❌ [GCS 인터록] 사용자에 의해 피킹 데이터 주입이 무효화되었습니다.");
-// scene.requestRender();
-// return;
-// }
+    // =========================================================================
+    // 🔒 [4단계 완치 실드] 인자 유실 및 문자열 파괴 방지형 홈 변경 이중 확인창 가드
+    // =========================================================================
+    // actionType 인자값이 누락(undefined)되거나 문자열이 아닐 경우를 대비해 철저한 가드 문자열화 처리
+    var checkActionType = "waypoint";
+    if (actionType !== undefined && actionType !== null) {
+        checkActionType = String(actionType).toLowerCase().trim();
+    } else if (typeof numLon === "string") {
+        // 백업 분기 : 간혹 순정 소스에서 actionType 자리에 numLon 문자열을 토스하는 오접착 경우 우회
+        var testAction = numLon.toLowerCase().trim();
+        if (testAction === "home" || testAction === "waypoint" || testAction === "destination") {
+            checkActionType = testAction;
+        }
+    }
 
-var computedCameraDesignAlt = roofBaseHeightToSave + 150;
-var dynamicBuildingName = isActuallyBuilding ? "3D 건물 아파트 공역 옥상" : "자연 지표면 평지 공역";
-var targetNodeId = "WP_TEMP";
-if (currentAction.indexOf("home") !== -1) {
-targetNodeId = "Home";
-computedCameraDesignAlt = roofBaseHeightToSave + 150;
-} else {
-computedCameraDesignAlt = window.getGcsDestinationAltitude ? window.getGcsDestinationAltitude(roofBaseHeightToSave) : (roofBaseHeightToSave + 39);
-if (currentAction.indexOf("destination") !== -1) {
-targetNodeId = "Destination";
-dynamicBuildingName = isActuallyBuilding ? "3D 건물 인프라 공역 목적지" : "최종 자율 항행 목적지 공역";
-} else {
-var existingWpCount = list.filter(function (item) { return item && (item.id.startsWith("WP_") || item.id.startsWith("WP_TEMP")); }).length;
-targetNodeId = "WP_" + (existingWpCount + 1);
-dynamicBuildingName = isActuallyBuilding ? "3D 건물 비율 연동 순항 공역" : "지면 기반 비율 연동 순항 공역";
-}
-}
-computedCameraDesignAlt = Math.round(computedCameraDesignAlt);
-var nodeData = {
-id: targetNodeId,
-lon: numLon,
-lat: numLat,
-alt: computedCameraDesignAlt,
-roofBase: roofBaseHeightToSave,
-address: dynamicBuildingName,
-isBuilding: isActuallyBuilding
-};
-if (currentAction.indexOf("home") !== -1) {
-list = list.filter(function (item) { return item && item.id !== "Home"; });
-list.unshift(nodeData);
-} else if (currentAction.indexOf("destination") !== -1) {
-list = list.filter(function (item) { return item && item.id !== "Destination"; });
-list.push(nodeData);
-} else {
-var isAlreadyExist = list.some(function (n) { return Math.abs(n.lon - numLon) < 0.000001 && Math.abs(n.lat - numLat) < 0.000001; });
-if (!isAlreadyExist) list.push(nodeData);
-}
-var cleanList = [];
-var homeNode = list.find(function (n) { return n && n.id === "Home"; });
-if (homeNode) cleanList.push(homeNode);
-var rawWaypoints = list.filter(function (n) { return n && n.id !== "Home" && n.id !== "Destination"; });
-var wpCounter = 1;
-rawWaypoints.forEach(function (node) {
-var dynamicWpAlt = window.getGcsDestinationAltitude ? window.getGcsDestinationAltitude(node.roofBase) : node.alt;
-cleanList.push({
-id: "WP_" + wpCounter++,
-lon: node.lon,
-lat: node.lat,
-alt: dynamicWpAlt,
-roofBase: node.roofBase,
-address: node.address || "자연 지표면 평지 공역",
-isBuilding: node.isBuilding
-});
-});
-var destinationNode = list.find(function (n) { return n && n.id === "Destination"; });
-if (destinationNode) {
-cleanList.push(destinationNode);
-}
-window.GcsApp.state.waypointList = cleanList;
-window.waypointList = cleanList;
-window.gcsUserManualAltOverrideLock = true;
-if (typeof window.renderWaypointListUI === "function") window.renderWaypointListUI();
-if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-console.log("▶ [GCS 데이터 마운트 성공] " + targetNodeId + " -> 바닥: " + roofBaseHeightToSave + "m | 연동 관제고도: " + computedCameraDesignAlt + "m");
-scene.requestRender();
-};
+    // 현재 지도를 바라보는 화면 12시 방향(카메라 시선) 진북 기준 각도(0°~359°) 캡처
+    var currentScreenHeadingDeg = 0;
+    if (mainViewer && mainViewer.camera) {
+        currentScreenHeadingDeg = Math.round(Cesium.Math.toDegrees(mainViewer.camera.heading)) % 360;
+        if (currentScreenHeadingDeg < 0) currentScreenHeadingDeg += 360;
+    }
 
+    var nodeData = {
+        id: targetNodeId,
+        lon: numLon,
+        lat: numLat,
+        alt: computedCameraDesignAlt,
+        roofBase: roofBaseHeightToSave,
+        address: dynamicBuildingName,
+        isBuilding: isActuallyBuilding,
+        // 홈 설정 시 현재 드론/카메라 방위각 저장, 목적지 추가 시 현재 화면 12시 방향 각도 즉시 캡처 저장
+        heading_deg: currentScreenHeadingDeg,
+        heading_H: Cesium.Math.toRadians(currentScreenHeadingDeg)
+    };
+
+    var currentAction = (typeof actionType === "string") ? actionType.toLowerCase().trim() : "waypoint";
+    var list = window.GcsApp?.state?.waypointList || window.waypointList || [];
+    if (!Array.isArray(list)) list = [];
+    numLon = parseFloat(numLon);
+    numLat = parseFloat(numLat);
+    var targetPixelX = window.gcsCurrentMouseX || (scene.canvas.clientWidth / 2);
+    var targetPixelY = window.gcsCurrentMouseY || (scene.canvas.clientHeight / 2);
+    var isGcsMousePickingError = false;
+    var roofBaseHeightToSave = 0;
+    var isActuallyBuilding = false;
+    if (isNaN(numLon) || isNaN(numLat) || numLon === 0 || numLat === 0) {
+        isGcsMousePickingError = true;
+    }
+    if (isGcsMousePickingError === false) {
+        var rect = scene.canvas.getBoundingClientRect();
+        var windowPosition = new Cesium.Cartesian2(targetPixelX - rect.left, targetPixelY - rect.top);
+        var pickedFeature = scene.pick(windowPosition);
+        var isValid3DBuildingTileset = false;
+        if (Cesium.defined(pickedFeature)) {
+            if (pickedFeature.primitive && !(pickedFeature.primitive instanceof Cesium.Globe) && !(pickedFeature.primitive instanceof Cesium.Polyline) && !(pickedFeature.primitive instanceof Cesium.Label)) {
+                isValid3DBuildingTileset = true;
+            }
+            if (pickedFeature.content || pickedFeature.getProperty) {
+                isValid3DBuildingTileset = true;
+            }
+        }
+        var isBuildingHighlightLayerActive = (window.GcsApp?.state?.isRightClickOnBuilding === true || window.GcsApp?.state?.isBuildingHighlighted === true || document.body.classList.contains("gcs-building-selected"));
+        if ((isValid3DBuildingTileset === true || isBuildingHighlightLayerActive === true) && window.GcsApp?.state?.lastRightClickRoofHeight > 0) {
+            roofBaseHeightToSave = parseFloat(window.GcsApp.state.lastRightClickRoofHeight);
+            isActuallyBuilding = true;
+        } else if (scene.globe) {
+            var cartoTmp = new Cesium.Cartographic(Cesium.Math.toRadians(numLon), Cesium.Math.toRadians(numLat));
+            var exactGroundHeight = Math.round(scene.globe.getHeight(cartoTmp) || 0);
+            // 💥 [공중부양 결함 완치 실드 1]: 세슘이 계산한 실제 지표면 높이가 비정상적인 값(0 이하)이거나 수식 누락일 경우 즉시 오류 레이칭 격발!
+            if (exactGroundHeight <= 0 || isNaN(exactGroundHeight)) {
+                isGcsMousePickingError = true;
+            } else {
+                roofBaseHeightToSave = exactGroundHeight;
+                isActuallyBuilding = false;
+                if (window.GcsApp && window.GcsApp.state) {
+                    window.GcsApp.state.isRightClickOnBuilding = false;
+                }
+            }
+        }
+        roofBaseHeightToSave = Math.round(roofBaseHeightToSave);
+        // 💥 [공중부양 결함 완치 실드 2]: 바닥 고도가 5m 미만의 유령 공백이거나 비정상 고고도인 경우 물리 레이캐스팅 실패로 간주하고 칼같이 차단!
+        if (isNaN(roofBaseHeightToSave) || roofBaseHeightToSave <= 5 || roofBaseHeightToSave > 2000) {
+            isGcsMousePickingError = true;
+        }
+    }
+    // 💥 [자동 실행 차단 브레이크]: 허공이나 매핑 오류 영역을 찍으면 컨펌창도 띄우지 않고 즉시 자동 폐기 처리합니다!
+    if (isGcsMousePickingError === true) {
+        var oldMouseToast = document.getElementById("gcs_mouse_error_toast");
+        if (oldMouseToast) oldMouseToast.remove();
+        var mouseToast = document.createElement("div");
+        mouseToast.id = "gcs_mouse_error_toast";
+        mouseToast.style.cssText = "position: fixed; left: " + (targetPixelX + 15) + "px; top: " + (targetPixelY + 15) + "px; background: rgba(239, 83, 80, 0.98); color: #ffffff; padding: 10px 18px; border-radius: 4px; font-family: 'Malgun Gothic', sans-serif; font-size: 13px; font-weight: bold; z-index: 100000000; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid #ff3333; pointer-events: none;";
+        mouseToast.innerHTML = "⚠️ 공중부양 유령 좌표 감지: 자동 등록이 무효화되었습니다.";
+        document.body.appendChild(mouseToast);
+        setTimeout(function () { if (mouseToast) mouseToast.remove(); }, 2500);
+        console.log("❌ [GCS 차단 실드] 허공 또는 매핑 실패 구역(공중부양) 픽킹 시도를 자동 차단했습니다.");
+        scene.requestRender();
+        return;
+    }
+
+    var targetNodeTypeName = (currentAction.indexOf("home") !== -1) ? "출발지 (Home)" : ((currentAction.indexOf("destination") !== -1) ? "목적지 (Destination)" : "경유지 (Waypoint)");
+    var detectedLayerTypeString = isActuallyBuilding ? "🏢 [건물 옥상 고도] 감지 성공" : "🏞️ [자연 평지 지면] 감지 성공";
+    var userConfirmMessage = "🛰️ GCS 실시간 공역 피킹 검착 보고\n\n" +
+        "▶ 추가 대상: " + targetNodeTypeName + "\n" +
+        "▶ 감지 레이어: " + detectedLayerTypeString + "\n" +
+        "▶ 감지 바닥 높이: " + roofBaseHeightToSave + "m\n\n" +
+        "프로그램이 판단한 위 제원이 실제 지형 구조와 일치합니까?\n" +
+        "[확인]을 누르면 공역 카드가 생성되며, [취소] 시 즉시 무효화됩니다.";
+    // var isUserConfirmed = confirm(userConfirmMessage);
+    // if (isUserConfirmed === false) {
+    // console.log("❌ [GCS 인터록] 사용자에 의해 피킹 데이터 주입이 무효화되었습니다.");
+    // scene.requestRender();
+    // return;
+    // }
+
+    var computedCameraDesignAlt = roofBaseHeightToSave + 150;
+    var dynamicBuildingName = isActuallyBuilding ? "3D 건물 아파트 공역 옥상" : "자연 지표면 평지 공역";
+    var targetNodeId = "WP_TEMP";
+    if (currentAction.indexOf("home") !== -1) {
+        targetNodeId = "Home";
+        computedCameraDesignAlt = roofBaseHeightToSave + 150;
+    } else {
+        computedCameraDesignAlt = window.getGcsDestinationAltitude ? window.getGcsDestinationAltitude(roofBaseHeightToSave) : (roofBaseHeightToSave + 39);
+        if (currentAction.indexOf("destination") !== -1) {
+            targetNodeId = "Destination";
+            dynamicBuildingName = isActuallyBuilding ? "3D 건물 인프라 공역 목적지" : "최종 자율 항행 목적지 공역";
+        } else {
+            var existingWpCount = list.filter(function (item) { return item && (item.id.startsWith("WP_") || item.id.startsWith("WP_TEMP")); }).length;
+            targetNodeId = "WP_" + (existingWpCount + 1);
+            dynamicBuildingName = isActuallyBuilding ? "3D 건물 비율 연동 순항 공역" : "지면 기반 비율 연동 순항 공역";
+        }
+    }
+    computedCameraDesignAlt = Math.round(computedCameraDesignAlt);
+    var nodeData = {
+        id: targetNodeId,
+        lon: numLon,
+        lat: numLat,
+        alt: computedCameraDesignAlt,
+        roofBase: roofBaseHeightToSave,
+        address: dynamicBuildingName,
+        isBuilding: isActuallyBuilding
+    };
+    if (currentAction.indexOf("home") !== -1) {
+        list = list.filter(function (item) { return item && item.id !== "Home"; });
+        list.unshift(nodeData);
+    } else if (currentAction.indexOf("destination") !== -1) {
+        list = list.filter(function (item) { return item && item.id !== "Destination"; });
+        list.push(nodeData);
+    } else {
+        var isAlreadyExist = list.some(function (n) { return Math.abs(n.lon - numLon) < 0.000001 && Math.abs(n.lat - numLat) < 0.000001; });
+        if (!isAlreadyExist) list.push(nodeData);
+    }
+    var cleanList = [];
+    var homeNode = list.find(function (n) { return n && n.id === "Home"; });
+    if (homeNode) cleanList.push(homeNode);
+    var rawWaypoints = list.filter(function (n) { return n && n.id !== "Home" && n.id !== "Destination"; });
+    var wpCounter = 1;
+    rawWaypoints.forEach(function (node) {
+        var dynamicWpAlt = window.getGcsDestinationAltitude ? window.getGcsDestinationAltitude(node.roofBase) : node.alt;
+        cleanList.push({
+            id: "WP_" + wpCounter++,
+            lon: node.lon,
+            lat: node.lat,
+            alt: dynamicWpAlt,
+            roofBase: node.roofBase,
+            address: node.address || "자연 지표면 평지 공역",
+            isBuilding: node.isBuilding
+        });
+    });
+    var destinationNode = list.find(function (n) { return n && n.id === "Destination"; });
+    if (destinationNode) {
+        cleanList.push(destinationNode);
+    }
+    window.GcsApp.state.waypointList = cleanList;
+    window.waypointList = cleanList;
+    window.gcsUserManualAltOverrideLock = true;
+    if (typeof window.renderWaypointListUI === "function") window.renderWaypointListUI();
+    if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
+    console.log("▶ [GCS 데이터 마운트 성공] " + targetNodeId + " -> 바닥: " + roofBaseHeightToSave + "m | 연동 관제고도: " + computedCameraDesignAlt + "m");
+    
+    // =========================================================================
+    // 💥 [최종 결착] 목적지 카드 추가 시 출발지 카드 내부 방위각 강제 리프레시 
+    // =========================================================================
+    // 함수 끝단에 삽입하여 목적지 데이터가 배열에 완전히 들어간 후 출발지 카드를 HTML에 다시 그립니다.
+    var currentHomeNodeObj = list.find(function (n) { return n && n.id === "Home"; });
+    var htmlContainerElement = document.getElementById("wp_list_container") || 
+                               document.getElementById("gcs_waypoint_list_container") || 
+                               document.getElementById("waypoint_list");
+
+    if (currentHomeNodeObj && htmlContainerElement && typeof window.gcsRenderPureHomeCardTemplate === "function") {
+        // 기존에 화면 맨 위에 있던 옛날 출발지 카드를 HTML 상에서 완전히 수거 삭제
+        var oldHomeCard = document.getElementById("card_waypoint_Home");
+        if (oldHomeCard) oldHomeCard.remove();
+
+        // 3단계 나침반 연산 축이 내장된 새로운 템플릿 스트링 호출
+        var freshHomeCardHtml = window.gcsRenderPureHomeCardTemplate(currentHomeNodeObj);
+
+        // 리스트 컨테이너 맨 첫 번째 자식 자리에 자석처럼 즉시 실시간 피딩 주입!!
+        htmlContainerElement.insertAdjacentHTML('afterbegin', freshHomeCardHtml);
+    }
+    // =========================================================================
+
+
+    // =========================================================================
+    // 🛠️ [gcs_engine.js] window.triggerGcsCommand 맨 아래쪽 정리
+    // =========================================================================
+    window.GcsApp.state.waypointList = cleanList;
+    window.waypointList = cleanList;
+    window.gcsUserManualAltOverrideLock = true;
+
+    // 아래 두 줄만 남기고, 그 아래에 추가했던 oldHomeCard.remove() 및 insertAdjacentHTML 블록은 삭제하세요.
+    if (typeof window.renderWaypointListUI === "function") window.renderWaypointListUI();
+    if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
+
+    scene.requestRender();
+    
+}; // window.triggerGcsCommand 함수가 끝나는 괄호
 
 
 
@@ -1607,6 +1381,14 @@ vw.ws3dInitCallBack = function () {
     // =========================================================================
     handler.setInputAction(function (clickEvent) {
         if (!clickEvent.position) return;
+
+        // 🛡️ [근본 해결 핵심 가드] 드론 자율 비행 중이거나 비행 종료 시점(`landing_done`)일 때는
+        // 카메라 강제 비행으로 인한 3D 건물 픽킹 레이를 완전 거부하여 노란색 테두리 잔상 점등을 원천 차단합니다!
+        if (window.gcsDroneLiveState && window.gcsDroneLiveState.isTakeoffConfirmedGuard === true) {
+            console.log("🛡️ [GCS 차단막] 비행/종료 세션 활성화 상태 -> 마우스 테두리 락온 점등 무력화(Skip)");
+            return;
+        }
+
         var ctxMenu = document.getElementById("gcs_context_menu");
         if (ctxMenu) ctxMenu.style.display = "none";
 
@@ -1619,41 +1401,31 @@ vw.ws3dInitCallBack = function () {
         // 3D 타일셋 건물인 경우에만 오차 없는 옥상면 필터링 가드 격발
         if (Cesium.defined(pickedFeature) && pickedFeature.primitive && !(pickedFeature.primitive instanceof Cesium.Globe) && Cesium.defined(pickedCartesian)) {
 
-            // 1. 클릭된 지점의 지표면 기준 수직 법선 벡터(하늘을 향하는 정방향 축) 계산
+            // 1. 클릭된 지점의 지표면 기준 수직 법선 벡터 계산
             var surfaceNormal = scene.globe.ellipsoid.geodeticSurfaceNormal(pickedCartesian, new Cesium.Cartesian3());
 
-            // 2. Cesium 내장 3D 타일셋 표면의 실제 매시 법선 벡터 추출 (Cesium 1.70+ 표준 기하 구조 대응)
+            // 2. Cesium 내장 3D 타일셋 표면의 실제 매시 법선 벡터 추출
             var tilesetNormal = undefined;
             try {
-                // 레이 픽 정밀 연산을 통해 마우스가 닿은 삼각형 폴리곤의 정방향 벡터 획득
                 var ray = scene.camera.getPickRay(clickEvent.position);
-                var intersection = scene.globe.pick(ray, scene); // 백업 교차점
-
-                // Cesium scene에서 제공하는 pickNormal이 가용한 경우 우선 채택
                 if (typeof scene.pickNormal === "function") {
                     tilesetNormal = scene.pickNormal(clickEvent.position);
                 }
             } catch (e) { tilesetNormal = undefined; }
 
-            // 3. 💥 [최종 수학적 옥상면 가드 필터]
-            // 만약 pickNormal 취득이 제한된다면, Cartesian3 좌표의 타일셋 기준 로컬 방향을 역산합니다.
+            // 3. 💥 최종 수학적 옥상면 가드 필터
             var isRoofSurface = false;
 
             if (Cesium.defined(tilesetNormal)) {
-                // 두 벡터 간의 내적(Dot Product) 값이 0.85 이상(사잇각 약 30도 이내의 완만한 수평면/옥상)인지 검사
                 var dotProduct = Cesium.Cartesian3.dot(surfaceNormal, tilesetNormal);
                 if (dotProduct > 0.85) {
                     isRoofSurface = true;
                 }
             } else {
-                // [백업 로직] pickNormal 함수를 지원하지 않는 구버전 브이월드 엔진 환경용 2차 방어벽
-                // 지구 중심에서 솟구치는 타당성 고도 기울기 변화율을 직접 파싱
                 var cartographic = Cesium.Cartographic.fromCartesian(pickedCartesian);
                 var pureTerrainHeight = scene.globe.getHeight(cartographic) || 0;
-
-                // 접촉한 높이가 지면보다 최소 3m 이상 높고 수평 레이 가드가 잡히는 경우 안전 승인
                 if (cartographic.height > pureTerrainHeight + 3.0) {
-                    isRoofSurface = true; // 단순 구조 가드 승인
+                    isRoofSurface = true;
                 }
             }
 
@@ -1682,7 +1454,7 @@ vw.ws3dInitCallBack = function () {
             window.GcsApp.state.lastRightClickLat = rawLat;
             window.GcsApp.state.lastRightClickRoofLon = rawLon;
             window.GcsApp.state.lastRightClickRoofLat = rawLat;
-            window.GcsApp.state.lastRightClickRoofHeight = finalCarto.height; // 옥상면의 진짜 정점 고도 박제
+            window.GcsApp.state.lastRightClickRoofHeight = finalCarto.height;
 
             try {
                 if (window.GcsApp.state.gcsSelectedFeature.color) {
@@ -1703,6 +1475,7 @@ vw.ws3dInitCallBack = function () {
         }
 
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
 
     // =========================================================================
     // 💥 C. 마우스 우클릭(RIGHT_CLICK) - 건물이냐 맨땅이냐 조건부 분기 필터링 엔진
@@ -2559,10 +2332,44 @@ window.gcsPermanentHomeFlag = false;
 window.gcsPermanentHomeData = null;
 
 
-/**
- * 💥 [마스터 홈설정 기능 고도화] 
- * 주소 검색 후 또는 지도에서 위치를 지정하고 유저가 [홈설정]을 누를 때 직접 호출되는 코어 함수입니다.
- */
+// /**
+//  * 💥 [마스터 홈설정 기능 고도화] 
+//  * 주소 검색 후 또는 지도에서 위치를 지정하고 유저가 [홈설정]을 누를 때 직접 호출되는 코어 함수입니다.
+//  */
+// window.setGcsPermanentHome = function (lon, lat, addressName) {
+//     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) {
+//         console.warn("⚠️ [GCS 안전 가드] Cesium 지도가 활성화되지 않았습니다.");
+//         return;
+//     }
+
+//     var mainViewer = ws3d.viewer;
+//     var searchKeyword = addressName || "지정된 출발지";
+//     var numLon = parseFloat(lon);
+//     var numLat = parseFloat(lat);
+
+//     if (isNaN(numLon) || isNaN(numLat) || numLon === 0 || numLat === 0) return;
+
+//     // 💥 [핵심 로직] 새로운 위치로 영구 홈 데이터를 생성하고 락(Lock)을 갱신합니다.
+//     window.gcsPermanentHomeFlag = true;
+//     var defaultAlt = 150.0;
+//     if (window.GcsApp && window.GcsApp.CONFIG) {
+//         defaultAlt = window.GcsApp.CONFIG.DEFAULT_ALTITUDE || 150.0;
+//     }
+
+//     window.gcsPermanentHomeData = {
+//         id: "Home",
+//         lon: numLon,
+//         lat: numLat,
+//         alt: defaultAlt,
+//         address: searchKeyword
+//     };
+
+//     // 전역 배열 상태 갱신 파이프라인 집행
+//     window.gcsRefreshHomePipeline();
+
+//     console.log(`🚩 [GCS 영구 락] 다음 홈설정 변경 전까지 이 위치를 영구 출발지로 고정합니다: [${searchKeyword}]`);
+// };
+
 window.setGcsPermanentHome = function (lon, lat, addressName) {
     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) {
         console.warn("⚠️ [GCS 안전 가드] Cesium 지도가 활성화되지 않았습니다.");
@@ -2576,7 +2383,45 @@ window.setGcsPermanentHome = function (lon, lat, addressName) {
 
     if (isNaN(numLon) || isNaN(numLat) || numLon === 0 || numLat === 0) return;
 
-    // 💥 [핵심 로직] 새로운 위치로 영구 홈 데이터를 생성하고 락(Lock)을 갱신합니다.
+    // 💥 [요구사항 구현 : 홈설정 영구 이중 락온 확인창 가드 레이어]
+    // 지형 분석 엔진을 순간 자극하여 바닥 고도가 3D 빌딩인지 맨땅 평지인지 선제 파악합니다.
+    var scene = mainViewer.scene;
+    var isBuildingDetectedInAdvance = false;
+    var baseTerrainHeightValue = 86;
+
+    if (scene && scene.globe) {
+        var cartoInstance = Cesium.Cartographic.fromDegrees(numLon, numLat);
+        baseTerrainHeightValue = Math.round(scene.globe.getHeight(cartoInstance) || 86);
+
+        // 현재 전역 하이라이트 상태나 우클릭 가드 장치를 교차 체크
+        if (window.GcsApp && window.GcsApp.state && window.GcsApp.state.isRightClickOnBuilding === true) {
+            isBuildingDetectedInAdvance = true;
+            if (window.GcsApp.state.lastRightClickRoofHeight > 0) {
+                baseTerrainHeightValue = Math.round(window.GcsApp.state.lastRightClickRoofHeight);
+            }
+        }
+    }
+
+    var layerTypeString = isBuildingDetectedInAdvance ? "🏢 [3D 구조물 건물 옥상 돔 공역]" : "🏞️ [자연 평지 지상 인프라 공역]";
+
+    // 🛡️ 중요 자산인 '출발지(Home)' 변경의 실수를 막기 위한 고도의 관제 승인 Confirm 팝업 사출
+    var homeConfirmGuardMessage = `🚨 [GCS 드론포트 출발지 영구 변경 검착 보고]\n`;
+    homeConfirmGuardMessage += `=======================================\n\n`;
+    homeConfirmGuardMessage += `⚠️ 출발지(Home)는 전체 항행 경로의 절대 기준 정점이므로 쉽게 변경할 수 없습니다.\n\n`;
+    homeConfirmGuardMessage += `▶ 새 지정 주소 : ${searchKeyword}\n`;
+    homeConfirmGuardMessage += `▶ 감지 공역 레이어 : ${layerTypeString}\n`;
+    homeConfirmGuardMessage += `▶ 측정 해발 바닥고도 : ${baseTerrainHeightValue} m\n\n`;
+    homeConfirmGuardMessage += `정말로 기존에 락온되어 있던 안전 드론포트를 해제하고\n`;
+    homeConfirmGuardMessage += `위 제원의 새로운 공역으로 출발지를 영구 재설정하시겠습니까?`;
+
+    // 조종사가 취소를 누르면 단 1비트의 데이터도 오염시키지 않고 즉시 차단 리턴 탈출!
+    if (!confirm(homeConfirmGuardMessage)) {
+        console.log("🛑 [GCS 마스터 가드] 사용자가 출발지 변경 승인을 거부하여 기존 홈 설정을 철저히 보존 유지했습니다.");
+        if (typeof window.renderWaypointListUI === "function") window.renderWaypointListUI();
+        return;
+    }
+
+    // [이중 조건 검착 통과 완료 시] 기존 영구 보존 락 및 스토리지 캐시 전격 갱신 
     window.gcsPermanentHomeFlag = true;
     var defaultAlt = 150.0;
     if (window.GcsApp && window.GcsApp.CONFIG) {
@@ -2588,14 +2433,16 @@ window.setGcsPermanentHome = function (lon, lat, addressName) {
         lon: numLon,
         lat: numLat,
         alt: defaultAlt,
-        address: searchKeyword
+        address: searchKeyword,
+        roofBase: isBuildingDetectedInAdvance ? baseTerrainHeightValue : 0
     };
 
-    // 전역 배열 상태 갱신 파이프라인 집행
+    localStorage.setItem("gcs_permanent_home_lock", JSON.stringify(window.gcsPermanentHomeData));
     window.gcsRefreshHomePipeline();
 
-    console.log(`🚩 [GCS 영구 락] 다음 홈설정 변경 전까지 이 위치를 영구 출발지로 고정합니다: [${searchKeyword}]`);
+    console.log(`🚩 [GCS 영구 락온 안착] 새로운 출발지가 안전하게 데이터베이스에 고정되었습니다: [${searchKeyword}]`);
 };
+
 
 /**
  * 💥 [유실 방지 핵심 가드 수식] 
@@ -2990,32 +2837,224 @@ if (typeof window.searchAddress === "function") {
  * 2. 관제고도 인풋 수치를 변경하는 순간, 3D 원기둥의 높이가 실시간으로 오차 없이 수직 팽창합니다.
  * 3. 새로고침 및 재접속 시에도 수직 팽창된 에어돔 상태가 100% 영구 복원됩니다.
  */
+// function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, currentAction) {
+//     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+
+//     if (currentAction && (currentAction.indexOf("wp") !== -1 || currentAction.indexOf("waypoint") !== -1 || currentAction.indexOf("destination") !== -1)) {
+//         return;
+//     }
+
+//     // [순정 데이터 역산 및 확정]
+//     var calculatedRoofHeight = parseInt(rawCesiumHeight, 10);
+//     if (isNaN(calculatedRoofHeight) || calculatedRoofHeight <= 0) calculatedRoofHeight = 111;
+
+//     var lon = window.GcsApp.state.lastRightClickLon || 126.919446;
+//     var lat = window.GcsApp.state.lastRightClickLat || 37.460815;
+//     var scene = ws3d.viewer.scene;
+
+//     // 지형 스캔 엔진 기반 지면 고도 연산
+//     var fixedTerrainHeight = Math.round(scene.globe ? (scene.globe.getHeight(Cesium.Cartographic.fromDegrees(lon, lat)) || 0) : 86);
+//     if (fixedTerrainHeight <= 0 || isNaN(fixedTerrainHeight)) fixedTerrainHeight = 86;
+
+//     // 🔒 [정밀 수정 위치] 호출부 진입 전에 고도 수치를 171m 부근으로 강제 강착시키던 구형 하드코딩 수식을 파괴합니다.
+//     var liveControlInput = document.getElementById("gcs_home_alt_input");
+
+//     // 💥 [핵심 완치 수식 1] 화면상에 떠 있는 진짜 인풋 제어창의 가변 값(예: 500m)을 최우선 1순위로 확정 래칭합니다.
+//     var safeAltitude = liveControlInput ? parseInt(liveControlInput.value, 10) : (calculatedRoofHeight + 60);
+
+//     // 만약 최초 로딩 타이라인이거나 수치가 비정상적일 때만 안전 권장 마진을 보완 작동시킵니다.
+//     if (isNaN(safeAltitude) || safeAltitude <= calculatedRoofHeight) {
+//         safeAltitude = calculatedRoofHeight + 60;
+//     }
+
+//     var dynamicBuildingName = isBuilding ? "3D 관제 지정 빌딩 옥상" : "자연 지표면 평지 이륙장";
+//     var pickedFeature = (window.GcsApp && window.GcsApp.state) ? (window.GcsApp.state.gcsSelectedFeature || window.GcsApp.state.gcsHoveredFeature) : null;
+//     if (pickedFeature && typeof pickedFeature.getProperty === "function") {
+//         var nativeName = pickedFeature.getProperty("name") || pickedFeature.getProperty("BLDG_NM") || pickedFeature.getProperty("bldg_nm");
+//         if (nativeName) dynamicBuildingName = nativeName;
+//     }
+
+//     if (window.GcsApp && window.GcsApp.state) {
+//         window.GcsApp.state.lastRightClickRoofHeight = calculatedRoofHeight;
+//         window.GcsApp.state.calculatedSafeAltitude = safeAltitude;
+
+//         var list = window.GcsApp.state.waypointList || window.waypointList || [];
+//         if (Array.isArray(list) && list.length > 0) {
+//             var homeNode = list.find(function (n) { return n && n.id === "Home"; });
+//             if (homeNode) {
+//                 homeNode.lon = lon;
+//                 homeNode.lat = lat;
+
+//                 // 💥 [핵심 완치 수식 2] 전역 원본 경로 데이터 스토리지 배열에도 진짜 가변 관제고도를 오차 없이 꼽아넣습니다.
+//                 homeNode.alt = safeAltitude;
+//                 homeNode.roofBase = isBuilding ? calculatedRoofHeight : 0;
+//                 homeNode.address = dynamicBuildingName;
+//             }
+//         }
+//     }
+
+//     // // 🔒 [정밀 수정 위치 1] 출발지 설정 시 건물고도 데이터(roofBase) 유실 현상을 원천 방어합니다.
+//     // var list = window.GcsApp.state.waypointList || window.waypointList || [];
+//     // if (Array.isArray(list) && list.length > 0) {
+//     //     var homeNode = list.find(function(n) { return n && n.id === "Home"; });
+//     //     if (homeNode) {
+//     //         homeNode.lon = lon; 
+//     //         homeNode.lat = lat;
+//     //         homeNode.alt = safeAltitude; 
+
+//     //         // 💥 [버그 박멸] 이식된 가드가 true인 경우(건물인 경우) 진짜 옥상 절대고도(calculatedRoofHeight)를 
+//     //         // 100% 온전히 전송 및 영구 보존 락온하여 지면고도로 강제 리셋되는 결함을 차단합니다.
+//     //         if (isBuilding) {
+//     //             homeNode.roofBase = calculatedRoofHeight;
+//     //         } else {
+//     //             homeNode.roofBase = 0; // 평지 맨땅인 경우 순정 0m 압착 고정
+//     //         }
+//     //         homeNode.address = dynamicBuildingName;
+//     //     }
+//     // }
+
+//     // 🔒 [완치 포인트 1] 하이재킹 공법을 통한 상단 중복 라인 원천 파괴 및 가변 단일 매칭
+//     // var forceGcsLeftUiHomeCardTextInject = function () {
+//     //     var cardContainer = document.getElementById("card_waypoint_Home");
+//     //     if (cardContainer) {
+//     //         // ① 외부 루프가 비정상적으로 밀어 넣는 텍스트 라인을 전부 추적하여 무조건 즉시 제거
+//     //         var childNodes = cardContainer.querySelectorAll("div, p, span");
+//     //         childNodes.forEach(function (node) {
+//     //             if ((node.textContent.includes("지면고도:") || node.textContent.includes("건물고도:")) && !node.querySelector("input") && node.id !== "gcs_core_height_anchor_node") {
+//     //                 node.remove();
+//     //             }
+//     //         });
+
+//     //         // ② 좌표 표기란 하단 컴포넌트에 단 하나의 완벽한 동적 고도 명세판을 고정 결착
+//     //         var coordsArea = cardContainer.querySelector("div[style*='display: flex'][style*='gap:']");
+//     //         if (coordsArea && coordsArea.parentNode) {
+//     //             var parentDiv = coordsArea.parentNode;
+
+//     //             var existAnchor = cardContainer.querySelector("#gcs_core_height_anchor_node");
+//     //             if (existAnchor) existAnchor.remove();
+
+//     //             var heightInfoWrapper = document.createElement("div");
+//     //             heightInfoWrapper.id = "gcs_core_height_anchor_node";
+//     //             heightInfoWrapper.style.cssText = "margin-top: 6px; margin-bottom: 2px; font-size: 12px; font-family: 'Malgun Gothic', sans-serif; color: #bdc3c7; line-height: 1.4; text-align: left;";
+
+//     //             if (isBuilding) {
+//     //                 heightInfoWrapper.innerHTML = `건물고도: <strong style="color: #fffa65; font-size: 13px;">${calculatedRoofHeight}m</strong> <span style="font-size:10px; color:#95a5a6;"></span>`;
+//     //             } else {
+//     //                 heightInfoWrapper.innerHTML = `지면고도: <strong style="color: #00ffcc; font-size: 13px;">${fixedTerrainHeight}m</strong> <span style="font-size:10px; color:#95a5a6;">(지상 높이)</span>`;
+//     //             }
+
+//     //             parentDiv.insertBefore(heightInfoWrapper, coordsArea.nextSibling);
+//     //         }
+//     //     }
+
+//     //     if (liveControlInput) {
+//     //         liveControlInput.value = safeAltitude;
+//     //     }
+//     // };
+
+//     // 🔒 [정밀 수정 위치 2] forceGcsLeftUiHomeCardTextInject 함수 내부를 깨끗이 세척합니다.
+//     var forceGcsLeftUiHomeCardTextInject = function () {
+//         var cardContainer = document.getElementById("card_waypoint_Home");
+//         if (cardContainer) {
+//             // 외부 루프가 비정상적으로 밀어 넣는 잔상 텍스트 라인을 추적하여 완전히 제거
+//             var childNodes = cardContainer.querySelectorAll("div, p, span");
+//             childNodes.forEach(function (node) {
+//                 if ((node.textContent.includes("지면고도:") || node.textContent.includes("건물고도:")) && !node.querySelector("input") && node.id !== "gcs_core_height_anchor_node") {
+//                     node.remove();
+//                 }
+//             });
+
+//             // 내부 앵커 노드가 존재한다면 실제 데이터 제원으로 정밀 강제 갱신
+//             var existAnchor = cardContainer.querySelector("#gcs_core_height_anchor_node");
+//             if (existAnchor) {
+//                 if (isBuilding) {
+//                     existAnchor.innerHTML = `<span>건물고도:</span><strong style="color: #fffa65; font-size: 12px;">${calculatedRoofHeight}m</strong>`;
+//                 } else {
+//                     existAnchor.innerHTML = `<span>지면고도:</span><strong style="color: #00ffcc; font-size: 12px;">${fixedTerrainHeight}m</strong>`;
+//                 }
+//             }
+//         }
+//         if (liveControlInput) {
+//             liveControlInput.value = safeAltitude;
+//         }
+//     };
+
+//     forceGcsLeftUiHomeCardTextInject();
+
+//     // 보존 캐시 저장
+//     var gcsPersistenceBundle = {
+//         lon: lon, lat: lat,
+//         calculatedRoofHeight: calculatedRoofHeight,
+//         fixedTerrainHeight: fixedTerrainHeight,
+//         safeAltitude: safeAltitude,
+//         dynamicBuildingName: dynamicBuildingName,
+//         isBuilding: isBuilding
+//     };
+//     localStorage.setItem("GCS_LAST_SAVED_HOME_PORT_CACHE", JSON.stringify(gcsPersistenceBundle));
+//     localStorage.setItem("gcs_permanent_home_lock", JSON.stringify({ lon: lon, lat: lat, alt: safeAltitude, address: dynamicBuildingName }));
+
+//     // 🔒 [완치 포인트 2] 3D 원기둥 실시간 고도 사출 엔진 연동 트리거 격발
+//     gcsDeployDynamicHPadAndPrismAirspace(lon, lat, calculatedRoofHeight, dynamicBuildingName, safeAltitude);
+
+//     if (typeof window.rebuildGcsPipelineAndLabels === "function" && !window.GcsApp.state.rebuildLock) {
+//         window.GcsApp.state.rebuildLock = true;
+//         window.rebuildGcsPipelineAndLabels();
+//         window.GcsApp.state.rebuildLock = false;
+//     }
+// }
+
+
 function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, currentAction) {
     if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+    var mainViewer = ws3d.viewer;
+    var scene = mainViewer.scene;
 
+    // 경유지 추가나 목적지 지정 액션일 때는 기존 출발지 드론포트를 철통 보존하고 우회 리턴
     if (currentAction && (currentAction.indexOf("wp") !== -1 || currentAction.indexOf("waypoint") !== -1 || currentAction.indexOf("destination") !== -1)) {
         return;
     }
 
-    // [순정 데이터 역산 및 확정]
-    var calculatedRoofHeight = parseInt(rawCesiumHeight, 10);
-    if (isNaN(calculatedRoofHeight) || calculatedRoofHeight <= 0) calculatedRoofHeight = 111;
+    var extractedHeight = parseInt(rawCesiumHeight, 10);
+    if (isNaN(extractedHeight) || extractedHeight <= 0) extractedHeight = 111;
 
-    var lon = window.GcsApp.state.lastRightClickLon || 126.919446;
-    var lat = window.GcsApp.state.lastRightClickLat || 37.460815;
-    var scene = ws3d.viewer.scene;
+    var lon = 126.919416;
+    var lat = 37.460815;
+    var fixedTerrainHeight = 0;
 
-    // 지형 스캔 엔진 기반 지면 고도 연산
-    var fixedTerrainHeight = Math.round(scene.globe ? (scene.globe.getHeight(Cesium.Cartographic.fromDegrees(lon, lat)) || 0) : 86);
+    var centerPosition = scene.camera.pickEllipsoid(new Cesium.Cartesian2(mainViewer.canvas.clientWidth / 2, mainViewer.canvas.clientHeight / 2));
+    if (centerPosition) {
+        var carto = Cesium.Cartographic.fromCartesian(centerPosition);
+        lon = Cesium.Math.toDegrees(carto.longitude);
+        lat = Cesium.Math.toDegrees(carto.latitude);
+        fixedTerrainHeight = Math.round(scene.globe ? (scene.globe.getHeight(carto) || 0) : 0);
+    }
+
+    if (window.GcsApp && window.GcsApp.state) {
+        if (window.GcsApp.state.lastRightClickLon) {
+            lon = window.GcsApp.state.lastRightClickLon;
+            lat = window.GcsApp.state.lastRightClickLat;
+        }
+        if (fixedTerrainHeight === 0 && scene.globe) {
+            fixedTerrainHeight = Math.round(scene.globe.getHeight(Cesium.Cartographic.fromDegrees(lon, lat)) || 0);
+        }
+    }
+
     if (fixedTerrainHeight <= 0 || isNaN(fixedTerrainHeight)) fixedTerrainHeight = 86;
 
-    // 🔒 [정밀 수정 위치] 호출부 진입 전에 고도 수치를 171m 부근으로 강제 강착시키던 구형 하드코딩 수식을 파괴합니다.
+    var calculatedRoofHeight = extractedHeight;
+    var finalNetHeightInt = calculatedRoofHeight - fixedTerrainHeight;
+
+    if (finalNetHeightInt <= 2 || finalNetHeightInt > 200 || isNaN(finalNetHeightInt)) {
+        finalNetHeightInt = 25;
+        fixedTerrainHeight = calculatedRoofHeight - finalNetHeightInt;
+    }
+
+    if (!isBuilding) {
+        calculatedRoofHeight = fixedTerrainHeight;
+    }
+
     var liveControlInput = document.getElementById("gcs_home_alt_input");
-
-    // 💥 [핵심 완치 수식 1] 화면상에 떠 있는 진짜 인풋 제어창의 가변 값(예: 500m)을 최우선 1순위로 확정 래칭합니다.
     var safeAltitude = liveControlInput ? parseInt(liveControlInput.value, 10) : (calculatedRoofHeight + 60);
-
-    // 만약 최초 로딩 타이라인이거나 수치가 비정상적일 때만 안전 권장 마진을 보완 작동시킵니다.
     if (isNaN(safeAltitude) || safeAltitude <= calculatedRoofHeight) {
         safeAltitude = calculatedRoofHeight + 60;
     }
@@ -3037,8 +3076,6 @@ function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, curr
             if (homeNode) {
                 homeNode.lon = lon;
                 homeNode.lat = lat;
-
-                // 💥 [핵심 완치 수식 2] 전역 원본 경로 데이터 스토리지 배열에도 진짜 가변 관제고도를 오차 없이 꼽아넣습니다.
                 homeNode.alt = safeAltitude;
                 homeNode.roofBase = isBuilding ? calculatedRoofHeight : 0;
                 homeNode.address = dynamicBuildingName;
@@ -3046,70 +3083,11 @@ function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, curr
         }
     }
 
-    // // 🔒 [정밀 수정 위치 1] 출발지 설정 시 건물고도 데이터(roofBase) 유실 현상을 원천 방어합니다.
-    // var list = window.GcsApp.state.waypointList || window.waypointList || [];
-    // if (Array.isArray(list) && list.length > 0) {
-    //     var homeNode = list.find(function(n) { return n && n.id === "Home"; });
-    //     if (homeNode) {
-    //         homeNode.lon = lon; 
-    //         homeNode.lat = lat;
-    //         homeNode.alt = safeAltitude; 
-
-    //         // 💥 [버그 박멸] 이식된 가드가 true인 경우(건물인 경우) 진짜 옥상 절대고도(calculatedRoofHeight)를 
-    //         // 100% 온전히 전송 및 영구 보존 락온하여 지면고도로 강제 리셋되는 결함을 차단합니다.
-    //         if (isBuilding) {
-    //             homeNode.roofBase = calculatedRoofHeight;
-    //         } else {
-    //             homeNode.roofBase = 0; // 평지 맨땅인 경우 순정 0m 압착 고정
-    //         }
-    //         homeNode.address = dynamicBuildingName;
-    //     }
-    // }
-
-    // 🔒 [완치 포인트 1] 하이재킹 공법을 통한 상단 중복 라인 원천 파괴 및 가변 단일 매칭
-    // var forceGcsLeftUiHomeCardTextInject = function () {
-    //     var cardContainer = document.getElementById("card_waypoint_Home");
-    //     if (cardContainer) {
-    //         // ① 외부 루프가 비정상적으로 밀어 넣는 텍스트 라인을 전부 추적하여 무조건 즉시 제거
-    //         var childNodes = cardContainer.querySelectorAll("div, p, span");
-    //         childNodes.forEach(function (node) {
-    //             if ((node.textContent.includes("지면고도:") || node.textContent.includes("건물고도:")) && !node.querySelector("input") && node.id !== "gcs_core_height_anchor_node") {
-    //                 node.remove();
-    //             }
-    //         });
-
-    //         // ② 좌표 표기란 하단 컴포넌트에 단 하나의 완벽한 동적 고도 명세판을 고정 결착
-    //         var coordsArea = cardContainer.querySelector("div[style*='display: flex'][style*='gap:']");
-    //         if (coordsArea && coordsArea.parentNode) {
-    //             var parentDiv = coordsArea.parentNode;
-
-    //             var existAnchor = cardContainer.querySelector("#gcs_core_height_anchor_node");
-    //             if (existAnchor) existAnchor.remove();
-
-    //             var heightInfoWrapper = document.createElement("div");
-    //             heightInfoWrapper.id = "gcs_core_height_anchor_node";
-    //             heightInfoWrapper.style.cssText = "margin-top: 6px; margin-bottom: 2px; font-size: 12px; font-family: 'Malgun Gothic', sans-serif; color: #bdc3c7; line-height: 1.4; text-align: left;";
-
-    //             if (isBuilding) {
-    //                 heightInfoWrapper.innerHTML = `건물고도: <strong style="color: #fffa65; font-size: 13px;">${calculatedRoofHeight}m</strong> <span style="font-size:10px; color:#95a5a6;"></span>`;
-    //             } else {
-    //                 heightInfoWrapper.innerHTML = `지면고도: <strong style="color: #00ffcc; font-size: 13px;">${fixedTerrainHeight}m</strong> <span style="font-size:10px; color:#95a5a6;">(지상 높이)</span>`;
-    //             }
-
-    //             parentDiv.insertBefore(heightInfoWrapper, coordsArea.nextSibling);
-    //         }
-    //     }
-
-    //     if (liveControlInput) {
-    //         liveControlInput.value = safeAltitude;
-    //     }
-    // };
-
-    // 🔒 [정밀 수정 위치 2] forceGcsLeftUiHomeCardTextInject 함수 내부를 깨끗이 세척합니다.
+    // 🔒 [완치 포인트 1] 하이재킹 가짜 안내문 강제 청소 및 동적 싱크 가드
     var forceGcsLeftUiHomeCardTextInject = function () {
         var cardContainer = document.getElementById("card_waypoint_Home");
         if (cardContainer) {
-            // 외부 루프가 비정상적으로 밀어 넣는 잔상 텍스트 라인을 추적하여 완전히 제거
+            // 다른 목적지 카드를 오염시키지 않도록 오직 출발지 카드 내부만 정밀 스캔하여 찌꺼기 텍스트 전면 소멸
             var childNodes = cardContainer.querySelectorAll("div, p, span");
             childNodes.forEach(function (node) {
                 if ((node.textContent.includes("지면고도:") || node.textContent.includes("건물고도:")) && !node.querySelector("input") && node.id !== "gcs_core_height_anchor_node") {
@@ -3117,27 +3095,25 @@ function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, curr
                 }
             });
 
-            // 내부 앵커 노드가 존재한다면 실제 데이터 제원으로 정밀 강제 갱신
             var existAnchor = cardContainer.querySelector("#gcs_core_height_anchor_node");
             if (existAnchor) {
                 if (isBuilding) {
-                    existAnchor.innerHTML = `<span>건물고도:</span><strong style="color: #fffa65; font-size: 12px;">${calculatedRoofHeight}m</strong>`;
+                    existAnchor.innerHTML = `<span>건물고도: </span><strong style="color: #fffa65; font-size: 12px;">${calculatedRoofHeight}m</strong>`;
                 } else {
-                    existAnchor.innerHTML = `<span>지면고도:</span><strong style="color: #00ffcc; font-size: 12px;">${fixedTerrainHeight}m</strong>`;
+                    existAnchor.innerHTML = `<span>지면고도: </span><strong style="color: #00ffcc; font-size: 12px;">${fixedTerrainHeight}m</strong>`;
                 }
             }
         }
+
         if (liveControlInput) {
             liveControlInput.value = safeAltitude;
         }
     };
-
     forceGcsLeftUiHomeCardTextInject();
 
-    // 보존 캐시 저장
     var gcsPersistenceBundle = {
         lon: lon, lat: lat,
-        calculatedRoofHeight: calculatedRoofHeight,
+        calculatedRoofHeight: isBuilding ? calculatedRoofHeight : 0,
         fixedTerrainHeight: fixedTerrainHeight,
         safeAltitude: safeAltitude,
         dynamicBuildingName: dynamicBuildingName,
@@ -3146,16 +3122,12 @@ function gcsExecuteIntegratedHPadPrismPipeline(rawCesiumHeight, isBuilding, curr
     localStorage.setItem("GCS_LAST_SAVED_HOME_PORT_CACHE", JSON.stringify(gcsPersistenceBundle));
     localStorage.setItem("gcs_permanent_home_lock", JSON.stringify({ lon: lon, lat: lat, alt: safeAltitude, address: dynamicBuildingName }));
 
-    // 🔒 [완치 포인트 2] 3D 원기둥 실시간 고도 사출 엔진 연동 트리거 격발
-    gcsDeployDynamicHPadAndPrismAirspace(lon, lat, calculatedRoofHeight, dynamicBuildingName, safeAltitude);
-
     if (typeof window.rebuildGcsPipelineAndLabels === "function" && !window.GcsApp.state.rebuildLock) {
         window.GcsApp.state.rebuildLock = true;
         window.rebuildGcsPipelineAndLabels();
         window.GcsApp.state.rebuildLock = false;
     }
 }
-
 
 /**
  * 🔒 [GCS 코어 그래픽 엔진 - 502m 관제고도 실시간 강제 관통 팽창 최종 완결 마스터피스]
@@ -3545,47 +3517,216 @@ window.toggleGcsDroneSimulationStatus = function () {
 
 
 
+// // =========================================================================
+// // 🔒 [GCS 엔진 최종단 결착] 최적화 스캔 가이드 안내 알림 팝업창 강착 차단벽 쉴드
+// // =========================================================================
+// (function gcsEmbedUltimateConfirmAlertShield() {
+//     var alertHookInterval = setInterval(function () {
+//         if (typeof window.startGcsDroneSimulation === "function" && !window.startGcsDroneSimulation.isGcsMasterAlertHooked) {
+//             clearInterval(alertHookInterval);
+
+//             var pureSimulationBody = window.startGcsDroneSimulation; // 오리지널 자율비행 함수 카피
+
+//             window.startGcsDroneSimulation = function () {
+//                 console.log("🛸 [GCS 마스터 실드] 시뮬레이션 격발 감지 -> 실시간 경로 조밀 지형 스캔 강제 통제 시작.");
+
+//                 var optResult = null;
+//                 if (typeof window.gcsExecuteTerrainOptimizationReturnData === "function") {
+//                     optResult = window.gcsExecuteTerrainOptimizationReturnData();
+//                 }
+
+//                 var finalTargetAlt = optResult ? optResult.recommendedSafeAltitude : 150.0;
+//                 var maxObstacleHeight = optResult ? optResult.maxApartmentHeight : 0;
+
+//                 // 💥 [최적화 팝업 동기 사출]
+//                 var alertMessage = `🛸 [GCS 자동 비행경로 최적화 검착]\n`;
+//                 alertMessage += `• 비행 경로 내 최고 장애물 높이: ${maxObstacleHeight}m\n`;
+//                 alertMessage += `• 안전 마진(+60m)이 반영된 관제 고도: [ ${finalTargetAlt}m ]\n\n`;
+//                 alertMessage += `산악 지형 충돌 우려를 격파하고 최적화된 고도로 자율 항행을 시작합니까?`;
+
+//                 if (!confirm(alertMessage)) {
+//                     console.log("🛑 사용자가 이륙을 거부하여 관제를 대기 상태로 유지합니다.");
+//                     window.isGcsDroneFlyingActive = false;
+//                     return; // 비행 스레드 즉시 Drop 후 차단 탈출
+//                 }
+
+//                 // 승인 시 고도 데이터 락을 체결하고 순정 비행 격발!
+//                 pureSimulationBody();
+//             };
+//             window.startGcsDroneSimulation.isGcsMasterAlertHooked = true;
+//             console.log("🛡️ [GCS 시스템 통합] 최적화 알림창(Confirm) 팝업 인터록 최종 부트 체결 완료.");
+//         }
+//     }, 300);
+// })();
+
+
+
+
 // =========================================================================
-// 🔒 [GCS 엔진 최종단 결착] 최적화 스캔 가이드 안내 알림 팝업창 강착 차단벽 쉴드
+// 🔗 [체크박스 및 시뮬레이션 연동기] 최적화 즉시 반영 바인딩
 // =========================================================================
-(function gcsEmbedUltimateConfirmAlertShield() {
-    var alertHookInterval = setInterval(function () {
-        if (typeof window.startGcsDroneSimulation === "function" && !window.startGcsDroneSimulation.isGcsMasterAlertHooked) {
-            clearInterval(alertHookInterval);
-
-            var pureSimulationBody = window.startGcsDroneSimulation; // 오리지널 자율비행 함수 카피
-
-            window.startGcsDroneSimulation = function () {
-                console.log("🛸 [GCS 마스터 실드] 시뮬레이션 격발 감지 -> 실시간 경로 조밀 지형 스캔 강제 통제 시작.");
-
-                var optResult = null;
-                if (typeof window.gcsExecuteTerrainOptimizationReturnData === "function") {
-                    optResult = window.gcsExecuteTerrainOptimizationReturnData();
-                }
-
-                var finalTargetAlt = optResult ? optResult.recommendedSafeAltitude : 150.0;
-                var maxObstacleHeight = optResult ? optResult.maxApartmentHeight : 0;
-
-                // 💥 [최적화 팝업 동기 사출]
-                var alertMessage = `🛸 [GCS 자동 비행경로 최적화 검착]\n`;
-                alertMessage += `• 비행 경로 내 최고 장애물 높이: ${maxObstacleHeight}m\n`;
-                alertMessage += `• 안전 마진(+60m)이 반영된 관제 고도: [ ${finalTargetAlt}m ]\n\n`;
-                alertMessage += `산악 지형 충돌 우려를 격파하고 최적화된 고도로 자율 항행을 시작합니까?`;
-
-                if (!confirm(alertMessage)) {
-                    console.log("🛑 사용자가 이륙을 거부하여 관제를 대기 상태로 유지합니다.");
-                    window.isGcsDroneFlyingActive = false;
-                    return; // 비행 스레드 즉시 Drop 후 차단 탈출
-                }
-
-                // 승인 시 고도 데이터 락을 체결하고 순정 비행 격발!
-                pureSimulationBody();
-            };
-            window.startGcsDroneSimulation.isGcsMasterAlertHooked = true;
-            console.log("🛡️ [GCS 시스템 통합] 최적화 알림창(Confirm) 팝업 인터록 최종 부트 체결 완료.");
+window.toggleGcsTerrainOptimization = function (isChecked) {
+    if (isChecked) {
+        var res = window.runGcsRouteOptimization();
+        if (res) {
+            console.log(`✅ [최적화 완료] 거리: ${res.distance}m | 최고장애물: ${res.maxObstacle}m | 안전고도: ${res.safeAlt}m | 추가WP: ${res.addedCount}개`);
         }
-    }, 300);
-})();
+    } else {
+        // 체크 해제 시 자동 생성된 WP_AUTO 노드 및 가이드라인 제거
+        var list = window.GcsApp?.state?.waypointList || window.waypointList || [];
+        var cleaned = list.filter(function (n) { return n && !String(n.id).startsWith("WP_AUTO_"); });
+        window.GcsApp.state.waypointList = cleaned;
+        window.waypointList = cleaned;
+
+        if (typeof ws3d !== "undefined" && ws3d && ws3d.viewer) {
+            var line = ws3d.viewer.entities.getById("GCS_3D_MAP_COMPASS_LINE");
+            if (line) ws3d.viewer.entities.remove(line);
+        }
+        if (typeof window.renderWaypointListUI === "function") window.renderWaypointListUI();
+        if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
+    }
+};
+
+// =========================================================================
+// 🛫 [시뮬레이션 시작 인터록] 기존 가로채기 대신 WP 추가 브리핑 후 비행 실행
+// =========================================================================
+var pureStartGcsSim = window.startGcsDroneSimulation;
+window.startGcsDroneSimulation = function () {
+    var list = window.GcsApp?.state?.waypointList || window.waypointList || [];
+    var hasAutoWp = list.some(function (n) { return n && String(n.id).startsWith("WP_AUTO_"); });
+
+    if (!hasAutoWp && list.length >= 2) {
+        var res = window.runGcsRouteOptimization();
+        if (res) {
+            window.gcsAutoNodesPreparedGuard = true;
+            alert(
+                `🛰️ [GCS 경로 최적화 및 경유지(WP) 반영 완료]\n` +
+                `=======================================\n\n` +
+                `• 총 비행 거리: ${res.distance}m\n` +
+                `• 최고 장애물 고도: ${res.maxObstacle}m\n` +
+                `• 안전 순항 고도: ${res.safeAlt}m\n\n` +
+                `🛠️ 반영된 경유지(WP) 명세:\n` +
+                `${res.logs.join("\n")}\n\n` +
+                `=======================================\n` +
+                `좌측 카드 목록과 3D 경로선을 확인하신 후\n` +
+                `[시뮬레이션 시작] 버튼을 한 번 더 누르시면 비행이 시작됩니다.`
+            );
+            return;
+        }
+    }
+
+    // 2번째 클릭 시 기존 자율비행 타임라인 즉시 기동
+    window.gcsAutoNodesPreparedGuard = false;
+    if (typeof pureStartGcsSim === "function") {
+        pureStartGcsSim.apply(this, arguments);
+    }
+};
 
 
+// 초기 로딩 2초 후 최적화 체크박스 자동 활성화 및 이벤트 결착
+setTimeout(function () {
+    var labels = document.querySelectorAll("label, span, div");
+    labels.forEach(function (el) {
+        if (el.textContent && el.textContent.indexOf("경로상 지형") !== -1) {
+            var parent = el.parentElement;
+            var chk = parent ? parent.querySelector("input[type='checkbox']") : null;
+            if (chk && !chk.isOptHooked) {
+                chk.checked = true; // 기본 활성화
+                chk.addEventListener("change", function () {
+                    window.toggleGcsTerrainOptimization(this.checked);
+                });
+                chk.isOptHooked = true;
+                window.toggleGcsTerrainOptimization(true);
+            }
+        }
+    });
+}, 2000);
 
+
+// =========================================================================
+// 💾 [전역 저장 실행기] 출발지(Home) 정보 로컬 스토리지 즉시 영구 저장
+// =========================================================================
+window.saveGcsHomeCardDirectly = function () {
+    var list = (window.GcsApp && window.GcsApp.state && window.GcsApp.state.waypointList) ? window.GcsApp.state.waypointList : (window.waypointList || []);
+    var homeNode = list.find(function (n) { return n && String(n.id).toLowerCase() === "home"; });
+    if (!homeNode) return;
+
+    var homeSavePayload = {
+        id: "Home",
+        lon: parseFloat(homeNode.lon),
+        lat: parseFloat(homeNode.lat),
+        alt: parseFloat(homeNode.alt) || 150,
+        roofBase: Math.round(parseFloat(homeNode.roofBase) || 0),
+        calculatedRoofHeight: Math.round(parseFloat(homeNode.roofBase) || 0),
+        address: homeNode.address || "사용자 설정 락온 공역 출발지",
+        heading_deg: homeNode.heading_deg || 0
+    };
+    localStorage.setItem("gcs_permanent_home_lock", JSON.stringify(homeSavePayload));
+
+    // 버튼 시각적 피드백 (팝업 없음)
+    var saveBtn = document.querySelector("#card_waypoint_Home .gcs-home-save-btn");
+    if (saveBtn) {
+        saveBtn.innerHTML = "✅ 저장됨";
+        saveBtn.style.background = "#2ecc71";
+        saveBtn.style.color = "#fff";
+        setTimeout(function () {
+            saveBtn.innerHTML = "💾 저장";
+            saveBtn.style.background = "#f1c40f";
+            saveBtn.style.color = "#000";
+        }, 1200);
+    }
+};
+
+
+// =========================================================================
+// 🎯 [전역 카메라 포커스] 2D·3D 구분 없이 해당 좌표를 화면 정중앙으로 이동
+// =========================================================================
+window.focusGcsNodeOnMap = function (lon, lat, baseHeight) {
+    if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+    var mainViewer = ws3d.viewer;
+    var numLon = parseFloat(lon);
+    var numLat = parseFloat(lat);
+    var floorH = parseFloat(baseHeight) || 0;
+
+    if (isNaN(numLon) || isNaN(numLat)) return;
+
+    // 기존 카메라 락 해제
+    mainViewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+
+    var currentPitchDeg = Cesium.Math.toDegrees(mainViewer.camera.pitch);
+    var is2DTopView = (window.isGcsCameraCurrently2D === true || currentPitchDeg <= -75.0);
+    var currentHeading = mainViewer.camera.heading;
+    var viewHeightOffset = 260.0; // 지면/옥상으로부터 띄울 카메라 높이(m)
+
+    if (is2DTopView) {
+        // 2D 탑뷰 모드: 위경도 정중앙 수직 상공으로 이동
+        mainViewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(numLon, numLat, floorH + viewHeightOffset),
+            orientation: {
+                heading: currentHeading,
+                pitch: Cesium.Math.toRadians(-90.0),
+                roll: 0.0
+            },
+            duration: 0.6
+        });
+    } else {
+        // 3D 사선뷰(-45도) 모드: 카메라 시선(heading) 방향의 뒤쪽으로 오프셋을 주어 타깃이 화면 정중앙에 오도록 계산
+        var pitchRad = Cesium.Math.toRadians(-45.0);
+        // 45도 각도일 때 높이(viewHeightOffset)만큼 뒤로 물러나야 화면 정중앙에 타깃이 위치함
+        var metersPerDegLat = 111320.0;
+        var metersPerDegLon = 111320.0 * Math.cos(Cesium.Math.toRadians(numLat));
+
+        var offsetLat = (viewHeightOffset * Math.cos(currentHeading)) / metersPerDegLat;
+        var offsetLon = (viewHeightOffset * Math.sin(currentHeading)) / metersPerDegLon;
+
+        mainViewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(numLon - offsetLon, numLat - offsetLat, floorH + viewHeightOffset),
+            orientation: {
+                heading: currentHeading,
+                pitch: pitchRad,
+                roll: 0.0
+            },
+            duration: 0.6
+        });
+    }
+};
