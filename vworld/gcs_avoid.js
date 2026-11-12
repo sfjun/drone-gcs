@@ -64,31 +64,6 @@
     };
     window.toggleSidewalkobstacleLayer = window.toggleSidewalkObstacleLayer;
 
-    // 비행 제어 인터록 모드 스위치 연동 API
-    window.gcsSetFlightPhase = function (phase) {
-        var normalizedPhase = String(phase).toUpperCase();
-        console.log("🚁 [GCS 기체 제어 인터록] 비행 모드 감지 -> " + normalizedPhase);
-
-        if (normalizedPhase === "TAKEOFF" || normalizedPhase === "LANDING" || normalizedPhase === "이륙" || normalizedPhase === "착륙") {
-            window.GcsApp.state.isDroneTakeoffOrLanding = true;
-            window.toggleSidewalkObstacleLayer(true);
-        } else {
-            window.GcsApp.state.isDroneTakeoffOrLanding = false;
-            window.toggleSidewalkObstacleLayer(false);
-        }
-    };
-
-
-
-    // 시뮬레이션 강제 구동 함수
-    window.gcsTriggerSimulationRoadWallForceEmit = function () {
-        var source = window.GcsApp.state.sidewalkLayerSource;
-        if (!source) return;
-        if (!viewer.dataSources.contains(source)) viewer.dataSources.add(source);
-        if (typeof window.fetchLiveSidewalkData === "function") window.fetchLiveSidewalkData();
-    };
-
-
     /**
      * 인도 장벽 데이터 호출 허브
      */

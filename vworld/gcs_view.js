@@ -53,38 +53,6 @@ window.getGcsDestinationAltitude = function (baseFloorHeight) {
     return Math.round(parseFloat(baseFloorHeight) + finalOffset);
 };
 
-window.toggleGcsCameraViewMode = function () {
-    window.gcsCameraTrackingModeActive = !window.gcsCameraTrackingModeActive;
-    var btn = document.getElementById("btn_hud_view_swap");
-    if (btn) {
-        btn.innerText = window.gcsCameraTrackingModeActive ? "🔄 점검 뷰 모드" : "🔄 광역 탑뷰 모드";
-        btn.style.background = window.gcsCameraTrackingModeActive ? "#e67e22" : "#27ae60";
-    }
-};
-
-window.initGcsHudDraggable = function () {
-    var hudContainer = document.getElementById("gcs_internal_hud_container") || document.querySelector('.gcs-hud-panel') || document.getElementById("hud");
-    if (!hudContainer) return;
-    var dragHandle = hudContainer.querySelector('#gcs_hud_header') || hudContainer;
-    dragHandle.style.cursor = "move";
-    var isDragging = false; var offsetPosition = { x: 0, y: 0 };
-    dragHandle.addEventListener("mousedown", function (e) {
-        if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON" || window.isGcsLayoutSwapped) return;
-        isDragging = true; offsetPosition.x = e.clientX - hudContainer.offsetLeft; offsetPosition.y = e.clientY - hudContainer.offsetTop;
-        document.body.style.userSelect = "none";
-    });
-    document.addEventListener("mousemove", function (e) {
-        if (!isDragging || window.isGcsLayoutSwapped) return;
-        var nextX = e.clientX - offsetPosition.x; var nextY = e.clientY - offsetPosition.y;
-        if (nextX < 0) nextX = 0; if (nextY < 0) nextY = 0;
-        if (nextX > window.innerWidth - hudContainer.offsetWidth) nextX = window.innerWidth - hudContainer.offsetWidth;
-        if (nextY > window.innerHeight - hudContainer.offsetHeight) nextY = window.innerHeight - hudContainer.offsetHeight;
-        hudContainer.style.left = nextX + "px"; hudContainer.style.top = nextY + "px"; hudContainer.style.right = "auto"; hudContainer.style.bottom = "auto";
-        window.gcsHudPositionMemory.left = nextX + "px"; window.gcsHudPositionMemory.top = nextY + "px"; window.gcsHudPositionMemory.right = "auto"; window.gcsHudPositionMemory.bottom = "auto";
-    });
-    document.addEventListener("mouseup", function () { if (isDragging) { isDragging = false; document.body.style.userSelect = "auto"; } });
-};
-
 // =========================================================================
 // 🛸 Three.js 입체 관제 레이더 인프라
 // =========================================================================
@@ -426,9 +394,11 @@ window.startGcsDroneSimulation = function () {
     window.gcsAutoNodesPreparedGuard = false;
     window.gcsCameraTrackingModeActive = true;       // 첫 비행 종료 시 false로 꺼진 카메라 추적 다시 활성화
     window.gcsSmoothCameraHeading = undefined;       // 이전 비행의 마지막 방위각 캐시 초기화
+    window.gcsHoverStartHeading = undefined;
     window.gcsLastValidHeadingCache = undefined;
     window.gcsLockedCruiseHeadingBackup = undefined;
-    
+
+
     window.gcsDroneLiveState = {
         isTakeoffConfirmedGuard: true,
         currentStageString: "takeoff_ready",         // "landing_done" 상태를 "takeoff_ready"로 강제 리셋
@@ -532,61 +502,190 @@ window.startGcsDroneSimulation = function () {
     propertyOrientation.addSample(timeHoverEnd, qTakeoffUp);
     window.gcsHoverScheduleTimestamps = [{ name: "Home_Hover", start: startHoverTimeRef, end: timeSum }];
 
-    // 수동 경유지 및 자동 추가된 경유지 모두 순회하며 궤적 샘플링
-    for (var j = 0; j < flightPathPoints.length; j++) {
-        var node = flightPathPoints[j];
-        if (!node || isNaN(parseFloat(node.lon)) || isNaN(parseFloat(node.lat))) continue;
-        
-        // [수정] 목적지 좌표와 동일한 직상공 가드 WP인 경우 중간 1초 대기를 생략하여 즉시 목적지 호버링으로 연결
-        var isSameAsDest = (Math.abs(parseFloat(node.lon) - parseFloat(destNodeObj.lon)) < 0.00001 &&
-                            Math.abs(parseFloat(node.lat) - parseFloat(destNodeObj.lat)) < 0.00001);
-        if (isSameAsDest) continue;
 
-        timeSum += 4.0;
-        var nodeTimeArrival = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+
+    // // 수동 경유지 및 자동 추가된 경유지 모두 순회하며 궤적 샘플링
+    // for (var j = 0; j < flightPathPoints.length; j++) {
+    //     var node = flightPathPoints[j];
+    //     if (!node || isNaN(parseFloat(node.lon)) || isNaN(parseFloat(node.lat))) continue;
+
+    //     // [수정] 목적지 좌표와 동일한 직상공 가드 WP인 경우 중간 1초 대기를 생략하여 즉시 목적지 호버링으로 연결
+    //     var isSameAsDest = (Math.abs(parseFloat(node.lon) - parseFloat(destNodeObj.lon)) < 0.00001 &&
+    //         Math.abs(parseFloat(node.lat) - parseFloat(destNodeObj.lat)) < 0.00001);
+    //     if (isSameAsDest) continue;
+
+
+    //     timeSum += 4.0;
+    //     var nodeTimeArrival = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    //     var targetNodeAlt = parseFloat(node.alt) || actualHomeFlightAlt;
+    //     var exactWpCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(node.lon), parseFloat(node.lat), targetNodeAlt);
+    //     propertyPosition.addSample(nodeTimeArrival, exactWpCartesian);
+    //     propertyOrientation.addSample(nodeTimeArrival, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+
+    //     var startWpHoverTime = timeSum;
+    //     timeSum += 1.0;
+    //     var nodeTimeHoverEnd = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    //     propertyPosition.addSample(nodeTimeHoverEnd, exactWpCartesian);
+    //     propertyOrientation.addSample(nodeTimeHoverEnd, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+    //     window.gcsHoverScheduleTimestamps.push({ name: node.id, start: startWpHoverTime, end: timeSum });
+    // }
+
+    // // 목적지 직상공 천장 진입 및 호버링
+    // timeSum += 4.0;
+    // var destTopAirspaceTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    // var lastWpNode = flightPathPoints.length > 0 ? flightPathPoints[flightPathPoints.length - 1] : homeNode;
+    // var calculatedTopAlt = parseFloat(lastWpNode.alt) || actualHomeFlightAlt;
+    // var destTopAirspaceCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(destNodeObj.lon), parseFloat(destNodeObj.lat), calculatedTopAlt);
+    // propertyPosition.addSample(destTopAirspaceTime, destTopAirspaceCartesian);
+    // propertyOrientation.addSample(destTopAirspaceTime, Cesium.Transforms.headingPitchRollQuaternion(destTopAirspaceCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+
+    // var destTopHoverStart = timeSum;
+    // timeSum += 3.5;
+    // var destTopHoverEndTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    // propertyPosition.addSample(destTopHoverEndTime, destTopAirspaceCartesian);
+    // propertyOrientation.addSample(destTopHoverEndTime, Cesium.Transforms.headingPitchRollQuaternion(destTopAirspaceCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+    // window.gcsHoverScheduleTimestamps.push({ name: "Dest_Top_Hover", start: destTopHoverStart, end: timeSum });
+
+    // // 최종 목적지(원래 설정된 착륙 고도)로 수직 하강 착륙
+    // timeSum += 1.5;
+    // var finalLandingTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    // var finalLandingCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(destNodeObj.lon), parseFloat(destNodeObj.lat), parseFloat(destNodeObj.alt));
+    // propertyPosition.addSample(finalLandingTime, finalLandingCartesian);
+    // propertyOrientation.addSample(finalLandingTime, Cesium.Transforms.headingPitchRollQuaternion(finalLandingCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+
+
+    // 두 지점 간 진행 방위각(Radian) 실시간 산출 헬퍼 함수
+    var calcSegmentHeading = function (fromNode, toNode, altVal) {
+        var p1 = Cesium.Cartesian3.fromDegrees(parseFloat(fromNode.lon), parseFloat(fromNode.lat), altVal);
+        var p2 = Cesium.Cartesian3.fromDegrees(parseFloat(toNode.lon), parseFloat(toNode.lat), altVal);
+        try {
+            var invMat = Cesium.Matrix4.inverse(Cesium.Transforms.eastNorthUpToFixedFrame(p1), new Cesium.Matrix4());
+            if (Cesium.defined(invMat)) {
+                var localVec = Cesium.Matrix4.multiplyByPoint(invMat, p2, new Cesium.Cartesian3());
+                var h = Math.atan2(localVec.x, localVec.y);
+                if (!isNaN(h) && isFinite(h)) return h;
+            }
+        } catch (e) { }
+        return 0.0;
+    };
+
+    // 실제 비행에 사용할 중간 경유지 필터링 (목적지와 좌표가 같은 가드 WP 제외)
+    var validWaypoints = flightPathPoints.filter(function (node) {
+        if (!node || isNaN(parseFloat(node.lon)) || isNaN(parseFloat(node.lat))) return false;
+        var isSameAsDest = (Math.abs(parseFloat(node.lon) - parseFloat(destNodeObj.lon)) < 0.00001 &&
+            Math.abs(parseFloat(node.lat) - parseFloat(destNodeObj.lat)) < 0.00001);
+        return !isSameAsDest;
+    });
+
+    var currentLegHeading = targetHeadingRadian; // 현재 구간 진입 방위각 추적 변수
+
+    // 1. 경유지(WP) 순회: 진입 각도로 도착 -> 1.5초 호버링하며 다음 목표 방향으로 기수 회전
+    for (var j = 0; j < validWaypoints.length; j++) {
+        var node = validWaypoints[j];
+        var nextNodeAfterWp = (j + 1 < validWaypoints.length) ? validWaypoints[j + 1] : destNodeObj;
         var targetNodeAlt = parseFloat(node.alt) || actualHomeFlightAlt;
         var exactWpCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(node.lon), parseFloat(node.lat), targetNodeAlt);
-        propertyPosition.addSample(nodeTimeArrival, exactWpCartesian);
-        propertyOrientation.addSample(nodeTimeArrival, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
 
+        // [A] 경유지 도착 (이전 구간 진행 방향 그대로 진입)
+        timeSum += 4.0;
+        var nodeTimeArrival = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+        propertyPosition.addSample(nodeTimeArrival, exactWpCartesian);
+        propertyOrientation.addSample(nodeTimeArrival, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(currentLegHeading, 0.0, 0.0)));
+
+        // [B] 경유지 호버링 (1.5초간 제자리 정지하면서 다음 목표 방향으로 기수 회전)
+        var nextLegHeading = calcSegmentHeading(node, nextNodeAfterWp, targetNodeAlt);
         var startWpHoverTime = timeSum;
-        timeSum += 1.0;
+        timeSum += 1.5;
         var nodeTimeHoverEnd = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
         propertyPosition.addSample(nodeTimeHoverEnd, exactWpCartesian);
-        propertyOrientation.addSample(nodeTimeHoverEnd, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+        propertyOrientation.addSample(nodeTimeHoverEnd, Cesium.Transforms.headingPitchRollQuaternion(exactWpCartesian, new Cesium.HeadingPitchRoll(nextLegHeading, 0.0, 0.0)));
+
         window.gcsHoverScheduleTimestamps.push({ name: node.id, start: startWpHoverTime, end: timeSum });
+        currentLegHeading = nextLegHeading; // 다음 구간 진행 방향 갱신
     }
 
-    // 목적지 직상공 천장 진입 및 호버링
+    // 목적지 카드에 저장된 설정 방향각(heading_H) 추출
+    var destTargetHeadingRad = currentLegHeading;
+    if (destNodeObj) {
+        if (destNodeObj.heading_H !== undefined && !isNaN(parseFloat(destNodeObj.heading_H))) {
+            destTargetHeadingRad = parseFloat(destNodeObj.heading_H);
+        } else if (destNodeObj.heading_deg !== undefined && !isNaN(parseFloat(destNodeObj.heading_deg))) {
+            destTargetHeadingRad = Cesium.Math.toRadians(parseFloat(destNodeObj.heading_deg));
+        }
+    }
+
+    // 2. 목적지 직상공 천장 진입 (마지막 구간 진행 방향 그대로 도착)
     timeSum += 4.0;
     var destTopAirspaceTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
-    var lastWpNode = flightPathPoints.length > 0 ? flightPathPoints[flightPathPoints.length - 1] : homeNode;
+    var lastWpNode = validWaypoints.length > 0 ? validWaypoints[validWaypoints.length - 1] : homeNode;
     var calculatedTopAlt = parseFloat(lastWpNode.alt) || actualHomeFlightAlt;
     var destTopAirspaceCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(destNodeObj.lon), parseFloat(destNodeObj.lat), calculatedTopAlt);
-    propertyPosition.addSample(destTopAirspaceTime, destTopAirspaceCartesian);
-    propertyOrientation.addSample(destTopAirspaceTime, Cesium.Transforms.headingPitchRollQuaternion(destTopAirspaceCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
 
+    propertyPosition.addSample(destTopAirspaceTime, destTopAirspaceCartesian);
+    propertyOrientation.addSample(destTopAirspaceTime, Cesium.Transforms.headingPitchRollQuaternion(destTopAirspaceCartesian, new Cesium.HeadingPitchRoll(currentLegHeading, 0.0, 0.0)));
+
+    // 3. 목적지 상공 호버링 (3.5초간 정지 비행하면서 목적지 설정 방향각으로 기수 회전 완료)
     var destTopHoverStart = timeSum;
     timeSum += 3.5;
     var destTopHoverEndTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+
+    // [중요] 호버링이 끝나는 시점에 이미 destTargetHeadingRad로 회전이 100% 완료됨
+    var finalFixedOrientation = Cesium.Transforms.headingPitchRollQuaternion(
+        destTopAirspaceCartesian,
+        new Cesium.HeadingPitchRoll(destTargetHeadingRad, 0.0, 0.0)
+    );
     propertyPosition.addSample(destTopHoverEndTime, destTopAirspaceCartesian);
-    propertyOrientation.addSample(destTopHoverEndTime, Cesium.Transforms.headingPitchRollQuaternion(destTopAirspaceCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+    propertyOrientation.addSample(destTopHoverEndTime, finalFixedOrientation);
     window.gcsHoverScheduleTimestamps.push({ name: "Dest_Top_Hover", start: destTopHoverStart, end: timeSum });
 
-    // 최종 목적지(원래 설정된 착륙 고도)로 수직 하강 착륙
+    // 4. 최종 목적지 수직 하강 착륙 (회전 없이 상공에서 맞춘 방향각 그대로 수직 하강)
     timeSum += 1.5;
     var finalLandingTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
     var finalLandingCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(destNodeObj.lon), parseFloat(destNodeObj.lat), parseFloat(destNodeObj.alt));
+    var landingFixedOrientation = Cesium.Transforms.headingPitchRollQuaternion(
+        finalLandingCartesian,
+        new Cesium.HeadingPitchRoll(destTargetHeadingRad, 0.0, 0.0)
+    );
+
     propertyPosition.addSample(finalLandingTime, finalLandingCartesian);
-    propertyOrientation.addSample(finalLandingTime, Cesium.Transforms.headingPitchRollQuaternion(finalLandingCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+    propertyOrientation.addSample(finalLandingTime, landingFixedOrientation);
 
-
-    // 💥 [추가] 착륙 완료 후 2.5초간 기체는 착륙 지점에 정지 유지 (카메라 -90° -> 0° POV 전환 시간)
+    // 5. 착륙 완료 후 2.5초간 기체는 착륙 지점에 정지 유지 (동일 방향각 완벽 고정)
     var landingCompleteTimeRef = timeSum;
     timeSum += 2.5;
     var finalPovEndTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
     propertyPosition.addSample(finalPovEndTime, finalLandingCartesian);
-    propertyOrientation.addSample(finalPovEndTime, Cesium.Transforms.headingPitchRollQuaternion(finalLandingCartesian, new Cesium.HeadingPitchRoll(targetHeadingRadian, 0.0, 0.0)));
+    propertyOrientation.addSample(finalPovEndTime, landingFixedOrientation);
+
+
+
+    window.gcsLiveLandingTimeRef = landingCompleteTimeRef;
+    window.gcsLiveTimeSumRef = timeSum;
+
+
+    // 목적지 카드에 저장된 설정 방향각(heading_H) 추출 (착륙 시 드론 기수 회전용)
+    var destTargetHeadingRad = targetHeadingRadian;
+    if (destNodeObj) {
+        if (destNodeObj.heading_H !== undefined && !isNaN(parseFloat(destNodeObj.heading_H))) {
+            destTargetHeadingRad = parseFloat(destNodeObj.heading_H);
+        } else if (destNodeObj.heading_deg !== undefined && !isNaN(parseFloat(destNodeObj.heading_deg))) {
+            destTargetHeadingRad = Cesium.Math.toRadians(parseFloat(destNodeObj.heading_deg));
+        }
+    }
+
+    // 최종 목적지(원래 설정된 착륙 고도)로 수직 하강 착륙 (목적지 설정 방향각으로 기수 정렬)
+    timeSum += 1.5;
+    var finalLandingTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    var finalLandingCartesian = Cesium.Cartesian3.fromDegrees(parseFloat(destNodeObj.lon), parseFloat(destNodeObj.lat), parseFloat(destNodeObj.alt));
+    propertyPosition.addSample(finalLandingTime, finalLandingCartesian);
+    propertyOrientation.addSample(finalLandingTime, Cesium.Transforms.headingPitchRollQuaternion(finalLandingCartesian, new Cesium.HeadingPitchRoll(destTargetHeadingRad, 0.0, 0.0)));
+
+    // 착륙 완료 후 2.5초간 기체는 착륙 지점에 정지 유지
+    var landingCompleteTimeRef = timeSum;
+    timeSum += 2.5;
+    var finalPovEndTime = Cesium.JulianDate.addSeconds(startTime, timeSum, new Cesium.JulianDate());
+    propertyPosition.addSample(finalPovEndTime, finalLandingCartesian);
+    propertyOrientation.addSample(finalPovEndTime, Cesium.Transforms.headingPitchRollQuaternion(finalLandingCartesian, new Cesium.HeadingPitchRoll(destTargetHeadingRad, 0.0, 0.0)));
 
     window.gcsLiveLandingTimeRef = landingCompleteTimeRef;
     window.gcsLiveTimeSumRef = timeSum;
@@ -596,6 +695,38 @@ window.startGcsDroneSimulation = function () {
         orientation: propertyOrientation,
         model: { uri: "data/drone.glb", scale: 0.15, minimumPixelSize: 35, maximumScale: 50, runAnimations: true },
         label: { text: "UAV 자율 항행 시동", font: 'bold 14px "Malgun Gothic", sans-serif', style: Cesium.LabelStyle.FILL_AND_OUTLINE, fillColor: Cesium.Color.SPRINGGREEN, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, verticalOrigin: Cesium.VerticalOrigin.CENTER, horizontalOrigin: Cesium.HorizontalOrigin.LEFT, pixelOffset: new Cesium.Cartesian2(40, 10), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+    });
+
+    // =========================================================================
+    // 🧭 [추가] 드론 기체 전방 실시간 기수 방향 화살표 (호버링 회전 & 목적지 방향 표시)
+    // =========================================================================
+    var oldHeadingArrow = mainViewer.entities.getById("GCS_DRONE_LIVE_HEADING_ARROW");
+    if (oldHeadingArrow) mainViewer.entities.remove(oldHeadingArrow);
+
+    mainViewer.entities.add({
+        id: "GCS_DRONE_LIVE_HEADING_ARROW",
+        polyline: {
+            positions: new Cesium.CallbackProperty(function (time) {
+                if (!window.gcsSimulatedDroneEntity) return [];
+                var pos = window.gcsSimulatedDroneEntity.position.getValue(time);
+                var ori = window.gcsSimulatedDroneEntity.orientation.getValue(time);
+                if (!Cesium.defined(pos) || !Cesium.defined(ori)) return [];
+
+                // 드론의 현재 자세(Quaternion)에서 기수 전방(Local X축 또는 Y축) 방향 벡터 산출
+                var rotMatrix = Cesium.Matrix3.fromQuaternion(ori, new Cesium.Matrix3());
+                // Cesium headingPitchRollQuaternion 기준 heading=0(정북)일 때 전방은 Local Y축 (컬럼 1)
+                var forwardDir = Cesium.Matrix3.getColumn(rotMatrix, 1, new Cesium.Cartesian3());
+                var arrowEndPos = Cesium.Cartesian3.add(
+                    pos,
+                    Cesium.Cartesian3.multiplyByScalar(forwardDir, 25.0, new Cesium.Cartesian3()),
+                    new Cesium.Cartesian3()
+                );
+                return [pos, arrowEndPos];
+            }, false),
+            width: 10.0,
+            material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.YELLOW),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }
     });
 
     mainViewer.clock.startTime = startTime.clone();
@@ -612,7 +743,7 @@ window.startGcsDroneSimulation = function () {
     mainViewer.camera.setView({ destination: cameraStaticFixedPosition, orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-90.0), roll: 0.0 } });
     var gcsStopwatchStartTime = performance.now();
     if (window.gcsStopwatchIntervalId) clearInterval(window.gcsStopwatchIntervalId);
-    
+
     window.gcsStopwatchIntervalId = setInterval(function () {
         var timeElement = document.getElementById("gcs_stopwatch_time_core");
         if (timeElement) {
@@ -657,7 +788,6 @@ window.gcsMultiCamRenderListener = function () {
     var destNode = list[list.length - 1];
 
 
-    // 임무 최종 터치다운 안착 세션 완료 -> 목적지 설정 방위각 및 화면 정중앙 0° POV 고정
     // 임무 최종 터치다운 안착 세션 완료 -> 목적지 설정 방위각 및 화면 정중앙 0° POV 고정
     if (elapsed >= (window.gcsLiveTimeSumRef - 0.05) || (window.gcsDroneLiveState && window.gcsDroneLiveState.currentStageString === "landing_done")) {
         mainViewer.clock.shouldAnimate = false;
@@ -756,7 +886,7 @@ window.gcsMultiCamRenderListener = function () {
 
     var finalCameraHeading = window.gcsLiveHeadingRef;
 
-    
+
     // =========================================================================
     // 🔒 [GCS 코어 관제 엔진] 호버링 줌아웃 -> 자율 순항 무결점 연속 전환 코드
     // =========================================================================
@@ -768,9 +898,9 @@ window.gcsMultiCamRenderListener = function () {
         var safe_t_hover = 4.5;
         var climbEndTime = safe_t_wait + safe_t_climb;          // 6.0초
         var cruiseStartTime = climbEndTime + safe_t_hover;      // 10.5초
-        
+
         // var cruiseEndTime = window.gcsLiveTimeSumRef - 5.0;
-         // 💥 [수정] 착륙 후 POV 전환(2.5초)이 추가되었으므로 cruiseEndTime을 -7.5초로 조정
+        // 💥 [수정] 착륙 후 POV 전환(2.5초)이 추가되었으므로 cruiseEndTime을 -7.5초로 조정
         var cruiseEndTime = window.gcsLiveTimeSumRef - 7.5;
         var landingEndTime = window.gcsLiveTimeSumRef - 2.5;
 
@@ -850,7 +980,7 @@ window.gcsMultiCamRenderListener = function () {
             targetHeadingRad = targetHeadingRadian;
             window.gcsHoverStartHeading = undefined; // 호버링 시작 각도 캡처 대기
 
-        
+
         } else if (elapsed > cruiseEndTime && elapsed <= (landingEndTime - 1.5)) {
             // [4단계: 목적지 상공 도착 즉시 지연 없이 줌인 + 목적지 방향각 동시 회전 (3.5초)]
             var destHoverProgress = (elapsed - cruiseEndTime) / 3.5;
@@ -977,14 +1107,14 @@ window.rebuildGcsPipelineAndLabels = function () {
 
     // [수정] 실제로 드론이 비행 중일 때만 렌더링을 차단하고, 착륙 완료(landing_done) 시에는 허용
     if (window.gcsDroneLiveState && window.gcsDroneLiveState.isTakeoffConfirmedGuard === true) {
-        if (window.gcsDroneLiveState.currentStageString !== "landing_done" && !window.isGcsSimulationPaused) {
+        if (window.gcsDroneLiveState.currentStageString !== "landing_done") {
             return;
         }
     }
 
     var fireZoneEntities = window.GcsApp.state.gcsFireZoneEntities || window.gcsFireZoneEntities || [];
     fireZoneEntities.forEach(function (e) { if (e && mainViewer.entities.contains(e)) mainViewer.entities.remove(e); });
-    
+
     window.GcsApp.state.gcsFireZoneEntities = [];
     var pipeLinePositions = [];
     var list = window.GcsApp.state.waypointList || window.waypointList || [];
@@ -1014,25 +1144,71 @@ window.rebuildGcsPipelineAndLabels = function () {
                 mainViewer.entities.add({ id: "GCS_HPAD_PIN", position: Cesium.Cartesian3.fromDegrees(nodeLon, nodeLat, buildingBaseHeight + 0.5), point: { pixelSize: 18, color: Cesium.Color.DEEPPINK, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } })
             );
         }
-        var basePoints = [];
-        for (var a = 0; a < 360; a += 120) {
-            var rad = Cesium.Math.toRadians(a);
-            basePoints.push({ lon: nodeLon + (0.00004 * Math.cos(rad)), lat: nodeLat + (0.00004 * Math.sin(rad)) });
-        }
+
+
+        // =========================================================================
+        // 🔺 [개선] 삼각기둥의 뾰족한 앞코(꼭짓점)가 목표 기수 방향(heading_deg)을 가리키도록 회전 생성
+        // =========================================================================
+        var nodeHeadingDeg = (node.heading_deg !== undefined && !isNaN(parseFloat(node.heading_deg)))
+            ? parseFloat(node.heading_deg)
+            : 0;
+        var headRad = Cesium.Math.toRadians(nodeHeadingDeg);
+        var metersPerDegLat = 111320.0;
+        var metersPerDegLon = 111320.0 * Math.cos(Cesium.Math.toRadians(nodeLat));
+
+        // 1번 꼭짓점(앞코): 설정된 기수 방향으로 6.5m 뻗어나감
+        // 2, 3번 꼭짓점(좌·우 뒷날개): 앞코 기준 ±135° 방향으로 4.5m 배치 (방향 식별이 쉬운 화살촉형 삼각형)
+        var vertexOffsets = [
+            { angleRad: headRad, distMeters: 6.5 },                          // [0] 뾰족한 기수 앞코
+            { angleRad: headRad + Cesium.Math.toRadians(135), distMeters: 4.5 }, // [1] 우측 후미 꼭짓점
+            { angleRad: headRad - Cesium.Math.toRadians(135), distMeters: 4.5 }  // [2] 좌측 후미 꼭짓점
+        ];
+
+        var basePoints = vertexOffsets.map(function (v) {
+            return {
+                lon: nodeLon + (v.distMeters * Math.sin(v.angleRad)) / metersPerDegLon,
+                lat: nodeLat + (v.distMeters * Math.cos(v.angleRad)) / metersPerDegLat
+            };
+        });
+
         var trianglePosArray = [];
         basePoints.forEach(function (pt) { trianglePosArray.push(pt.lon, pt.lat); });
-        window.GcsApp.state.gcsFireZoneEntities.push(
-            mainViewer.entities.add({
-                polygon: {
-                    hierarchy: Cesium.Cartesian3.fromDegreesArray(trianglePosArray),
-                    height: buildingBaseHeight,
-                    extrudedHeight: nodeAlt,
-                    material: Cesium.Color.fromAlpha(nodeColor, 0.28),
-                    outline: false,
-                    perPositionHeight: false
-                }
-            })
-        );
+
+        // =========================================================================
+        // 🎯 [표기] 삼각기둥 윗면의 뾰족한 앞코 꼭짓점(basePoints[0])에 방향 식별 마커 표기
+        // =========================================================================
+        if (node.id === "Destination" || node.id === "Home") {
+            var nosePoint = basePoints[0]; // 윗면 삼각형의 기수 방향 끝점
+            var noseColor = (node.id === "Destination") ? Cesium.Color.YELLOW : Cesium.Color.CYAN;
+
+            window.GcsApp.state.gcsFireZoneEntities.push(
+                // 윗면 꼭짓점 끝단 방향 표기 포인트
+                mainViewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(nosePoint.lon, nosePoint.lat, nodeAlt + 0.3),
+                    point: {
+                        pixelSize: 12,
+                        color: noseColor,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                }),
+                // 삼각기둥 윗면 중심에서 뾰족한 꼭짓점 끝단까지 이어지는 중심 방향선
+                mainViewer.entities.add({
+                    polyline: {
+                        positions: [
+                            Cesium.Cartesian3.fromDegrees(nodeLon, nodeLat, nodeAlt + 0.3),
+                            Cesium.Cartesian3.fromDegrees(nosePoint.lon, nosePoint.lat, nodeAlt + 0.3)
+                        ],
+                        width: 4.0,
+                        material: noseColor,
+                        arcType: Cesium.ArcType.NONE,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                })
+            );
+        }
+
         basePoints.forEach(function (pt, idx) {
             var nextPt = basePoints[(idx + 1) % basePoints.length];
             window.GcsApp.state.gcsFireZoneEntities.push(
@@ -1041,10 +1217,43 @@ window.rebuildGcsPipelineAndLabels = function () {
                 mainViewer.entities.add({ polyline: { positions: [Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, buildingBaseHeight), Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, nodeAlt)], width: 3.0, material: Cesium.Color.fromAlpha(nodeColor, 0.7), arcType: Cesium.ArcType.NONE, disableDepthTestDistance: Number.POSITIVE_INFINITY } })
             );
         });
+
+        // =========================================================================
+        // 🏢 [개선] 목적지(Destination) 및 건물은 지표면 대비 높이(3m=1층)를 환산하여 '몇m (N층)' 표기
+        // =========================================================================
+        var groundHeight = scene.globe
+            ? (scene.globe.getHeight(Cesium.Cartographic.fromDegrees(nodeLon, nodeLat)) || 86)
+            : 86;
+        var isAptOrBuilding = (node.isBuilding === true ||
+            (node.address && (node.address.indexOf("건물") !== -1 || node.address.indexOf("옥상") !== -1 || node.address.indexOf("아파트") !== -1)));
+
+        var labelDisplayText = node.id + " (" + Math.round(nodeAlt) + "m)";
+        if (node.id === "Destination" || isAptOrBuilding) {
+            var heightFromGround = Math.max(0, nodeAlt - groundHeight);
+            var estimatedFloor = Math.max(1, Math.round(heightFromGround / 3.0)); // 아파트 표준 층고 3m 기준
+            labelDisplayText = node.id + " " + Math.round(nodeAlt) + "m (" + estimatedFloor + "층)";
+        }
+
         window.GcsApp.state.gcsFireZoneEntities.push(
-            mainViewer.entities.add({ position: Cesium.Cartesian3.fromDegrees(nodeLon, nodeLat, nodeAlt + 12.0), label: { text: node.id + " (" + Math.round(nodeAlt) + "m)", font: 'bold 14px "Malgun Gothic", sans-serif', fillColor: nodeColor, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY } })
+            mainViewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(nodeLon, nodeLat, nodeAlt + 12.0),
+                label: {
+                    text: labelDisplayText,
+                    font: 'bold 14px "Malgun Gothic", sans-serif',
+                    fillColor: nodeColor,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 3,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                }
+            })
         );
+
     });
+
+
+
     if (pipeLinePositions.length > 1) {
         window.GcsApp.state.gcsFireZoneEntities.push(
             mainViewer.entities.add({ polyline: { positions: pipeLinePositions, width: 5, material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.3, color: Cesium.Color.SPRINGGREEN }), arcType: Cesium.ArcType.NONE, disableDepthTestDistance: Number.POSITIVE_INFINITY } })
@@ -1198,21 +1407,31 @@ window.renderWaypointListUI = function () {
             });
         }
 
-        // 고도 조절 버튼 이벤트
+        // 고도 조절 버튼 이벤트 (목적지 및 건물은 1층 높이까지 하강 가능 & 3m=1층 단위 조절)
+        var stepMeters = (wp.id === "Destination" || isBuildingNode) ? 3 : 5;
+        var minAllowedAlt = finalCalculatedHeight + 10;
+        if ((wp.id === "Destination" || isBuildingNode) && mainViewer && mainViewer.scene && mainViewer.scene.globe) {
+            var groundElev = mainViewer.scene.globe.getHeight(Cesium.Cartographic.fromDegrees(numLon, numLat)) || 86;
+            minAllowedAlt = Math.round(groundElev) + 3; // 1층 높이까지 하강 허용
+        }
+
         card.querySelector(".gcs-wp-alt-down-scroll").addEventListener("click", function (e) {
             e.stopPropagation();
             var inputEl = card.querySelector(".gcs-node-alt-dynamic-input");
-            var nextVal = Math.max(finalCalculatedHeight + 10, (parseInt(inputEl.value, 10) || 150) - 5);
+            var nextVal = Math.max(minAllowedAlt, (parseInt(inputEl.value, 10) || 150) - stepMeters);
             inputEl.value = nextVal; wp.alt = nextVal; wp.altitude_Z = nextVal;
             if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
         });
         card.querySelector(".gcs-wp-alt-up-scroll").addEventListener("click", function (e) {
             e.stopPropagation();
             var inputEl = card.querySelector(".gcs-node-alt-dynamic-input");
-            var nextVal = Math.min(1200, (parseInt(inputEl.value, 10) || 150) + 5);
+            var nextVal = Math.min(1200, (parseInt(inputEl.value, 10) || 150) + stepMeters);
             inputEl.value = nextVal; wp.alt = nextVal; wp.altitude_Z = nextVal;
             if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
         });
+
+
+
         // 삭제 버튼 이벤트
         var delBtn = card.querySelector(".gcs-wp-delete-btn");
         if (delBtn) {
@@ -1255,12 +1474,296 @@ window.deleteWaypoint = function (id) {
     window.rebuildGcsPipelineAndLabels();
     window.renderWaypointListUI();
 };
+
+
+// =========================================================================
+// 📤 [완치본] 외부 CSS 간섭 차단(DOM 직접 생성 + !important) 표 & JSON 모달
+// =========================================================================
 window.exportMissionJSON = function () {
-    var list = window.GcsApp.state.waypointList; if (list.length === 0) return;
-    var d = list.map(function (w, i) { return { index: i + 1, id: w.id, longitude_X: parseFloat(w.lon.toFixed(6)), latitude_Y: parseFloat(w.lat.toFixed(6)), altitude_Z: parseFloat(w.alt.toFixed(1)) }; });
-    var blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
-    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gcs_mission.json"; a.click();
+    var list = (window.GcsApp && window.GcsApp.state && window.GcsApp.state.waypointList)
+        ? window.GcsApp.state.waypointList
+        : (window.waypointList || []);
+
+    if (!Array.isArray(list) || list.length < 2) {
+        alert("⚠️ 출발지(Home)와 목적지(Destination)를 먼저 설정해 주세요.");
+        return;
+    }
+
+    var hasAutoWp = list.some(function (n) { return n && String(n.id).startsWith("WP_AUTO_"); });
+    if (!hasAutoWp && typeof window.runGcsRouteOptimization === "function") {
+        window.runGcsRouteOptimization();
+        list = window.GcsApp.state.waypointList || list;
+    }
+
+    var scene = (typeof ws3d !== "undefined" && ws3d && ws3d.viewer) ? ws3d.viewer.scene : null;
+
+    var calcBearingDeg = function (fromNode, toNode) {
+        if (!fromNode || !toNode || Array.isArray(toNode)) return 0;
+        var p1 = Cesium.Cartesian3.fromDegrees(parseFloat(fromNode.lon), parseFloat(fromNode.lat), 0);
+        var p2 = Cesium.Cartesian3.fromDegrees(parseFloat(toNode.lon), parseFloat(toNode.lat), 0);
+        try {
+            var invMat = Cesium.Matrix4.inverse(Cesium.Transforms.eastNorthUpToFixedFrame(p1), new Cesium.Matrix4());
+            if (Cesium.defined(invMat)) {
+                var localVec = Cesium.Matrix4.multiplyByPoint(invMat, p2, new Cesium.Cartesian3());
+                var deg = Math.round(Cesium.Math.toDegrees(Math.atan2(localVec.x, localVec.y))) % 360;
+                if (deg < 0) deg += 360;
+                return isNaN(deg) ? 0 : deg;
+            }
+        } catch (e) { }
+        return 0;
+    };
+
+    var homeNode = list.find(function (n) { return n && String(n.id).toLowerCase() === "home"; }) || list[0];
+    var destNode = list.find(function (n) { return n && n.id === "Destination"; }) || list[list.length - 1];
+
+    var missionWaypoints = list.map(function (w, idx) {
+        var lon = parseFloat(w.lon);
+        var lat = parseFloat(w.lat);
+        var altAmsl = Math.round(parseFloat(w.alt) || 150);
+        var baseHeight = Math.round(parseFloat(w.roofBase) || 0);
+
+        var terrainHeight = 86;
+        if (scene && scene.globe) {
+            var gH = scene.globe.getHeight(Cesium.Cartographic.fromDegrees(lon, lat));
+            if (gH && !isNaN(gH) && gH > 0) terrainHeight = Math.round(gH);
+        }
+        var floorRefHeight = baseHeight > 0 ? baseHeight : terrainHeight;
+        var altAgl = Math.max(0, altAmsl - floorRefHeight);
+
+        var commandType = "WAYPOINT";
+        var targetHeadingDeg = 0;
+        var holdTimeSec = 1.5;
+        var speedMps = 10.0;
+
+        if (w.id === "Home") {
+            commandType = "TAKEOFF";
+            targetHeadingDeg = (list.length > 1) ? calcBearingDeg(w, list[1]) : (w.heading_deg || 0);
+            holdTimeSec = 4.5;
+            speedMps = 5.0;
+        } else if (w.id === "Destination") {
+            commandType = "LAND";
+            targetHeadingDeg = (w.heading_deg !== undefined && !isNaN(parseFloat(w.heading_deg)))
+                ? Math.round(parseFloat(w.heading_deg))
+                : calcBearingDeg(list[idx - 1], w);
+            holdTimeSec = 0.0;
+            speedMps = 2.0;
+        } else if (String(w.id).startsWith("WP_AUTO_GUARD") || (Math.abs(lon - parseFloat(destNode.lon)) < 0.00001 && Math.abs(lat - parseFloat(destNode.lat)) < 0.00001)) {
+            commandType = "HOVER_ALIGN";
+            targetHeadingDeg = (destNode.heading_deg !== undefined && !isNaN(parseFloat(destNode.heading_deg)))
+                ? Math.round(parseFloat(destNode.heading_deg))
+                : calcBearingDeg(list[idx - 1], w);
+            holdTimeSec = 3.5;
+            speedMps = 8.0;
+        } else {
+            commandType = "WAYPOINT";
+            targetHeadingDeg = (idx + 1 < list.length) ? calcBearingDeg(w, list[idx + 1]) : 0;
+            holdTimeSec = 1.5;
+            speedMps = 10.0;
+        }
+
+        var wpPayload = {
+            seq: idx + 1,
+            node_id: w.id,
+            command: commandType,
+            address: w.address || "관제 공역",
+            longitude_X: parseFloat(lon.toFixed(6)),
+            latitude_Y: parseFloat(lat.toFixed(6)),
+            altitude_amsl: altAmsl,
+            altitude_agl: altAgl,
+            base_height_m: floorRefHeight,
+            heading_deg: targetHeadingDeg,
+            hold_time_sec: holdTimeSec,
+            speed_mps: speedMps
+        };
+
+        if (w.id === "Destination") {
+            var heightFromGround = Math.max(0, altAmsl - terrainHeight);
+            wpPayload.target_floor = Math.max(1, Math.round(heightFromGround / 3.0));
+        }
+
+        return wpPayload;
+    });
+
+    var finalMissionObject = {
+        mission_id: "GCS_MISSION_" + new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14),
+        created_at: new Date().toLocaleString("ko-KR"),
+        coordinate_frame: "WGS84_AMSL",
+        total_waypoints: missionWaypoints.length,
+        estimated_flight_time_sec: window.gcsLiveTimeSumRef ? Math.round(window.gcsLiveTimeSumRef) : Math.round(12 + (missionWaypoints.length * 5.5)),
+        home_position: {
+            longitude_X: parseFloat(parseFloat(homeNode.lon).toFixed(6)),
+            latitude_Y: parseFloat(parseFloat(homeNode.lat).toFixed(6)),
+            base_height_m: Math.round(parseFloat(homeNode.roofBase) || 0),
+            takeoff_altitude_m: Math.round(parseFloat(homeNode.alt) || 150)
+        },
+        waypoints: missionWaypoints
+    };
+
+    var jsonPrettyString = JSON.stringify(finalMissionObject, null, 2);
+
+    // 기존 모달 제거
+    var oldModal = document.getElementById("gcs_json_preview_modal");
+    if (oldModal) oldModal.remove();
+
+    // 외부 CSS 격리용 전용 스타일 시트 주입
+    var styleId = "gcs_modal_isolated_css";
+    var oldStyle = document.getElementById(styleId);
+    if (oldStyle) oldStyle.remove();
+
+    var styleTag = document.createElement("style");
+    styleTag.id = styleId;
+    styleTag.textContent = `
+        #gcs_json_preview_modal, #gcs_json_preview_modal * {
+            box-sizing: border-box !important;
+            font-family: 'Malgun Gothic', sans-serif !important;
+        }
+        #gcs_json_preview_modal {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            background: rgba(0, 0, 0, 0.78) !important;
+            z-index: 9999999 !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+        }
+        #gcs_modal_box {
+            width: 880px !important; max-width: 95vw !important; max-height: 88vh !important;
+            background: #101828 !important; border: 2px solid #00ffcc !important; border-radius: 8px !important;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.75) !important;
+            display: flex !important; flex-direction: column !important; overflow: hidden !important; color: #fff !important;
+        }
+        #gcs_modal_header {
+            padding: 14px 20px !important; background: #1e293b !important;
+            border-bottom: 1px solid rgba(0,255,204,0.3) !important;
+            display: flex !important; flex-direction: row !important;
+            justify-content: space-between !important; align-items: center !important;
+        }
+        #gcs_modal_subbar {
+            padding: 10px 20px !important; background: #0f172a !important; font-size: 12px !important;
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+            display: flex !important; flex-direction: row !important;
+            justify-content: space-between !important; align-items: center !important;
+        }
+        #gcs_modal_table_wrap {
+            width: 100% !important; overflow-x: auto !important; overflow-y: auto !important;
+            max-height: 54vh !important; background: #0b0f19 !important; display: block !important;
+        }
+        #gcs_modal_table {
+            width: 100% !important; border-collapse: collapse !important;
+            font-size: 12px !important; display: table !important;
+        }
+        #gcs_modal_table thead { display: table-header-group !important; background: #1e293b !important; }
+        #gcs_modal_table tbody { display: table-row-group !important; }
+        #gcs_modal_table tr { display: table-row !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
+        #gcs_modal_table th, #gcs_modal_table td {
+            display: table-cell !important; padding: 10px 8px !important;
+            text-align: center !important; vertical-align: middle !important; white-space: nowrap !important;
+        }
+        #gcs_modal_table th { color: #00ffcc !important; border-bottom: 2px solid #00ffcc !important; font-weight: bold !important; }
+        #gcs_json_preview_textarea {
+            display: none; width: 100% !important; height: 360px !important;
+            background: #0b0f19 !important; color: #a7f3d0 !important;
+            border: none !important; padding: 16px 20px !important;
+            font-family: 'Consolas', monospace !important; font-size: 12px !important;
+            line-height: 1.55 !important; resize: none !important; outline: none !important;
+        }
+        #gcs_modal_footer {
+            padding: 12px 20px !important; background: #1e293b !important;
+            border-top: 1px solid rgba(255,255,255,0.1) !important;
+            display: flex !important; flex-direction: row !important;
+            justify-content: flex-end !important; align-items: center !important; gap: 10px !important;
+        }
+        .gcs-m-btn {
+            display: inline-block !important; width: auto !important; height: auto !important;
+            padding: 7px 14px !important; border-radius: 4px !important; font-weight: bold !important; font-size: 12px !important; cursor: pointer !important;
+}
+`;
+document.head.appendChild(styleTag);
+// 표 행 생성
+var tableRowsHtml = missionWaypoints.map(function (wp) {
+var badgeBg = "rgba(56, 189, 248, 0.18)", badgeColor = "#38bdf8";
+if (wp.command === "TAKEOFF") { badgeBg = "rgba(241, 196, 15, 0.2)"; badgeColor = "#f1c40f"; }
+else if (wp.command === "LAND") { badgeBg = "rgba(239, 83, 80, 0.2)"; badgeColor = "#ef5350"; }
+else if (wp.command === "HOVER_ALIGN") { badgeBg = "rgba(0, 255, 204, 0.18)"; badgeColor = "#00ffcc"; }
+
+var floorBadge = wp.target_floor ?  `<span style="color:#fffa65; font-weight:bold;">(${wp.target_floor}층)</span>` : "";
+return `
+${wp.seq}
+\(wp.node_{i}d\){floorBadge}${wp.command}${wp.longitude_X.toFixed(6)}${wp.latitude_Y.toFixed(6)}\({wp.altitude_amsl}m <span style="font-size:11px; color:#94a3b8;">(+\){wp.altitude_agl}m)${wp.heading_deg}°${wp.hold_time_sec}초${wp.speed_mps}m/s`;
+}).join("");
+var modalOverlay = document.createElement("div");
+modalOverlay.id = "gcs_json_preview_modal";
+modalOverlay.innerHTML = `
+
+
+🛸 드론 자율비행 임무경로 데이터 명세
+✕
+
+
+
+• 총 노드: ${missionWaypoints.length}개
+• 예상 비행시간: ${finalMissionObject.estimated_flight_time_sec}초
+• 목적지 층수: ${missionWaypoints[missionWaypoints.length - 1].target_floor || "-"}층
+
+
+📊 표(테이블) 보기
+💻 JSON 원문 보기
+
+
+${tableRowsHtml}
+
+순번	노드 ID (층수)	임무 명령	경도 (X)	위도 (Y)	해발고도 (상대)	기수 방위각	호버링	속도
+
+${jsonPrettyString}
+
+📋 JSON 복사
+💾 JSON 파일 저장
+닫기
+
+
+`;
+document.body.appendChild(modalOverlay);
+// 탭 전환 이벤트
+var tableBtn = document.getElementById("gcs_tab_table_btn");
+var jsonBtn = document.getElementById("gcs_tab_json_btn");
+var tableWrap = document.getElementById("gcs_modal_table_wrap");
+var jsonArea = document.getElementById("gcs_json_preview_textarea");
+tableBtn.onclick = function () {
+tableWrap.style.setProperty("display", "block", "important");
+jsonArea.style.setProperty("display", "none", "important");
+tableBtn.style.setProperty("background", "#00ffcc", "important");
+tableBtn.style.setProperty("color", "#000", "important");
+jsonBtn.style.setProperty("background", "transparent", "important");
+jsonBtn.style.setProperty("color", "#cbd5e1", "important");
 };
+jsonBtn.onclick = function () {
+tableWrap.style.setProperty("display", "none", "important");
+jsonArea.style.setProperty("display", "block", "important");
+jsonBtn.style.setProperty("background", "#00ffcc", "important");
+jsonBtn.style.setProperty("color", "#000", "important");
+tableBtn.style.setProperty("background", "transparent", "important");
+tableBtn.style.setProperty("color", "#cbd5e1", "important");
+};
+// 닫기 / 복사 / 파일 저장 이벤트
+document.getElementById("gcs_json_modal_close_x").onclick = function () { modalOverlay.remove(); };
+document.getElementById("gcs_json_close_btn").onclick = function () { modalOverlay.remove(); };
+modalOverlay.addEventListener("click", function (e) { if (e.target === modalOverlay) modalOverlay.remove(); });
+document.getElementById("gcs_json_copy_btn").onclick = function () {
+navigator.clipboard.writeText(jsonPrettyString);
+var btn = this;
+btn.innerText = "✅ 복사 완료!";
+setTimeout(function () { btn.innerText = "📋 JSON 복사"; }, 1500);
+};
+document.getElementById("gcs_json_download_file_btn").onclick = function () {
+var blob = new Blob([jsonPrettyString], { type: "application/json;charset=utf-8" });
+var a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = finalMissionObject.mission_id + ".json";
+a.click();
+};
+};
+
+
+
+
 window.importMissionJSON = function (e) {
     if (!e.target || !e.target.files || e.target.files.length === 0) return;
     var reader = new FileReader();
@@ -1292,13 +1795,7 @@ window.switchGcsMode = function (mode) {
         ws3d.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.002, currentHeight > 0 ? currentHeight : 300.0), orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-45.0), roll: 0.0 }, duration: 1.0 });
     }
 };
-window.closeGcsHudPanelWithLayoutRestore = function () {
-    var hudContainer = document.getElementById("gcs_internal_hud_container") || document.querySelector('.gcs-hud-panel') || document.getElementById("hud");
-    if (!hudContainer) return; if (window.isGcsLayoutSwapped) window.switchGcsMainWindowAndHud();
-    hudContainer.style.display = "none";
-    var chk = document.getElementById("gcs_hud_use_toggle") || document.querySelector('input[type="checkbox"]');
-    if (chk) chk.checked = false;
-};
+
 window.gcsInjectMasterLayoutCssShield = function () {
     var shieldId = "gcs_html_layout_shield"; var existingStyle = document.getElementById(shieldId); if (existingStyle) existingStyle.remove();
     var styleEl = document.createElement("style"); styleEl.id = shieldId;
@@ -1338,58 +1835,6 @@ window.gcsBlockRadarClearFlag = true;
 })();
 window.gcsIsSubsequentFlightActive = false;
 
-// =========================================================================
-// 🔒 [완치 결착] 비행 종료 후 목적지 관제 고도 제어반 컴포넌트 (글씨 중복 영구 소탕)
-// =========================================================================
-window.gcsInitializeDestAltControls = function () {
-    var list = window.GcsApp?.state?.waypointList || window.waypointList || [];
-    if (!Array.isArray(list) || list.length === 0) return;
-    var destCard = document.getElementById("card_waypoint_Destination");
-    if (destCard) {
-        var inputContainer = destCard.querySelector(".gcs-node-alt-dynamic-input")?.parentNode;
-        if (inputContainer && !document.getElementById("gcs_dest_alt_live_input")) {
-            var lastNode = list[list.length - 1];
-            // 💥 [버그 박멸]: 중복 생성을 유발하던 하드코딩 "관제 고도:" 문구를 흔적도 없이 삭제 완료!
-            inputContainer.innerHTML = `
-                <div style="display: inline-flex; align-items: center; background: #111; border: 1px solid #ef5350; border-radius: 3px; padding: 1px 2px;">
-                    <button id="gcs_dest_alt_down" style="background:none; border:none; color:#ef5350; cursor:pointer; font-weight:bold; font-size:9px; padding:0 1px; line-height:1;">▼</button>
-                    <input type="number" id="gcs_dest_alt_live_input" value="${Math.round(lastNode.alt || 150)}" style="width: 36px; background: transparent; color: #ef5350; border: none; text-align: center; font-size: 11px; font-weight: bold; padding: 0; margin: 0; -webkit-appearance: none; -moz-appearance: textfield;" readonly />
-                    <button id="gcs_dest_alt_up" style="background:none; border:none; color:#ef5350; cursor:pointer; font-weight:bold; font-size:9px; padding:0 1px; line-height:1;">▲</button>
-                </div>
-            `;
-            document.getElementById("gcs_dest_alt_up").addEventListener("click", function (e) { e.stopPropagation(); var currentAlt = parseInt(document.getElementById("gcs_dest_alt_live_input").value, 10) || 150; window.gcsUpdateDestinationAltitudeLive(currentAlt + 5); });
-            document.getElementById("gcs_dest_alt_down").addEventListener("click", function (e) { e.stopPropagation(); var currentAlt = parseInt(document.getElementById("gcs_dest_alt_live_input").value, 10) || 150; window.gcsUpdateDestinationAltitudeLive(currentAlt - 5); });
-        }
-    }
-};
-
-var secureDestinationArrivalTracker = setInterval(function () { if (window.gcsDroneLiveState && window.gcsDroneLiveState.currentStageString === "landing_done") { window.gcsInitializeDestAltControls(); } }, 500);
-window.gcsUpdateDestinationAltitudeLive = function (newAltitude) {
-    var list = window.GcsApp?.state?.waypointList || window.waypointList || []; if (!Array.isArray(list) || list.length === 0) return;
-    var destNode = list[list.length - 1]; if (!destNode || destNode.id !== "Destination") return;
-    var baseFloorHeight = parseFloat(destNode.roofBase) || 0;
-    if (baseFloorHeight === 0 && ws3d.viewer.scene.globe) { baseFloorHeight = ws3d.viewer.scene.globe.getHeight(Cesium.Cartographic.fromDegrees(destNode.lon, destNode.lat)) || 86; }
-    baseFloorHeight = Math.round(baseFloorHeight);
-    if (newAltitude < baseFloorHeight + 15) { newAltitude = baseFloorHeight + 15; }
-    if (newAltitude > 1200) newAltitude = 1200;
-    var destAltInput = document.getElementById("gcs_dest_alt_live_input"); if (destAltInput) destAltInput.value = Math.round(newAltitude);
-    destNode.alt = newAltitude; destNode.altitude_Z = newAltitude; window.gcsIsSubsequentFlightActive = true;
-    var backupStage = window.gcsDroneLiveState?.currentStageString; if (window.gcsDroneLiveState) window.gcsDroneLiveState.currentStageString = "editing_mode_override";
-    if (typeof window.rebuildGcsPipelineAndLabels === "function") window.rebuildGcsPipelineAndLabels();
-    if (window.gcsDroneLiveState) window.gcsDroneLiveState.currentStageString = backupStage;
-    ws3d.viewer.scene.requestRender();
-};
-(function clearAllGcsOldOptimizationResidualIntervals() {
-    window.gcsUserManualAltOverrideLock = true;
-    for (var i = 1; i < 9999; i++) { if (window.gcsStopwatchIntervalId && i === window.gcsStopwatchIntervalId) continue; clearInterval(i); }
-    if (window.gcsArchiveIntervalId) { clearInterval(window.gcsArchiveIntervalId); window.gcsArchiveIntervalId = null; }
-    window.gcsArchiveIntervalId = setInterval(function () {
-        var list = window.GcsApp?.state?.waypointList || window.waypointList || []; if (!Array.isArray(list) || list.length === 0) return;
-        var cStage = (window.gcsDroneLiveState) ? window.gcsDroneLiveState.currentStageString : "editing";
-        if (cStage === "takeoff_ready" || cStage === "takeoff_climb" || cStage === "takeoff_hover" || cStage === "cruise" || window.gcsSimulatedDroneEntity) return;
-        window.gcsUserManualAltOverrideLock = true;
-    }, 100);
-})();
 (function gcsLinkTriggerActive() {
     var allButtons = document.querySelectorAll('button, input[type="button"], .btn');
     allButtons.forEach(function (btnEl) { if (btnEl.innerText && (btnEl.innerText.indexOf("HUD") !== -1 || btnEl.innerText.indexOf("계기판") !== -1)) { if (!btnEl.isGcsLayoutHooked) { btnEl.addEventListener('click', function () { window.isGcsDroneFlyingActive = false; setTimeout(function () { if (typeof window.switchGcsMainWindowAndHud === "function") { window.switchGcsMainWindowAndHud(true); } }, 60); }); btnEl.isGcsLayoutHooked = true; } } });
