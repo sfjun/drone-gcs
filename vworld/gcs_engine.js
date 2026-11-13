@@ -140,9 +140,65 @@ function gcsInitializeVWorldMap() {
     map.start();
 }
 
-/**
- * 지능형 주소/명칭 탐색 검색 라우터 엔진 (카테고리 자동 주입)
- */
+// /**
+//  * 지능형 주소/명칭 탐색 검색 라우터 엔진 (카테고리 자동 주입)
+//  */
+// window.executeGcsSearch = function () {
+//     var searchInput = document.getElementById("gcs_search_keyword");
+//     var query = searchInput ? searchInput.value.trim() : "";
+//     var resultList = document.getElementById("resultDiv");
+//     var popupLayer = document.getElementById("gcs_search_layer_popup");
+
+//     if (!query) { alert("검색어를 입력하세요."); return; }
+//     if (resultList) {
+//         resultList.innerHTML = "<li style='padding: 12px; color: #ccc; text-align: center; list-style:none;'>탐색 중...</li>";
+//     }
+//     if (popupLayer) popupLayer.style.display = "block";
+
+//     // 주소 패턴 체크 검증 가드
+//     var isAddress = /[로길동읍면리가0-9]/.test(query);
+//     var searchType = isAddress ? "ADDRESS" : "PLACE";
+//     var categoryParam = "";
+
+//     if (searchType === "ADDRESS") {
+//         categoryParam = (query.indexOf("로") !== -1 || query.indexOf("길") !== -1) ? "road" : "parcel";
+//     }
+
+//     console.log("📡 [GCS 라우터] 유형: " + searchType + " | 카테고리: " + (categoryParam || "N/A") + " | 검색어: " + query);
+
+//     var requestData = {
+//         key: window.GcsApp.CONFIG.VWORLD_API_KEY,
+//         domain: window.location.hostname || "127.0.0.1", // 실시간 동적 도메인 매핑으로 고정 하드코딩 탈피
+//         service: "search",
+//         version: "2.0",
+//         request: "search",
+//         query: query,
+//         type: searchType,
+//         format: "json"
+//     };
+
+//     if (searchType === "ADDRESS") {
+//         requestData.category = categoryParam;
+//     }
+
+//     jQuery.ajax({
+//         type: "get",
+//         url: "https://api.vworld.kr/req/search",
+//         data: requestData,
+//         dataType: "jsonp",
+//         jsonpCallback: "parsePoiSearchResponse",
+//         success: function (data) {
+//             if (data && data.response && data.response.status === "NOT_FOUND") {
+//                 if (resultList) resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
+//             }
+//         }
+//     });
+// };
+
+
+// =========================================================================
+// 1. 1단계: VWorld 장소/주소 검색 실행기
+// =========================================================================
 window.executeGcsSearch = function () {
     var searchInput = document.getElementById("gcs_search_keyword");
     var query = searchInput ? searchInput.value.trim() : "";
@@ -155,20 +211,15 @@ window.executeGcsSearch = function () {
     }
     if (popupLayer) popupLayer.style.display = "block";
 
-    // 주소 패턴 체크 검증 가드
     var isAddress = /[로길동읍면리가0-9]/.test(query);
     var searchType = isAddress ? "ADDRESS" : "PLACE";
-    var categoryParam = "";
-
-    if (searchType === "ADDRESS") {
-        categoryParam = (query.indexOf("로") !== -1 || query.indexOf("길") !== -1) ? "road" : "parcel";
-    }
-
-    console.log("📡 [GCS 라우터] 유형: " + searchType + " | 카테고리: " + (categoryParam || "N/A") + " | 검색어: " + query);
+    var categoryParam = (searchType === "ADDRESS")
+        ? ((query.indexOf("로") !== -1 || query.indexOf("길") !== -1) ? "road" : "parcel")
+        : "";
 
     var requestData = {
         key: window.GcsApp.CONFIG.VWORLD_API_KEY,
-        domain: window.location.hostname || "127.0.0.1", // 실시간 동적 도메인 매핑으로 고정 하드코딩 탈피
+        domain: window.location.hostname || "127.0.0.1",
         service: "search",
         version: "2.0",
         request: "search",
@@ -176,10 +227,19 @@ window.executeGcsSearch = function () {
         type: searchType,
         format: "json"
     };
+    if (searchType === "ADDRESS") requestData.category = categoryParam;
 
-    if (searchType === "ADDRESS") {
-        requestData.category = categoryParam;
-    }
+    window.parsePoiSearchResponse = function (data) {
+        if (data && data.response && data.response.status === "OK" && data.response.result) {
+            var res = data.response.result;
+            var rawData = res.items || res.juso || res.item || [];
+            window.renderGcsSearchResults(rawData);
+            return;
+        }
+        if (resultList) {
+            resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
+        }
+    };
 
     jQuery.ajax({
         type: "get",
@@ -187,13 +247,261 @@ window.executeGcsSearch = function () {
         data: requestData,
         dataType: "jsonp",
         jsonpCallback: "parsePoiSearchResponse",
-        success: function (data) {
-            if (data && data.response && data.response.status === "NOT_FOUND") {
-                if (resultList) resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
+        error: function () {
+            if (resultList) {
+                resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>검색 통신 오류가 발생했습니다.</li>";
             }
         }
     });
 };
+
+// =========================================================================
+// 2. 1차 리스트 렌더링 + 클릭 시 2차 소방전용구역 리스트 연계 조회
+// =========================================================================
+window.renderGcsSearchResults = function (items) {
+    var resultList = document.getElementById("resultDiv");
+    if (!resultList) return;
+    resultList.innerHTML = "";
+
+    var itemsArray = Array.isArray(items) ? items : (items ? [items] : []);
+    var fragment = document.createDocumentFragment();
+
+    itemsArray.forEach(function (item) {
+        if (!item) return;
+
+        var displayAddress = "";
+        if (item.address) {
+            if (typeof item.address === "string") {
+                displayAddress = item.address;
+            } else {
+                displayAddress = item.address.road || item.address.parcel || "";
+            }
+        }
+
+        var displayTitle = item.title || item.text || displayAddress || "이름 없음";
+        var targetPoint = item.point || (item.geometry && item.geometry.point);
+        if (!targetPoint) return;
+
+        var lon = parseFloat(targetPoint.x);
+        var lat = parseFloat(targetPoint.y);
+        if (isNaN(lon) || isNaN(lat)) return;
+
+        var addressHtml = (displayAddress && displayAddress !== displayTitle)
+            ? "<div style='font-size:11px; color:#e2e8f0; margin-top:4px;'>🏠 " + displayAddress + "</div>"
+            : "";
+
+        var li = document.createElement("li");
+        li.style.cssText = "padding: 10px; border-bottom: 1px solid #34495e; color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
+        li.innerHTML =
+            "<div><strong style='color:#00ffcc; font-size:13px;'>📍 " + displayTitle + "</strong></div>" +
+            addressHtml +
+            "<div style='font-size:10px; color:#94a3b8; margin-top:3px;'>좌표 - X: " + lon.toFixed(4) + ", Y: " + lat.toFixed(4) + " <span style='color:#fbbf24; float:right;'>▶ 소방구역 탐색</span></div>";
+
+        li.onmouseover = function () { this.style.background = "rgba(26, 188, 156, 0.25)"; };
+        li.onmouseout = function () { this.style.background = "transparent"; };
+
+        // 1차 리스트 항목 클릭 이벤트
+        li.addEventListener("click", function () {
+            if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+
+            ws3d.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+            window.GcsApp.state.isDrawingMode = true;
+
+            var oldSearchPoint = ws3d.viewer.entities.getById("vworld_search_marker_pin");
+            if (oldSearchPoint) ws3d.viewer.entities.remove(oldSearchPoint);
+
+            ws3d.viewer.entities.add({
+                id: "vworld_search_marker_pin",
+                position: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+                point: {
+                    pixelSize: 18, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                }
+            });
+
+            // 1. 선택한 장소로 카메라 즉시 이동
+            ws3d.viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.0012, 210.0),
+                orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-40.0), roll: 0.0 },
+                duration: 0.8
+            });
+
+            // 2. 선택한 장소의 주소·좌표 기반으로 2차 소방전용구역 리스트 조회 실행
+            window.fetchFireZonesForSelectedPlace(displayTitle, displayAddress, lon, lat, itemsArray);
+        });
+
+        fragment.appendChild(li);
+    });
+
+    resultList.appendChild(fragment);
+
+    if (resultList.children.length === 0) {
+        resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
+    }
+};
+
+// =========================================================================
+// 3. 2단계: 선택된 장소 주변의 소방전용구역 조회 및 2차 리스트 전환
+// =========================================================================
+window.fetchFireZonesForSelectedPlace = function (placeTitle, placeAddress, centerLon, centerLat, prevSearchItems) {
+    var resultList = document.getElementById("resultDiv");
+    var popupLayer = document.getElementById("gcs_search_layer_popup");
+    if (!resultList) return;
+
+    resultList.innerHTML = "<li style='padding: 12px; color: #fbbf24; text-align: center; list-style:none;'>🚒 [" + placeTitle + "] 주변 소방전용구역 조회 중...</li>";
+
+    // 두 좌표 간 직선 거리(m) 계산
+    var getDistMeters = function (lon1, lat1, lon2, lat2) {
+        var R = 6371000;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    // 주소에서 시군구명 추출 (예: "서울특별시 성동구 성수동..." -> "성동구")
+    var signguMatch = (placeAddress || "").match(/([가-힣]+(?:구|군|시))\s/);
+    var targetSigngu = (signguMatch && signguMatch) ? signguMatch : "";
+
+    var serviceKey = "90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264";
+    var baseApiUrl = "https://api.data.go.kr/openapi/tn_pubr_public_fgtcar_prkarea_api";
+
+    // 시군구 전체(최대 500건) + 장소명 직접 조회 병렬 실행
+    var urls = [];
+    if (targetSigngu) {
+        urls.push(baseApiUrl + "?serviceKey=" + encodeURIComponent(serviceKey) + "&pageNo=1&numOfRows=500&type=json&signguNm=" + encodeURIComponent(targetSigngu));
+    }
+    urls.push(baseApiUrl + "?serviceKey=" + encodeURIComponent(serviceKey) + "&pageNo=1&numOfRows=50&type=json&copertnHouseNm=" + encodeURIComponent(placeTitle));
+
+    Promise.all(urls.map(function (u) {
+        return fetch(u, { mode: "cors", credentials: "omit" })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (json) {
+                var body = (json && json.body) || (json && json.response && json.response.body);
+                var raw = body && body.items;
+                return Array.isArray(raw) ? raw : (raw ? [raw] : []);
+            })
+            .catch(function () { return []; });
+    })).then(function (arrays) {
+        var matchedMap = new Map();
+        var cleanPlaceKey = placeTitle.replace(/\s+/g, "");
+
+        arrays.forEach(function (arr) {
+            arr.forEach(function (it) {
+                if (!it || !it.latitude || !it.longitude) return;
+                var fLon = parseFloat(it.longitude);
+                var fLat = parseFloat(it.latitude);
+                if (isNaN(fLon) || isNaN(fLat)) return;
+
+                var dist = getDistMeters(centerLon, centerLat, fLon, fLat);
+                var houseNameClean = (it.copertnHouseNm || "").replace(/\s+/g, "");
+
+                // 조건: 선택 지점 반경 500m 이내이거나 아파트 이름이 일치하는 경우
+                if (dist <= 500.0 || (cleanPlaceKey.length >= 2 && houseNameClean.indexOf(cleanPlaceKey) !== -1)) {
+                    var key = (it.copertnHouseNm || "") + "_" + (it.dongNo || "") + "_" + fLon.toFixed(5) + "_" + fLat.toFixed(5);
+                    if (!matchedMap.has(key)) {
+                        it._distanceMeters = Math.round(dist);
+                        matchedMap.set(key, it);
+                    }
+                }
+            });
+        });
+
+        // 거리순 정렬
+        var matchedFireZones = Array.from(matchedMap.values()).sort(function (a, b) {
+            return a._distanceMeters - b._distanceMeters;
+        });
+
+        console.log("🚒 [2차 소방 리스트 결과] 대상: " + placeTitle + " (" + targetSigngu + ") -> " + matchedFireZones.length + "건 발견", matchedFireZones);
+
+        // 발견된 소방전용구역이 없으면 팝업 닫기
+        if (matchedFireZones.length === 0) {
+if (popupLayer) popupLayer.style.display = "none";
+return;
+}
+// 발견된 경우 2차 소방전용구역 선택 리스트 렌더링
+resultList.innerHTML = "";
+// 상단 헤더 (뒤로가기 버튼 포함)
+var headerLi = document.createElement("li");
+headerLi.style.cssText = "padding: 8px 10px; background: #1e293b; border-bottom: 1px solid #475569; display: flex; justify-content: space-between; align-items: center; list-style:none;";
+headerLi.innerHTML =
+"🚒 주변 소방전용구역 (" + matchedFireZones.length + "건)" +
+"◀ 이전 목록";
+resultList.appendChild(headerLi);
+var backBtn = document.getElementById("gcs_back_to_place_list_btn");
+if (backBtn) {
+backBtn.onclick = function (e) {
+e.stopPropagation();
+window.renderGcsSearchResults(prevSearchItems);
+};
+}
+// 소방전용구역 항목들 렌더링
+matchedFireZones.forEach(function (fItem) {
+var fLon = parseFloat(fItem.longitude);
+var fLat = parseFloat(fItem.latitude);
+var houseNm = (fItem.copertnHouseNm || "소방자동차 전용구역").trim();
+var dongStr = fItem.dongNo ? " - " + fItem.dongNo : "";
+var fAddr = fItem.rdnmadr || fItem.lnmadr || "";
+var fLi = document.createElement("li");
+fLi.style.cssText = "padding: 10px; border-bottom: 1px solid #34495e; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.12); color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
+fLi.innerHTML =
+"" +
+"🚒 " + houseNm + dongStr + "" +
+"" + fItem._distanceMeters + "m" +
+"" +
+(fAddr ? "🏠 " + fAddr + "" : "") +
+"좌표 - X: " + fLon.toFixed(5) + ", Y: " + fLat.toFixed(5) + "";
+fLi.onmouseover = function () { this.style.background = "rgba(239, 68, 68, 0.28)"; };
+fLi.onmouseout = function () { this.style.background = "rgba(239, 68, 68, 0.12)"; };
+// 2차 소방 리스트 항목 클릭 시: 해당 패드 정밀 이동 + 노란 원형 패드 즉시 생성
+fLi.addEventListener("click", function () {
+if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+if (typeof window.gcsProcessAndRenderFireZones === "function") {
+if (window.GcsApp.state.fireZoneSource && !ws3d.viewer.dataSources.contains(window.GcsApp.state.fireZoneSource)) {
+ws3d.viewer.dataSources.add(window.GcsApp.state.fireZoneSource);
+}
+window.gcsProcessAndRenderFireZones([fItem], fLon, fLat, ws3d.viewer.scene);
+}
+var oldPin = ws3d.viewer.entities.getById("vworld_search_marker_pin");
+if (oldPin) ws3d.viewer.entities.remove(oldPin);
+ws3d.viewer.entities.add({
+id: "vworld_search_marker_pin",
+position: Cesium.Cartesian3.fromDegrees(fLon, fLat, 0.0),
+point: {
+pixelSize: 22,
+color: Cesium.Color.ORANGERED,
+outlineColor: Cesium.Color.YELLOW,
+outlineWidth: 4,
+heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+disableDepthTestDistance: Number.POSITIVE_INFINITY
+},
+label: {
+text: "🚒 " + houseNm + dongStr,
+font: 'bold 13px "Malgun Gothic", sans-serif',
+fillColor: Cesium.Color.YELLOW,
+outlineColor: Cesium.Color.BLACK,
+outlineWidth: 3,
+style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+pixelOffset: new Cesium.Cartesian2(0, -16),
+heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+disableDepthTestDistance: Number.POSITIVE_INFINITY
+}
+});
+ws3d.viewer.camera.flyTo({
+destination: Cesium.Cartesian3.fromDegrees(fLon, fLat - 0.0006, 120.0),
+orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-45.0), roll: 0.0 },
+duration: 0.7
+});
+if (popupLayer) popupLayer.style.display = "none";
+});
+resultList.appendChild(fLi);
+});
+});
+};
+
 
 /**
  * 브이월드 POI 서버 응답 무선 처리 인터페이스 함수
@@ -219,28 +527,145 @@ window.parsePoiSearchResponse = function (data) {
 };
 
 
-/**
- * 🚩 [검색 결착 완치] 검색 목록을 클릭하는 순간, 자동으로 영구 홈 데이터를 갱신하고 노란색 카드로 즉시 반영하는 렌더러
- */
+// /**, -소전구
+//  * 🚩 [검색 결착 완치] 검색 목록을 클릭하는 순간, 자동으로 영구 홈 데이터를 갱신하고 노란색 카드로 즉시 반영하는 렌더러
+//  */
+// window.renderGcsSearchResults = function (items) {
+//     var resultList = document.getElementById("resultDiv");
+//     if (!resultList) return;
+//     resultList.innerHTML = "";
+
+//     var itemsArray = Array.isArray(items) ? items : (items ? [items] : []);
+//     console.log("📋 [GCS 렌더러] 최종 바인딩 리스트 구성:", itemsArray);
+
+//     var fragment = document.createDocumentFragment();
+
+//     itemsArray.forEach(function (item) {
+//         if (!item) return;
+
+//         // var displayTitle = item.title || item.text || "이름 없음";
+//         // if (displayTitle === "이름 없음" && item.address) {
+//         //     if (typeof item.address === "string") displayTitle = item.address;
+//         //     else if (item.address.road) displayTitle = item.address.road;
+//         //     else if (item.address.parcel) displayTitle = item.address.parcel;
+//         // }
+
+//         // var targetPoint = item.point || (item.geometry && item.geometry.point);
+//         // if (!targetPoint) return;
+
+//         // var lon = parseFloat(targetPoint.x);
+//         // var lat = parseFloat(targetPoint.y);
+//         // if (isNaN(lon) || isNaN(lat)) return;
+
+//         // var li = document.createElement("li");
+//         // li.style.cssText = "padding: 10px; border-bottom: 1px solid #34495e; color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
+//         // li.innerHTML = "<div><strong style='color: #00ffcc;'>📍 " + displayTitle + "</strong></div>" +
+//         //     "<div style='font-size:10px; color:#bdc3c7; margin-top:3px;'>좌표 - X: " + lon.toFixed(4) + ", Y: " + lat.toFixed(4) + "</div>";
+
+//         // 1. 주소 정보 추출 (도로명 주소 우선, 없으면 지번 주소 사용)
+//         var displayAddress = "";
+//         if (item.address) {
+//             if (typeof item.address === "string") {
+//                 displayAddress = item.address;
+//             } else {
+//                 displayAddress = item.address.road || item.address.parcel || "";
+//             }
+//         }
+
+//         // 2. 장소명(이름) 추출
+//         var displayTitle = item.title || item.text || displayAddress || "이름 없음";
+
+//         var targetPoint = item.point || (item.geometry && item.geometry.point);
+//         if (!targetPoint) return;
+
+//         var lon = parseFloat(targetPoint.x);
+//         var lat = parseFloat(targetPoint.y);
+//         if (isNaN(lon) || isNaN(lat)) return;
+
+//         // 3. 주소가 있고 제목과 중복되지 않을 때만 주소 줄 HTML 생성
+//         var addressHtml = (displayAddress && displayAddress !== displayTitle)
+//             ? "<div style='font-size:11px; color:#e2e8f0; margin-top:3px;'>🏠 " + displayAddress + "</div>"
+//             : "";
+
+//         var li = document.createElement("li");
+//         li.style.cssText = "padding: 10px; border-bottom: 1px solid #34495e; color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
+//         li.innerHTML =
+//             "<div><strong style='color: #00ffcc;'>📍 " + displayTitle + "</strong></div>" +
+//             addressHtml +
+//             "<div style='font-size:10px; color:#94a3b8; margin-top:3px;'>좌표 - X: " + lon.toFixed(4) + ", Y: " + lat.toFixed(4) + "</div>";
+
+//         //   변경코드 
+        
+        
+//         li.onmouseover = function () { this.style.background = "rgba(26, 188, 156, 0.25)"; };
+//         li.onmouseout = function () { this.style.background = "transparent"; };
+
+//         // 💥 [핵심 수정부] 검색 결과 항목 클릭 시 카메라 이동과 동시에 비행경로 출발지 카드 즉시 동기화
+//         li.addEventListener("click", function () {
+//             if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
+
+//             ws3d.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+//             window.GcsApp.state.isDrawingMode = true;
+
+//             var oldSearchPoint = ws3d.viewer.entities.getById("vworld_search_marker_pin");
+//             if (oldSearchPoint) ws3d.viewer.entities.remove(oldSearchPoint);
+
+//             ws3d.viewer.entities.add({
+//                 id: "vworld_search_marker_pin",
+//                 position: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+//                 point: {
+//                     pixelSize: 18, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+//                     disableDepthTestDistance: Number.POSITIVE_INFINITY
+//                 }
+//             });
+
+//             // 1. 카메라를 해당 검색 주소지로 0.8초만에 정밀 안착 비행
+//             ws3d.viewer.camera.flyTo({
+//                 destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.0012, 210.0),
+//                 orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-40.0), roll: 0.0 },
+//                 duration: 0.8
+//             });
+
+//             // 팝업 레이어 닫기 원천 차단 우회 해결
+//             var targetPopup = document.getElementById("gcs_search_layer_popup");
+//             if (targetPopup) {
+//                 targetPopup.style.display = "none";
+//             }
+//         });
+
+//         fragment.appendChild(li);
+//     });
+
+//     resultList.appendChild(fragment);
+
+//     if (resultList.children.length === 0) {
+//         resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
+//     }
+// };
+
 window.renderGcsSearchResults = function (items) {
     var resultList = document.getElementById("resultDiv");
     if (!resultList) return;
     resultList.innerHTML = "";
 
     var itemsArray = Array.isArray(items) ? items : (items ? [items] : []);
-    console.log("📋 [GCS 렌더러] 최종 바인딩 리스트 구성:", itemsArray);
-
     var fragment = document.createDocumentFragment();
 
     itemsArray.forEach(function (item) {
         if (!item) return;
 
-        var displayTitle = item.title || item.text || "이름 없음";
-        if (displayTitle === "이름 없음" && item.address) {
-            if (typeof item.address === "string") displayTitle = item.address;
-            else if (item.address.road) displayTitle = item.address.road;
-            else if (item.address.parcel) displayTitle = item.address.parcel;
+        var displayAddress = "";
+        if (item.address) {
+            if (typeof item.address === "string") {
+                displayAddress = item.address;
+            } else {
+                displayAddress = item.address.road || item.address.parcel || "";
+            }
         }
+
+        var rawTitle = item.title || item.text || displayAddress || "이름 없음";
+        // 기존 텍스트에 붙어있던 이모지/태그 정리
+        var cleanTitle = rawTitle.replace(/^🚨\s*\[소방전용구역\]\s*/, "");
 
         var targetPoint = item.point || (item.geometry && item.geometry.point);
         if (!targetPoint) return;
@@ -249,45 +674,105 @@ window.renderGcsSearchResults = function (items) {
         var lat = parseFloat(targetPoint.y);
         if (isNaN(lon) || isNaN(lat)) return;
 
+        var isFire = (item.isFireZone === true);
+
+        // 1. 리스트 창 시각적 구분 (일반 장소 vs 소방전용구역 전용 배지 스타일)
+        var headerHtml = isFire
+            ? "<div style='display:flex; align-items:center; gap:6px;'>" +
+                "<span style='background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; letter-spacing:-0.3px;'>🚒 소방전용</span>" +
+                "<strong style='color:#fbbf24; font-size:13px;'>" + cleanTitle + "</strong>" +
+              "</div>"
+            : "<div><strong style='color:#00ffcc; font-size:13px;'>📍 " + cleanTitle + "</strong></div>";
+
+        var addressHtml = (displayAddress && displayAddress !== cleanTitle)
+            ? "<div style='font-size:11px; color:#e2e8f0; margin-top:4px;'>🏠 " + displayAddress + "</div>"
+            : "";
+
         var li = document.createElement("li");
-        li.style.cssText = "padding: 10px; border-bottom: 1px solid #34495e; color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
-        li.innerHTML = "<div><strong style='color: #00ffcc;'>📍 " + displayTitle + "</strong></div>" +
-            "<div style='font-size:10px; color:#bdc3c7; margin-top:3px;'>좌표 - X: " + lon.toFixed(4) + ", Y: " + lat.toFixed(4) + "</div>";
+        li.style.cssText = isFire
+            ? "padding: 10px; border-bottom: 1px solid #34495e; border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.12); color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;"
+            : "padding: 10px; border-bottom: 1px solid #34495e; color:#fff; cursor:pointer; list-style:none; text-align:left; transition:0.2s;";
 
-        li.onmouseover = function () { this.style.background = "rgba(26, 188, 156, 0.25)"; };
-        li.onmouseout = function () { this.style.background = "transparent"; };
+        li.innerHTML =
+            headerHtml +
+            addressHtml +
+            "<div style='font-size:10px; color:#94a3b8; margin-top:3px;'>좌표 - X: " + lon.toFixed(4) + ", Y: " + lat.toFixed(4) + "</div>";
 
-        // 💥 [핵심 수정부] 검색 결과 항목 클릭 시 카메라 이동과 동시에 비행경로 출발지 카드 즉시 동기화
+        li.onmouseover = function () {
+            this.style.background = isFire ? "rgba(239, 68, 68, 0.28)" : "rgba(26, 188, 156, 0.25)";
+        };
+        li.onmouseout = function () {
+            this.style.background = isFire ? "rgba(239, 68, 68, 0.12)" : "transparent";
+        };
+
+        // 2. 리스트 항목 클릭 시 지도 마커 차별화 렌더링
         li.addEventListener("click", function () {
             if (typeof ws3d === "undefined" || !ws3d || !ws3d.viewer) return;
 
             ws3d.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
             window.GcsApp.state.isDrawingMode = true;
 
+            // 기존 검색 핀 제거
             var oldSearchPoint = ws3d.viewer.entities.getById("vworld_search_marker_pin");
             if (oldSearchPoint) ws3d.viewer.entities.remove(oldSearchPoint);
 
-            ws3d.viewer.entities.add({
-                id: "vworld_search_marker_pin",
-                position: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
-                point: {
-                    pixelSize: 18, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+            if (isFire) {
+                // 소방전용구역 바닥 원형 패드(반경 5m) 동시 생성
+                if (item.rawFireItem && typeof window.gcsProcessAndRenderFireZones === "function") {
+                    if (window.GcsApp.state.fireZoneSource && !ws3d.viewer.dataSources.contains(window.GcsApp.state.fireZoneSource)) {
+                        ws3d.viewer.dataSources.add(window.GcsApp.state.fireZoneSource);
+                    }
+                    window.gcsProcessAndRenderFireZones([item.rawFireItem], lon, lat, ws3d.viewer.scene);
                 }
-            });
 
-            // 1. 카메라를 해당 검색 주소지로 0.8초만에 정밀 안착 비행
+                // 소방전용구역 전용 마커 (노란 테두리 대형 경고 마커 + 소방 라벨)
+                ws3d.viewer.entities.add({
+                    id: "vworld_search_marker_pin",
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+                    point: {
+                        pixelSize: 22,
+                        color: Cesium.Color.ORANGERED,
+                        outlineColor: Cesium.Color.YELLOW,
+                        outlineWidth: 4,
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    },
+                    label: {
+                        text: "🚒 " + cleanTitle,
+                        font: 'bold 13px "Malgun Gothic", sans-serif',
+                        fillColor: Cesium.Color.YELLOW,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 3,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -16),
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                });
+            } else {
+                // 일반 장소 검색 핀 (기존 빨간 원형 핀)
+                ws3d.viewer.entities.add({
+                    id: "vworld_search_marker_pin",
+                    position: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+                    point: {
+                        pixelSize: 18,
+                        color: Cesium.Color.RED,
+                        outlineColor: Cesium.Color.WHITE,
+                        outlineWidth: 3,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    }
+                });
+            }
+
             ws3d.viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(lon, lat - 0.0012, 210.0),
                 orientation: { heading: Cesium.Math.toRadians(0.0), pitch: Cesium.Math.toRadians(-40.0), roll: 0.0 },
                 duration: 0.8
             });
 
-            // 팝업 레이어 닫기 원천 차단 우회 해결
             var targetPopup = document.getElementById("gcs_search_layer_popup");
-            if (targetPopup) {
-                targetPopup.style.display = "none";
-            }
+            if (targetPopup) targetPopup.style.display = "none";
         });
 
         fragment.appendChild(li);
@@ -299,7 +784,6 @@ window.renderGcsSearchResults = function (items) {
         resultList.innerHTML = "<li style='padding: 12px; color: red; text-align: center; list-style:none;'>결과가 없습니다.</li>";
     }
 };
-
 
 // =========================================================================
 // 🛸 [최종 무결성 완치 패치] Cesium 내부 프라이빗 배열 탐색 연산 전면 제거
@@ -400,50 +884,36 @@ window.gcsInitializeCoreEngineDoubleClickToggle = function () {
         var relativeFlightHeight = currentCameraHeight - clickHeight;
         if (relativeFlightHeight < 50) relativeFlightHeight = 250.0; // 최소 가이드 안전 고도
 
+        // ✅ 현재 사용자가 보고 있는 화면 방향(방위각)을 그대로 보존
+        var currentHeading = camera.heading;
+
         if (window.isGcsCameraCurrently2D === false) {
-            // 💥 [A] 3D 사선 모드 ➡️ 2D 정탑 모드 전환 
-            // 전환 직전 유저가 보고 있던 고도(Height) 제원만 정밀 저장 백업
+            // 💥 [A] 3D 사선 모드 ➡️ 2D 정탑 모드 전환 (현재 방향 그대로 유지)
             window.gcsLastSaved3DCameraState.height = currentCameraHeight;
-
-            console.log(`%c🛰️ [GCS 시점 제어] 클릭 중심 정탑뷰 2D 전환 (방위각 회전 고정) ➡️ 좌표: (${clickLon.toFixed(5)}, ${clickLat.toFixed(5)})`, "color:#f1c40f; font-weight:bold;");
-
+            window.gcsLastSaved3DCameraState.heading = currentHeading;
             window.isGcsCameraCurrently2D = true;
 
-            // 🔒 화면이 멋대로 돌아가는 결함을 원천 방어하기 위해 heading각을 무조건 '0.0(정북방향)'으로 고정 압착 사출!!
             camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(clickLon, clickLat, currentCameraHeight),
                 orientation: {
-                    heading: 0.0,                 // 회전 전면 차단 고정 (정북 고정)
-                    pitch: Cesium.Math.toRadians(-90.0), // 수직 부감 각도 낙하
+                    heading: currentHeading,             // ✅ 0.0 대신 현재 보고 있는 각도 그대로 유지
+                    pitch: Cesium.Math.toRadians(-90.0), // 수직 탑뷰 전환
                     roll: 0.0
                 },
                 duration: 0.4
             });
         } else {
-            // 💥 [B] 2D 정탑 모드 ➡️ 3D 사선뷰 화각 시점 복원
-            console.log(`%c🛸 [GCS 시점 제어] 클릭 중심 3D 사선뷰 복원 (방위각 회전 고정) ➡️ 좌표: (${clickLon.toFixed(5)}, ${clickLat.toFixed(5)})`, "color:#2ecc71; font-weight:bold;");
-
+            // 💥 [B] 2D 정탑 모드 ➡️ 3D 사선뷰 복원 (현재 방향 그대로 유지)
             window.isGcsCameraCurrently2D = false;
 
-            // 🔒 복원 비행 시에도 화면이 회전하지 않도록 heading을 '0.0' 정북 고정 상태로 3D 사선 틸트 피치만 반영!!
-            var restoreHeading = 0.0;
-            var restorePitch = Cesium.Math.toRadians(-45.0); // 3D 관제용 사선 최적 표준 고각 배치
-            var restoreRoll = 0.0;
-
+            var restorePitch = Cesium.Math.toRadians(-45.0);
             var targetLookCenter = Cesium.Cartesian3.fromDegrees(clickLon, clickLat, clickHeight);
 
-            // 더블클릭 정점 타깃 좌표를 화면 정중앙에 고정시킨 채 사선 각도만 부드럽게 토글 스위칭
-            camera.flyTo({
-                destination: camera.position,
-                duration: 0.0,
-                complete: function () {
-                    // 회전 없이 정북을 바라본 상태에서 지정 사선 틸트 각도와 상대 고도만 주입
-                    camera.lookAt(targetLookCenter, new Cesium.HeadingPitchRange(restoreHeading, restorePitch, relativeFlightHeight));
-
-                    // 회전 중심 매트릭스 락을 다시 글로벌 원위치로 초기화하여 지도 조작 자유 상태 복원
-                    camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-                }
-            });
+            camera.lookAt(
+                targetLookCenter,
+                new Cesium.HeadingPitchRange(currentHeading, restorePitch, relativeFlightHeight) // ✅ 현재 방향 유지한 채 사선 각도만 적용
+            );
+            camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
         }
 
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -613,6 +1083,7 @@ window.triggerGcsCommand = function (numLon, numLat, actionType) {
         list = list.filter(function (item) { return item && item.id !== "Home"; });
         list.unshift(nodeData);
     } else if (currentAction.indexOf("destination") !== -1) {
+        if (typeof window.clearGcsSimulationResiduals === "function") window.clearGcsSimulationResiduals();
         list = list.filter(function (item) { return item && item.id !== "Destination"; });
         list.push(nodeData);
     } else {

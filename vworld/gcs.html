@@ -143,8 +143,16 @@
         </div>      
 
 
-        <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px;">💾 임무 경로 JSON 다운로드</button>
+        <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px;">💾 임무경로 다운로드</button>
+        <!-- 임무경로 JSON 불러오기 버튼 및 숨겨진 파일 입력창 -->
+        <!-- <button type="button" onclick="document.getElementById('gcs_json_file_input').click()" style="width: 100%; margin-top: 6px; padding: 9px 12px; background: #1e293b; color: #00ffcc; border: 1px solid #00ffcc; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer;">
+            📂 임무경로 불러오기 (JSON)
+        </button>
+        <input type="file" id="gcs_json_file_input" accept=".json" style="display: none;" onchange="importMissionJSON(event)" /> -->
+
+    
     </div>
+
 
     <!-- 🖱️ 우클릭 GCS 관제 컨텍스트 메뉴 -->
     <div id="gcs_context_menu">
@@ -212,6 +220,174 @@
         </table>
     </div>
 
+
+    <!-- 드론 임무경로 표 & JSON 모달 전용 스타일 -->
+    <style>
+        #gcs_json_preview_modal, #gcs_json_preview_modal * {
+            box-sizing: border-box;
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+        #gcs_json_preview_modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.78);
+            z-index: 9999999;
+            align-items: center;
+            justify-content: center;
+        }
+        #gcs_json_preview_modal.open {
+            display: flex;
+        }
+        #gcs_modal_box {
+            width: 880px;
+            max-width: 95vw;
+            max-height: 88vh;
+            background: #101828;
+            border: 2px solid #00ffcc;
+            border-radius: 8px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #fff;
+        }
+        #gcs_modal_header {
+            padding: 14px 20px;
+            background: #1e293b;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #gcs_modal_subbar {
+            padding: 10px 20px;
+            background: #0f172a;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #gcs_modal_table_wrap {
+            width: 100%;
+            overflow: auto;
+            max-height: 54vh;
+            background: #0b0f19;
+        }
+        #gcs_modal_table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        #gcs_modal_table th, #gcs_modal_table td {
+            padding: 10px 8px;
+            text-align: center;
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        #gcs_modal_table th {
+            background: #1e293b;
+            color: #00ffcc;
+            border-bottom: 2px solid #00ffcc;
+            font-weight: bold;
+        }
+        #gcs_json_preview_textarea {
+            display: none;
+            width: 100%;
+            height: 360px;
+            background: #0b0f19;
+            color: #a7f3d0;
+            border: none;
+            padding: 16px 20px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.55;
+            resize: none;
+            outline: none;
+        }
+        #gcs_modal_footer {
+            padding: 12px 20px;
+            background: #1e293b;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .gcs-m-btn {
+            padding: 7px 14px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+        }
+        .gcs-tab-btn.active {
+            background: #00ffcc;
+            color: #000;
+        }
+        .gcs-tab-btn:not(.active) {
+            background: transparent;
+            color: #cbd5e1;
+        }
+    </style>
+
+    <!-- 드론 임무경로 표 & JSON 모달 구조 -->
+    <div id="gcs_json_preview_modal">
+        <div id="gcs_modal_box">
+            <div id="gcs_modal_header">
+                <strong style="color:#00ffcc; font-size:15px;">🛸 드론 자율비행 임무경로 데이터 명세</strong>
+                <button id="gcs_json_modal_close_x" class="gcs-m-btn" style="background:none; color:#94a3b8; font-size:16px;">✕</button>
+            </div>
+
+            <div id="gcs_modal_subbar">
+                <div style="display:flex; gap:16px; color:#cbd5e1;">
+                    <span>• 총 노드: <strong id="gcs_summary_count" style="color:#f1c40f;">0개</strong></span>
+                    <span>• 예상 비행시간: <strong id="gcs_summary_time" style="color:#38bdf8;">0초</strong></span>
+                    <span>• 목적지 층수: <strong id="gcs_summary_floor" style="color:#ef5350;">-층</strong></span>
+                </div>
+                <div style="display:inline-flex; background:#1e293b; border-radius:5px; padding:3px; border:1px solid #334155; gap:4px;">
+                    <button id="gcs_tab_table_btn" class="gcs-m-btn gcs-tab-btn active">📊 표(테이블) 보기</button>
+                    <button id="gcs_tab_json_btn" class="gcs-m-btn gcs-tab-btn">💻 JSON 원문 보기</button>
+                </div>
+            </div>
+
+            <div id="gcs_modal_table_wrap">
+                <table id="gcs_modal_table">
+                    <thead>
+                        <tr>
+                            <th>순번</th>
+                            <th style="text-align:left;">노드 ID (층수)</th>
+                            <th>임무 명령</th>
+                            <th>경도 (X)</th>
+                            <th>위도 (Y)</th>
+                            <th>해발고도 (상대)</th>
+                            <th>기수 방위각</th>
+                            <th>호버링</th>
+                            <th>속도</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gcs_modal_tbody"></tbody>
+                </table>
+            </div>
+
+            <textarea id="gcs_json_preview_textarea" readonly></textarea>
+
+            <div id="gcs_modal_footer">
+                <!-- 숨겨진 JSON 파일 선택기 -->
+                <input type="file" id="gcs_modal_json_file_input" accept=".json" style="display: none;" />
+                <button type="button" id="gcs_json_load_btn" style="background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">📂 JSON 파일읽기</button>
+                <button id="gcs_json_copy_btn" class="gcs-m-btn" style="background:#334155; color:#fff; border:1px solid #475569;">📋 JSON 복사</button>
+                <button id="gcs_json_download_file_btn" class="gcs-m-btn" style="background:#00ffcc; color:#000;">💾 JSON 파일저장</button>
+                <!-- <button id="gcs_json_close_btn" class="gcs-m-btn" style="background:#ef5350; color:#fff;">닫기</button> -->
+                <!-- 2. 신규 추가: 모달 내 시뮬레이션 바로 실행 -->
+                <button type="button" id="gcs_modal_sim_start_btn" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">🚀 시뮬레이션</button>
+            </div>
+        </div>
+    </div>
+
+    
     <!-- 🔗 GCS 분할 경량화 모듈 멀티 로더 링크 -->
     <script type="text/javascript" src="./gcs_engine.js"></script>
     <script type="text/javascript" src="./gcs_view.js"></script>
