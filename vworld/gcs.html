@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>VWorld GCS 스마트 관제 시스템</title>
     <!-- 브이월드 3D 지도 구동용 오픈 리소스 임포트 -->
-    <!-- <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script> -->
     <script src="https://jquery.com"></script>
     <script src="./three.min.js"></script>
     <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script>
@@ -70,16 +69,18 @@
             box-shadow: 0 0 6px rgba(26, 188, 156, 0.3) !important;
         }
     </style>
+        
 </head>
 <body>
 
+<div class="panel right">
     <!-- 🗺️ 브이월드 3D WebGL 지도 탑재 캔버스 -->
     <div id="vmap"></div>
 
-        <!-- 📋 GCS 좌측 관제 사이드 바 영역 (오른쪽 플로팅 레이어 완치 스킨) -->
+    <!-- 📋 GCS 좌측 관제 사이드 바 영역 (오른쪽 플로팅 레이어 완치 스킨) -->
     <div id="gcs_sidebar" style="position: absolute; left: 15px; top: 15px; width: 290px; height: calc(100% - 30px); background: rgba(11, 15, 25, 0.94); border: 1px solid #233446; border-radius: 6px; z-index: 10; padding: 12px; box-sizing: border-box; color: #fff; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
         <div class="sidebar-title">🚁 GCS 스마트 웨이포인트 관제</div>
-        
+    
         <!-- 🔍 [검색 기능 인터페이스] 주소 및 명칭 이동 서치 바 -->
         <div class="search-box-container" style="margin-bottom: 12px; position: relative;">
             <div style="display: flex; gap: 4px; width: 100%;">
@@ -100,42 +101,32 @@
         </div>
 
         <!-- 레이어 토글 세션 -->
-        <!-- <label style="font-size:11px; display:flex; align-items:center; gap:6px; margin-bottom:10px; color:#bdc3c7; cursor:pointer; user-select:none;">
-            <input type="checkbox" onchange="window.toggleFireWMS(this)"> 🔥 소방방재 건물 특수 레이어 켜기
-        </label> -->
-        <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" checked onchange="toggleSidewalkObstacleLayer(this.checked)"> 차도인도/철탑/대교
-        </label>
-
-        <!-- HTML 설정 판넬 내부에 삽입 -->
-        <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="gcs_streetlight_check" checked onchange="toggleStreetlightPoiLayer(this.checked)" />
-            <span>소방차전용구역</span>
-        </label>
-
-        <!-- 📐 [GCS 스마트 관제] 고도 자동 최적화 적용 선택 체크박스 UI 컴포넌트 -->
-        <!-- <div id="gcs_optimize_checkbox_wrapper" style="margin: 8px 0; padding: 12px; background: rgba(30, 39, 46, 0.95); border-radius: 6px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; border: 1px solid #00ffcc; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"> -->
         <div id="gcs_optimize_checkbox_wrapper">
-        
-            <!-- <input type="checkbox" id="gcs_use_optimize_check" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #00ffcc; margin: 0;" /> -->
-            <input type="checkbox" id="gcs_use_optimize_check" checked/>
-            <label for="gcs_use_optimize_check" style="color: #00ffcc; font-size: 13px; font-weight: bold; cursor: pointer; user-select: none; margin: 0; line-height: 1;">
-                경로상 지형·건물 고도 최적화
+            <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" checked onchange="toggleSidewalkObstacleLayer(this.checked)"> 
+                <span>차도인도</span>
+            </label>
+            <!-- HTML 설정 판넬 내부에 삽입 -->
+            <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="gcs_streetlight_check" checked onchange="toggleStreetlightPoiLayer(this.checked)" />
+                <span>소방차전용구역</span>
+            </label>
+
+            <label for="gcs_use_optimize_check" style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="gcs_use_optimize_check" checked/>
+                <span>지형·건물 고도 최적화</span>
             </label>
         </div>
                 
-        <div style="font-size: 11px; font-weight: bold; color: #a4b0be; margin-bottom: 5px;">📋 비행 노드 리스트 (실시간 편집)</div>
+        <div style="font-size: 11px; font-weight: bold; color: #a4b0be; margin-bottom: 5px;">📋 비행노드 리스트 (실시간 편집)</div>
         <div id="wp_list_container"></div>
 
 
         <!-- 💥 시작 버튼과 HUD 켜기 토글 스위치 나란히 병렬 한 줄 정렬 마감 -->
         <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
-            <!-- <button class="gcs-btn" onclick="window.startGcsDroneSimulation()" style="flex: 1; background:#e67e22; font-size:12px; padding:10px; margin: 0;">🛸자율주행 시뮬레이션 시작</button> -->
-            <!-- 💥 [HTML 최종 바인딩 복원 마크업]: 클릭 신호 누수를 차단하고 자바스크립트 관제 엔진 함수를 다이렉트로 강제 점화! -->
             <button onclick="window.startGcsDroneSimulation()" style="flex: 1; padding: 12px; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
-            <!-- <button onclick="window.startGcsSimulation()" style="flex: 1; padding: 12px; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;"> -->
-            ▶ 자율주행 시뮬레이션 시작
-            </button>      
+            ▶ 시뮬레이션 시작
+            </button>     
                  
             <label style="font-size:11px; display:flex; align-items:center; gap:4px; color:#00ffcc; cursor:pointer; user-select:none; background: rgba(0,255,204,0.06); padding: 8px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.2); white-space: nowrap; height: 35px; box-sizing: border-box;">
                 <input type="checkbox" id="gcs_hud_use_toggle" onchange="var panel = document.getElementById('gcs_internal_hud_container') || document.getElementById('hud'); if(panel){ panel.style.display = this.checked ? 'block' : 'none'; }"> HUD
@@ -143,16 +134,9 @@
         </div>      
 
 
-        <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px;">💾 임무경로 다운로드</button>
-        <!-- 임무경로 JSON 불러오기 버튼 및 숨겨진 파일 입력창 -->
-        <!-- <button type="button" onclick="document.getElementById('gcs_json_file_input').click()" style="width: 100%; margin-top: 6px; padding: 9px 12px; background: #1e293b; color: #00ffcc; border: 1px solid #00ffcc; border-radius: 4px; font-weight: bold; font-size: 13px; cursor: pointer;">
-            📂 임무경로 불러오기 (JSON)
-        </button>
-        <input type="file" id="gcs_json_file_input" accept=".json" style="display: none;" onchange="importMissionJSON(event)" /> -->
-
-    
+        <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px; font-size: 14px;">💾 임무경로 다운로드</button>
+        
     </div>
-
 
     <!-- 🖱️ 우클릭 GCS 관제 컨텍스트 메뉴 -->
     <div id="gcs_context_menu">
@@ -221,7 +205,62 @@
     </div>
 
 
-    <!-- 드론 임무경로 표 & JSON 모달 전용 스타일 -->
+    <!-- 드론 임무경로 표 & JSON 모달 구조 -->
+    <div id="gcs_json_preview_modal">
+        <div id="gcs_modal_box">
+            <div id="gcs_modal_header">
+                <strong style="color:#00ffcc; font-size:15px;">🛸 드론 자율비행 임무경로 데이터 명세</strong>
+                <button id="gcs_json_modal_close_x" class="gcs-m-btn" style="background:none; color:#94a3b8; font-size:16px;">✕</button>
+            </div>
+
+            <div id="gcs_modal_subbar">
+                <div style="display:flex; gap:16px; color:#cbd5e1;">
+                    <span>• 총 노드: <strong id="gcs_summary_count" style="color:#f1c40f;">0개</strong></span>
+                    <span>• 예상 비행시간: <strong id="gcs_summary_time" style="color:#38bdf8;">0초</strong></span>
+                    <span>• 목적지 층수: <strong id="gcs_summary_floor" style="color:#ef5350;">-층</strong></span>
+                </div>
+                <div style="display:inline-flex; background:#1e293b; border-radius:5px; padding:3px; border:1px solid #334155; gap:4px;">
+                    <button id="gcs_tab_table_btn" class="gcs-m-btn gcs-tab-btn active">📊 표(테이블) 보기</button>
+                    <button id="gcs_tab_json_btn" class="gcs-m-btn gcs-tab-btn">💻 JSON 원문 보기</button>
+                </div>
+            </div>
+
+            <div id="gcs_modal_table_wrap">
+                <table id="gcs_modal_table">
+                    <thead>
+                        <tr>
+                            <th>순번</th>
+                            <th style="text-align:left;">노드 ID (층수)</th>
+                            <th>임무 명령</th>
+                            <th>경도 (X)</th>
+                            <th>위도 (Y)</th>
+                            <th>해발고도 (상대)</th>
+                            <th>기수 방위각</th>
+                            <th>호버링</th>
+                            <th>속도</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gcs_modal_tbody"></tbody>
+                </table>
+            </div>
+
+            <textarea id="gcs_json_preview_textarea" readonly></textarea>
+
+            <div id="gcs_modal_footer">
+                <!-- 숨겨진 JSON 파일 선택기 -->
+                <input type="file" id="gcs_modal_json_file_input" accept=".json" style="display: none;" />
+                <button type="button" id="gcs_json_load_btn" style="background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">📂 JSON 파일읽기</button>
+                <button id="gcs_json_copy_btn" class="gcs-m-btn" style="background:#334155; color:#fff; border:1px solid #475569;">📋 JSON 복사</button>
+                <button id="gcs_json_download_file_btn" class="gcs-m-btn" style="background:#00ffcc; color:#000;">💾 JSON 파일저장</button>
+                <!-- <button id="gcs_json_close_btn" class="gcs-m-btn" style="background:#ef5350; color:#fff;">닫기</button> -->
+                <!-- 2. 신규 추가: 모달 내 시뮬레이션 바로 실행 -->
+                <button type="button" id="gcs_modal_sim_start_btn" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">🚀 시뮬레이션</button>
+            </div>
+        </div>
+    </div>
+
+</div>    
+<!-- 드론 임무경로 표 & JSON 모달 전용 스타일 -->
     <style>
         #gcs_json_preview_modal, #gcs_json_preview_modal * {
             box-sizing: border-box;
@@ -333,61 +372,7 @@
         }
     </style>
 
-    <!-- 드론 임무경로 표 & JSON 모달 구조 -->
-    <div id="gcs_json_preview_modal">
-        <div id="gcs_modal_box">
-            <div id="gcs_modal_header">
-                <strong style="color:#00ffcc; font-size:15px;">🛸 드론 자율비행 임무경로 데이터 명세</strong>
-                <button id="gcs_json_modal_close_x" class="gcs-m-btn" style="background:none; color:#94a3b8; font-size:16px;">✕</button>
-            </div>
 
-            <div id="gcs_modal_subbar">
-                <div style="display:flex; gap:16px; color:#cbd5e1;">
-                    <span>• 총 노드: <strong id="gcs_summary_count" style="color:#f1c40f;">0개</strong></span>
-                    <span>• 예상 비행시간: <strong id="gcs_summary_time" style="color:#38bdf8;">0초</strong></span>
-                    <span>• 목적지 층수: <strong id="gcs_summary_floor" style="color:#ef5350;">-층</strong></span>
-                </div>
-                <div style="display:inline-flex; background:#1e293b; border-radius:5px; padding:3px; border:1px solid #334155; gap:4px;">
-                    <button id="gcs_tab_table_btn" class="gcs-m-btn gcs-tab-btn active">📊 표(테이블) 보기</button>
-                    <button id="gcs_tab_json_btn" class="gcs-m-btn gcs-tab-btn">💻 JSON 원문 보기</button>
-                </div>
-            </div>
-
-            <div id="gcs_modal_table_wrap">
-                <table id="gcs_modal_table">
-                    <thead>
-                        <tr>
-                            <th>순번</th>
-                            <th style="text-align:left;">노드 ID (층수)</th>
-                            <th>임무 명령</th>
-                            <th>경도 (X)</th>
-                            <th>위도 (Y)</th>
-                            <th>해발고도 (상대)</th>
-                            <th>기수 방위각</th>
-                            <th>호버링</th>
-                            <th>속도</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gcs_modal_tbody"></tbody>
-                </table>
-            </div>
-
-            <textarea id="gcs_json_preview_textarea" readonly></textarea>
-
-            <div id="gcs_modal_footer">
-                <!-- 숨겨진 JSON 파일 선택기 -->
-                <input type="file" id="gcs_modal_json_file_input" accept=".json" style="display: none;" />
-                <button type="button" id="gcs_json_load_btn" style="background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">📂 JSON 파일읽기</button>
-                <button id="gcs_json_copy_btn" class="gcs-m-btn" style="background:#334155; color:#fff; border:1px solid #475569;">📋 JSON 복사</button>
-                <button id="gcs_json_download_file_btn" class="gcs-m-btn" style="background:#00ffcc; color:#000;">💾 JSON 파일저장</button>
-                <!-- <button id="gcs_json_close_btn" class="gcs-m-btn" style="background:#ef5350; color:#fff;">닫기</button> -->
-                <!-- 2. 신규 추가: 모달 내 시뮬레이션 바로 실행 -->
-                <button type="button" id="gcs_modal_sim_start_btn" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">🚀 시뮬레이션</button>
-            </div>
-        </div>
-    </div>
-
-    
     <!-- 🔗 GCS 분할 경량화 모듈 멀티 로더 링크 -->
     <script type="text/javascript" src="./gcs_engine.js"></script>
     <script type="text/javascript" src="./gcs_view.js"></script>

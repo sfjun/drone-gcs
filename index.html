@@ -6,88 +6,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>소방 관제 센터 [DEMO v1.0]</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" type="text/css" /> -->
+    <!-- <link rel="stylesheet" href="/static/css/bootstrap.min.css" type="text/css" /> -->
+
+    <!-- jQuery & Three.js & 브이월드 3D 지도 구동용 리소스 -->
+    <script src="https://jquery.com"></script>
+    <script src="/static/js/three.min.js"></script>
+    <!-- <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=307B0E17-0322-43C3-A570-59947C0FC7A1"></script> -->
+    <script type="text/javascript" src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=0DB2E2FF-05EE-499D-9621-86FC06F403D0"></script>
 
     <!-- COMMAND CHAT 전용 CSS -->
     <style>
-        #chat-log-area {
-            flex: 1;
-            background: #0b141a;
-            border: 1px solid #1e293b;
-            color: #cbd5e1;
-            font-family: "Consolas", monospace;
-            padding: 10px;
-            overflow-y: auto;
-            border-radius: 0 4px 4px 4px;
-            font-size: 10pt;
-            margin-bottom: 6px;
-            min-height: 120px;
-        }
+        #chat-log-area { flex: 1; background: #0b141a; border: 1px solid #1e293b; color: #cbd5e1; font-family: "Consolas", monospace; padding: 10px; overflow-y: auto; border-radius: 0 4px 4px 4px; font-size: 10pt; margin-bottom: 6px; min-height: 120px; }
+        .chat-message { display: flex; flex-direction: column; width: fit-content; max-width: 78%; padding: 7px 10px; margin: 6px 0; border-radius: 8px; word-break: break-word; line-height: 1.4; box-sizing: border-box; }
+        .chat-message.sent { margin-left: auto; background: #1d4ed8; color: white; border-bottom-right-radius: 2px; }
+        .chat-message.received { margin-right: auto; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-bottom-left-radius: 2px; }
+        .chat-message.system { margin-left: auto; margin-right: auto; background: rgba(14, 165, 233, 0.10); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); text-align: center; max-width: 95%; }
+        .chat-meta { font-size: 9px; opacity: 0.65; margin-bottom: 3px; }
+        .chat-text { font-size: 13px; }
+        #chat-input { flex: 1; margin-bottom: 0; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; outline: none; border-radius: 4px; }
+        #chat-input:focus { border-color: #38bdf8; }
+    </style>
 
-        .chat-message {
-            display: flex;
-            flex-direction: column;
-            width: fit-content;
-            max-width: 78%;
-            padding: 7px 10px;
-            margin: 6px 0;
-            border-radius: 8px;
-            word-break: break-word;
-            line-height: 1.4;
-            box-sizing: border-box;
-        }
+    <!-- GCS 3D 지도 및 관제 UI 전용 스타일 (오른쪽 패널 내부 격리) -->
+    <style>
+        .panel.right { position: relative; overflow: hidden; background: #0b0f19; font-family: 'Malgun Gothic', sans-serif; }
+        #vmap { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        #gcs_sidebar { position: absolute; left: 15px; top: 15px; width: 290px; height: calc(100% - 30px); background: rgba(11, 15, 25, 0.94); border: 1px solid #233446; border-radius: 6px; z-index: 10; padding: 12px; box-sizing: border-box; color: #fff; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .sidebar-title { font-size: 14px; font-weight: bold; color: #00ffcc; border-bottom: 2px solid #233446; padding-bottom: 6px; margin-bottom: 10px; }
+        .gcs-btn { width: 100%; padding: 7px; margin-bottom: 6px; border: none; border-radius: 4px; background: #2980b9; color: #fff; font-weight: bold; cursor: pointer; font-size: 11px; transition: 0.2s; text-align: center; }
+        .gcs-btn:hover { background: #3498db; }
+        #wp_list_container { flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); border: 1px solid #1e272e; border-radius: 4px; padding: 4px; margin-bottom: 8px; }
+        .search-box-container { background: rgba(255, 255, 255, 0.05); border: 1px solid #34495e; border-radius: 4px; padding: 6px; margin-bottom: 12px; display: flex; gap: 4px; position: relative; }
+        .search-input { flex: 1; background: #111; border: 1px solid #444; color: #fff; padding: 4px 6px; font-size: 11px; border-radius: 3px; outline: none; }
+        .search-btn { background: #1abc9c; border: none; color: #fff; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 3px; cursor: pointer; }
+        .search-btn:hover { background: #16a085; }
+        #gcs_context_menu { display: none; position: absolute; background: #1b263b; border: 1px solid #415a77; border-radius: 4px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); padding: 4px 0; min-width: 110px; }
+        #gcs_context_menu div { padding: 6px 12px; color: #e0e1dd; cursor: pointer; font-size: 11px; }
+        #gcs_context_menu div:hover { background: #415a77; color: #fff; }
+        .gcs-mode-btn-group { display: flex !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; margin-bottom: 8px !important; }
+        .gcs-mode-btn-group .btn-mode { flex: 1 !important; width: 100% !important; padding: 12px 0 !important; font-weight: bold !important; font-size: 14px !important; line-height: 1.2 !important; border-radius: 6px !important; text-align: center !important; box-sizing: border-box !important; cursor: pointer !important; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important; color: #95a5a6 !important; background-color: #2c3e50 !important; border: 1px solid #34495e !important; }
+        .gcs-mode-btn-group .btn-mode.active { color: #ffffff !important; background-color: #1abc9c !important; border: 1px solid #16a085 !important; box-shadow: 0 0 6px rgba(26, 188, 156, 0.3) !important; }
+    </style>
 
-        .chat-message.sent {
-            margin-left: auto;
-            background: #1d4ed8;
-            color: white;
-            border-bottom-right-radius: 2px;
-        }
-
-        .chat-message.received {
-            margin-right: auto;
-            background: #1e293b;
-            color: #e2e8f0;
-            border: 1px solid #334155;
-            border-bottom-left-radius: 2px;
-        }
-
-        .chat-message.system {
-            margin-left: auto;
-            margin-right: auto;
-            background: rgba(14, 165, 233, 0.10);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            text-align: center;
-            max-width: 95%;
-        }
-
-        .chat-meta {
-            font-size: 9px;
-            opacity: 0.65;
-            margin-bottom: 3px;
-        }
-
-        .chat-text {
-            font-size: 13px;
-        }
-
-        #chat-input {
-            flex: 1;
-            margin-bottom: 0;
-            background: #0f172a;
-            border: 1px solid #334155;
-            color: white;
-            padding: 8px;
-            outline: none;
-            border-radius: 4px;
-        }
-
-        #chat-input:focus {
-            border-color: #38bdf8;
-        }
+    <!-- 드론 임무경로 표 & JSON 모달 전용 스타일 -->
+    <style>
+        #gcs_json_preview_modal, #gcs_json_preview_modal * { box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; }
+        #gcs_json_preview_modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.78); z-index: 9999999; align-items: center; justify-content: center; }
+        #gcs_json_preview_modal.open { display: flex; }
+        #gcs_modal_box { width: 880px; max-width: 95vw; max-height: 88vh; background: #101828; border: 2px solid #00ffcc; border-radius: 8px; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75); display: flex; flex-direction: column; overflow: hidden; color: #fff; }
+        #gcs_modal_header { padding: 14px 20px; background: #1e293b; border-bottom: 1px solid rgba(0, 255, 204, 0.3); display: flex; justify-content: space-between; align-items: center; }
+        #gcs_modal_subbar { padding: 10px 20px; background: #0f172a; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; }
+        #gcs_modal_table_wrap { width: 100%; overflow: auto; max-height: 54vh; background: #0b0f19; }
+        #gcs_modal_table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        #gcs_modal_table th, #gcs_modal_table td { padding: 10px 8px; text-align: center; white-space: nowrap; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        #gcs_modal_table th { background: #1e293b; color: #00ffcc; border-bottom: 2px solid #00ffcc; font-weight: bold; }
+        #gcs_json_preview_textarea { display: none; width: 100%; height: 360px; background: #0b0f19; color: #a7f3d0; border: none; padding: 16px 20px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.55; resize: none; outline: none; }
+        #gcs_modal_footer { padding: 12px 20px; background: #1e293b; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end; gap: 10px; }
+        .gcs-m-btn { padding: 7px 14px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; border: none; }
+        .gcs-tab-btn.active { background: #00ffcc; color: #000; }
+        .gcs-tab-btn:not(.active) { background: transparent; color: #cbd5e1; }
     </style>
 </head>
-
 <body>
     <div class="header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; gap: 20px; flex-wrap: wrap;"> 
     
@@ -245,215 +225,214 @@
 
         </div> <!-- 중앙 패널 끝 -->
 
-        <!-- 오른쪽 패널 -->
+
+<!-- 오른쪽 패널 (기존 gcs.html 통합 영역) -->
         <div class="panel right">
+            <!-- 🗺️ 브이월드 3D WebGL 지도 탑재 캔버스 -->
+            <div id="vmap"></div>
 
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
-                <h3 style="margin:0;">
-                    SITUATION MAP
-                </h3>
+            <!-- 📋 GCS 좌측 관제 사이드 바 영역 -->
+            <div id="gcs_sidebar" style="position: absolute; left: 15px; top: 15px; width: 290px; height: calc(100% - 30px); background: rgba(11, 15, 25, 0.94); border: 1px solid #233446; border-radius: 6px; z-index: 10; padding: 12px; box-sizing: border-box; color: #fff; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                <div class="sidebar-title">🚁 GCS 스마트 웨이포인트 관제</div>
+            
+                <!-- 🔍 주소 및 명칭 이동 서치 바 -->
+                <div class="search-box-container" style="margin-bottom: 12px; position: relative;">
+                    <div style="display: flex; gap: 4px; width: 100%;">
+                        <input type="text" id="gcs_search_keyword" class="search-input" placeholder="장소명, 주소 검색 이동..." onkeyup="if(event.keyCode===13) window.executeGcsSearch();">
+                        <button class="search-btn" onclick="window.executeGcsSearch()">검색</button>
+                    </div>
 
-                <div style="display:flex; gap:5px;">
-                    <button id="btn-map-osm" class="btn-blue" style="margin:0; padding:5px 12px; font-size:9pt;">일반</button>
-                    <button id="btn-map-sat" class="btn-gray" style="margin:0; padding:5px 12px; font-size:9pt;">위성</button>
+                    <!-- 오른쪽 플로팅 검색 결과 레이어 패널 -->
+                    <div id="gcs_search_layer_popup" style="display: none; position: absolute; left: 275px; top: 0; width: 320px; max-height: 280px; background: rgba(16, 24, 40, 0.98); border: 2px solid #1abc9c; border-radius: 6px; box-shadow: 5px 5px 20px rgba(0,0,0,0.6); overflow: hidden; z-index: 9999;">
+                        <div style="background: #111b27; padding: 6px 10px; font-size: 11px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid #233446; display: flex; justify-content: space-between; align-items: center;">
+                            <span>🔍 통합 검색 결과 목록</span>
+                            <button onclick="document.getElementById('gcs_search_layer_popup').style.display='none';" style="background: none; border: none; color: #ef5350; cursor: pointer; font-weight: bold; font-size: 14px; padding: 0;">×</button>
+                        </div>
+                        <ul id="resultDiv" style="list-style: none; padding: 0; margin: 0; max-height: 240px; overflow-y: auto;">
+                            <li style="color: #7f8c8d; text-align: center; padding: 15px; font-size: 11px; list-style: none;">검색 결과가 여기에 표시됩니다.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 레이어 토글 섹션 -->
+                <div id="gcs_optimize_checkbox_wrapper">
+                    <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" checked onchange="toggleSidewalkObstacleLayer(this.checked)"> 
+                        <span>차도인도</span>
+                    </label>
+                    <label style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="gcs_streetlight_check" checked onchange="toggleStreetlightPoiLayer(this.checked)" />
+                        <span>소방차전용구역</span>
+                    </label>
+                    <label for="gcs_use_optimize_check" style="color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="gcs_use_optimize_check" checked/>
+                        <span>지형·건물 고도 최적화</span>
+                    </label>
+                </div>
+                        
+                <div style="font-size: 11px; font-weight: bold; color: #a4b0be; margin-bottom: 5px; margin-top: 8px;">📋 비행노드 리스트 (실시간 편집)</div>
+                <div id="wp_list_container"></div>
+
+                <!-- 시작 버튼과 HUD 켜기 토글 스위치 -->
+                <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+                    <button onclick="window.startGcsDroneSimulation()" style="flex: 1; padding: 12px; background-color: #e74c3c; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
+                        ▶ 시뮬레이션 시작
+                    </button>     
+                         
+                    <label style="font-size:11px; display:flex; align-items:center; gap:4px; color:#00ffcc; cursor:pointer; user-select:none; background: rgba(0,255,204,0.06); padding: 8px 6px; border-radius: 4px; border: 1px solid rgba(0,255,204,0.2); white-space: nowrap; height: 35px; box-sizing: border-box;">
+                        <input type="checkbox" id="gcs_hud_use_toggle" onchange="var panel = document.getElementById('gcs_internal_hud_container') || document.getElementById('hud'); if(panel){ panel.style.display = this.checked ? 'block' : 'none'; }"> HUD
+                    </label>
+                </div>      
+
+                <button class="gcs-btn" onclick="window.exportMissionJSON()" style="background:#27ae60; margin-top:3px; font-size: 14px;">💾 임무경로 다운로드</button>
+            </div>
+
+            <!-- 🖱️ 우클릭 GCS 관제 컨텍스트 메뉴 -->
+            <div id="gcs_context_menu">
+                <div>🛸 홈 설정</div>
+                <div>📍 경유지 추가</div>
+                <div>🎯 목적지 설정</div>
+            </div>
+
+            <!-- 🛰️ GCS 레이더 전용 미니 HUD -->
+            <div id="gcs_internal_hud_container" style="position: fixed; right: 20px; bottom: 20px; width: 380px; height: auto; min-height: 280px; z-index: 10000; background: rgba(16, 23, 41, 0.95); border: 1px solid #2c3e50; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; display: none;">   
+                <div id="gcs_hud_header" style="background: #2c3e50; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #34495e; cursor: move; user-select: none;">
+                    <span style="font-weight: bold; font-size: 13px; color: #00ffcc;">🛰️ 3D TACTICAL RADAR</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button id="btn_hud_layout_swap" onclick="window.switchGcsMainWindowAndHud();" style="background: #2980b9; border: none; color: #fff; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s;">🔄화면스위칭</button>
+                        <button onclick="var b=document.getElementById('gcs_hud_body_wrapper'); if(b){ b.style.display=b.style.display==='none'?'block':'none'; this.innerText=b.style.display==='none'?'🔼':'🔽'; }" style="background:none; border:none; color:#fff; cursor:pointer; font-size:12px; padding:0 4px;">🔽</button>
+                        <button onclick="window.closeGcsHudPanelWithLayoutRestore();" style="background: none; border: none; color: #ef5350; cursor: pointer; font-weight: bold; font-size: 18px; padding:0 2px; line-height: 1;">×</button>
+                    </div>
+                </div>
+
+                <div id="gcs_hud_body_wrapper" style="display: block;">
+                    <div id="gcs_hud_body" style="padding: 10px; background: rgba(10, 15, 28, 0.6); height: 230px;">
+                        <canvas id="gcs_hud_minimap_canvas" width="360" height="220" style="background: #0b0f19; border: 1px solid #1b263b; border-radius: 4px; display: block; width: 100%; height: 100%; box-sizing: border-box;"></canvas>
+                    </div>
+                </div>
+
+                <div id="gcs_hud_details" style="display: none !important; visibility: hidden !important; height: 0px !important;">
+                    <span id="hud_status_text">대기중</span>
+                    <span id="hud_metric_stage">-</span>
+                    <span id="hud_metric_alt">0</span>
+                    <span id="hud_metric_heading">0.0</span>
+                    <span id="hud_metric_coords">X: 0, Y: 0</span>
                 </div>
             </div>
 
-            <div style="position:relative; display:flex; flex-direction:column; flex-grow:1;">
-
-               <div id="map" style="width:100%; height:350px;"></div>
-
-                <!-- 🎮 가상 조종기 (드래그, 접기 지원) -->
-                <div class="virtual-gamepad" id="virtual-gamepad">
-                    
-                    <!-- 상단 드래그 헤더 및 제어 버튼 -->
-                    <div class="gamepad-header" id="gamepad-header">
-                        <span style="font-size: 11px; font-weight: bold; color: #cbd5e1; pointer-events: none;">🎮 드론 조종패드</span>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="gamepad-btn" onclick="resetGamepadPosition()" title="초기 위치로 복귀">↺</button>
-                            <button class="gamepad-btn" id="btn-toggle-gamepad" onclick="toggleGamepad()" title="숨기기/펼치기">－</button>
-                        </div>
-                    </div>
-
-                    <!-- 기존 컨트롤 영역 (숨김 대상) -->
-                    <div class="gamepad-body" id="gamepad-body">
-                        <!-- 왼쪽 스틱 -->
-                        <div class="pad-container">
-                            <div class="pad-label">고도 / 회전</div>
-                            <div class="d-pad">
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="상승">▲</button>
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_YAW_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌회전">◀</button>
-                                <div class="pad-center"></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_YAW_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우회전">▶</button>
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="하강">▼</button>
-                                <div></div>
-                            </div>
-                        </div>
-
-                        <!-- 중앙 시스템 제어 버튼 -->
-                        <div class="pad-center-controls">
-                            <div class="pad-label">시스템 제어</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%;">
-                                <button class="btn-green" onclick="sendCommand('ARM')">ARM</button>
-                                <button class="btn-red" onclick="sendCommand('DISARM')">DISARM</button>
-                                <button class="btn-orange" onclick="sendCommand('TAKEOFF')">이륙</button>
-                                <button class="btn-blue" onclick="sendCommand('LAND')">착륙</button>
-                                <button style="background: #64748b; color: white; border: none;" onclick="sendCommand('BRAKE')">정지</button>
-                                <button style="background: #8b5cf6; color: white; border: none;" onclick="sendCommand('RTH')">RTH</button>
-                            </div>
-                        </div>
-
-                        <!-- 오른쪽 스틱 -->
-                        <div class="pad-container">
-                            <div class="pad-label">전후좌우 이동</div>
-                            <div class="d-pad">
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_PITCH_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="전진">▲</button>
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_ROLL_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌이동">◀</button>
-                                <div class="pad-center"></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_ROLL_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우이동">▶</button>
-                                <div></div>
-                                <button class="pad-btn" onmousedown="startJog('RC_PITCH_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="후진">▼</button>
-                                <div></div>
-                            </div>
-                        </div>
-                    </div> <!-- // gamepad-body -->
+            <!-- 📡 대화면 전역 상황정보 패널 -->
+            <div id="gcs_main_screen_telemetry_panel" style="position: fixed; left: 20px; top: 80px; width: 320px; z-index: 5000; background: rgba(11, 19, 36, 0.95); border-left: 4px solid #38bdf8; border-radius: 0 6px 6px 0; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); padding: 15px; font-family: 'Malgun Gothic', sans-serif; display: none; pointer-events: auto;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 6px;">
+                    <span style="color: #38bdf8; font-size: 12px; font-weight: bold; margin-right: 6px;">📡 LIVE TELEMETRY STATUS:</span>
+                    <span id="gcs_live_status" style="color: #fff; font-size: 12px; font-weight: bold;">대기중</span>
                 </div>
-                <!-- 🎮 조종패드 끝 -->
-
-                <!-- 🔍 지도 검색 컨테이너 -->
-                <div id="search-container" style="position:absolute; top:10px; left:10px; z-index:999; display:flex; flex-direction:column; width:500px;">
-                    
-                    <div style="display:flex; align-items:center; width:100%; height:32px; background:rgba(30,41,59,0.7); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
-                        <input
-                            type="text"
-                            id="address-input"
-                            placeholder="주소 또는 장소 입력"
-                            spellcheck="false"
-                            autocomplete="off"
-                            readonly                                      
-                            onfocus="this.removeAttribute('readonly');"   
-                            oninput="handleAutoSearch()"
-                            onkeydown="if(event.key === 'Enter') { searchAddress(true); }"
-                            style="flex-grow:1; height:100%; margin:0; padding:0 10px; border:none; background:transparent; color:white; outline:none; font-size:15px; font-family:inherit; box-sizing:border-box; line-height:32px;"
-                        >
-
-                        <!-- 검색 버튼 -->
-                        <button
-                            onclick="searchAddress(true)" 
-                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0; background-color:#3b82f6; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
-                        >
-                            검색
-                        </button>
-
-                        <!-- 드론 위치 복귀 버튼 -->
-                        <button
-                            onclick="if(typeof map !== 'undefined' && typeof droneFeature !== 'undefined') map.getView().animate({ center: droneFeature.getGeometry().getCoordinates(), zoom: 19, duration: 800 });" 
-                            style="width:55px; height:100%; margin:0; padding:0; border:none; border-radius:0 4px 4px 0; background-color:#10b981; color:white; font-size:12px; font-weight:bold; cursor:pointer; flex-shrink:0; border-left:1px solid rgba(255,255,255,0.1);"
-                            title="현재 드론 위치로 이동"
-                        >
-                            드론
-                        </button>
-                    </div>
-
-                    <!-- 드롭다운 결과창 (초기엔 숨김) -->
-                    <div id="search-results-dropdown" style="display:none; flex-direction:column; width:100%; margin-top:5px; background:rgba(15,23,42,0.95); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 4px 6px rgba(0,0,0,0.5); max-height:200px; overflow-y:auto;">
-                    </div>
-                </div>
-
-                <!-- 📍 좌표 상태창 (하단) -->
-                <div
-                    style="
-                        position:absolute;
-                        bottom:15px;
-                        right:10px;
-                        z-index:2;
-                        display:flex;
-                        flex-direction:column;
-                        background:rgba(30,41,59,0.5);
-                        backdrop-filter:blur(4px);
-                        border:1px solid rgba(255,255,255,0.2);
-                        border-radius:5px;
-                        padding:8px 12px;
-                        gap:6px;
-                        box-shadow:0 4px 6px rgba(0,0,0,0.3);
-                    "
-                >
-
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="color:#94a3b8; font-size:11px; font-weight:bold; width:28px;">CUR</span>
-                        <span
-                            id="live-coordinates"
-                            style="
-                                color:#38bdf8;
-                                font-family:'Consolas', monospace;
-                                font-size:13px;
-                                font-weight:bold;
-                                width:140px;
-                                text-align:right;
-                                white-space:nowrap;
-                            "
-                        >
-                            ---.-----, ---.-----
-                        </span>
-                    </div>
-
-                    <div style="width:100%; height:1px; background:rgba(255,255,255,0.1);"></div>
-
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="color:#94a3b8; font-size:11px; font-weight:bold; width:28px;">TGT</span>
-                        <input
-                            type="text"
-                            id="target-coords"
-                            value="TARGET 미설정"
-                            readonly
-                            style="
-                                background:transparent;
-                                color:#facc15;
-                                border:none;
-                                font-size:13px;
-                                font-family:'Consolas', monospace;
-                                width:140px;
-                                text-align:right;
-                                cursor:text;
-                                outline:none;
-                                padding:0;
-                                margin:0;
-                            "
-                        >
-                    </div>
-
-                </div>
-
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #94a3b8;">
+                    <tr style="height: 24px;">
+                        <td style="width: 45%; color: #cbd5e1; font-size: 12px;">✈️ 임무 단계:</td>
+                        <td id="gcs_live_stage" style="color: #34d399; font-weight: bold; text-align: right; font-size: 12px;">-</td>
+                    </tr>
+                    <tr style="height: 24px;">
+                        <td style="color: #cbd5e1; font-size: 12px;">📊 비행 고도:</td>
+                        <td style="color: #f59e0b; font-weight: bold; text-align: right; font-size: 12px;"><span id="gcs_live_alt">0</span> m</td>
+                    </tr>
+                    <tr style="height: 24px;">
+                        <td style="color: #cbd5e1; font-size: 12px;">🧭 방향각 (Yaw):</td>
+                        <td style="color: #a78bfa; font-weight: bold; text-align: right; font-size: 12px;"><span id="gcs_live_heading">0.0</span> °</td>
+                    </tr>
+                    <tr style="height: 24px;">
+                        <td style="color: #cbd5e1; font-size: 12px;">📍 실시간 좌표:</td>
+                        <td id="gcs_live_coords" style="color: #e2e8f0; text-align: right; font-size: 10px; font-family: monospace;">X: 0.00000, Y: 0.00000</td>
+                    </tr>
+                </table>
             </div>
 
+            <!-- 드론 임무경로 표 & JSON 모달 구조 -->
+            <div id="gcs_json_preview_modal">
+                <div id="gcs_modal_box">
+                    <div id="gcs_modal_header">
+                        <strong style="color:#00ffcc; font-size:15px;">🛸 드론 자율비행 임무경로 데이터 명세</strong>
+                        <button id="gcs_json_modal_close_x" class="gcs-m-btn" style="background:none; color:#94a3b8; font-size:16px;">✕</button>
+                    </div>
+
+                    <div id="gcs_modal_subbar">
+                        <div style="display:flex; gap:16px; color:#cbd5e1;">
+                            <span>• 총 노드: <strong id="gcs_summary_count" style="color:#f1c40f;">0개</strong></span>
+                            <span>• 예상 비행시간: <strong id="gcs_summary_time" style="color:#38bdf8;">0초</strong></span>
+                            <span>• 목적지 층수: <strong id="gcs_summary_floor" style="color:#ef5350;">-층</strong></span>
+                        </div>
+                        <div style="display:inline-flex; background:#1e293b; border-radius:5px; padding:3px; border:1px solid #334155; gap:4px;">
+                            <button id="gcs_tab_table_btn" class="gcs-m-btn gcs-tab-btn active">📊 표(테이블) 보기</button>
+                            <button id="gcs_tab_json_btn" class="gcs-m-btn gcs-tab-btn">💻 JSON 원문 보기</button>
+                        </div>
+                    </div>
+
+                    <div id="gcs_modal_table_wrap">
+                        <table id="gcs_modal_table">
+                            <thead>
+                                <tr>
+                                    <th>순번</th>
+                                    <th style="text-align:left;">노드 ID (층수)</th>
+                                    <th>임무 명령</th>
+                                    <th>경도 (X)</th>
+                                    <th>위도 (Y)</th>
+                                    <th>해발고도 (상대)</th>
+                                    <th>기수 방위각</th>
+                                    <th>호버링</th>
+                                    <th>속도</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gcs_modal_tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <textarea id="gcs_json_preview_textarea" readonly></textarea>
+
+                    <div id="gcs_modal_footer">
+                        <input type="file" id="gcs_modal_json_file_input" accept=".json" style="display: none;" />
+                        <button type="button" id="gcs_json_load_btn" style="background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">📂 JSON 파일읽기</button>
+                        <button id="gcs_json_copy_btn" class="gcs-m-btn" style="background:#334155; color:#fff; border:1px solid #475569;">📋 JSON 복사</button>
+                        <button id="gcs_json_download_file_btn" class="gcs-m-btn" style="background:#00ffcc; color:#000;">💾 JSON 파일저장</button>
+                        <button type="button" id="gcs_modal_sim_start_btn" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">🚀 시뮬레이션</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <!-- 오른쪽 패널 끝 -->
 
     </div>
     <!-- 메인 컨텐츠 영역 끝 -->
 
-    <!-- ========================================== -->
+
+<!-- ========================================== -->
     <!-- ⬇️ 스크립트 로드 및 모듈 초기화 영역 ⬇️ -->
     <!-- ========================================== -->
 
-    <!-- OpenLayers 최신 스타일시트 및 코어 라이브러리 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" type="text/css" />
-    <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
+    <!-- OpenLayers 코어 라이브러리 -->
+    <!-- <script src="https://jsdelivr.net"></script> -->
 
-    <!-- 맵 매니저 모듈 -->
-    <script src="/static/js/map_manager.js?v=2"></script>
+    <!-- 맵 매니저 모듈 (기존 index.html) -->
+    <script src="/static/js/map_3d.js"></script>
 
-    <!-- ✨ 드롭다운 자동완성(디바운스) 스크립트 -->
+    <!-- GCS 분할 경량화 모듈 멀티 로더 링크 (기존 gcs.html) -->
+    <!-- <script type="text/javascript" src="./gcs_engine.js"></script>
+    <script type="text/javascript" src="./gcs_view.js"></script>
+    <script type="text/javascript" src="./gcs_avoid.js"></script> -->
+    <script>
+        jQuery(document).ready(function() {
+            if (typeof window.renderWaypointListUI === "function") {
+                window.renderWaypointListUI();
+            }
+        });
+    </script>
+
+    <!-- 드롭다운 자동완성(디바운스) 스크립트 -->
     <script>
         window.searchTimeout = null; 
 
         window.handleAutoSearch = function() {
-            const query = document.getElementById('address-input').value;
+            const inputEl = document.getElementById('address-input');
+            if (!inputEl) return;
+            const query = inputEl.value;
             const dropdown = document.getElementById('search-results-dropdown');
 
             if (!query.trim()) {
@@ -481,9 +460,7 @@
     <!-- 페이지 이탈 경고 -->
     <script>
         window.addEventListener('beforeunload', function (event) {
-            // 표준 명세에 따른 설정 (크롬, 파이어폭스 등에서 필수)
             event.preventDefault();
-            // 브라우저 기본 경고창 활성화
             event.returnValue = ''; 
         });
     </script>
@@ -500,14 +477,12 @@
 
         // 2. 날씨 코드(숫자)를 한글 상태 문구로 변환하는 함수
         function getWeatherConditionText(weatherCode, ptyCode) {
-            // 기상청 비/눈 데이터 최우선 반영
             if (ptyCode !== undefined && ptyCode !== null && ptyCode > 0) {
                 if (ptyCode === 1 || ptyCode === 5) return '비 🌧️';
                 if (ptyCode === 2 || ptyCode === 6) return '비/눈 🌨️';
                 if (ptyCode === 3 || ptyCode === 7) return '눈 ❄️';
             }
             
-            // Open-Meteo 코드 변환
             if (weatherCode !== undefined && weatherCode !== null) {
                 if (weatherCode === 0) return '맑음 ☀️';
                 if (weatherCode === 1 || weatherCode === 2) return '구름조금 🌤️';
@@ -526,7 +501,6 @@
                 if (!response.ok) throw new Error("서버 응답 오류");
                 const data = await response.json();
 
-                // UI 매핑
                 document.getElementById('w-speed').innerText = data.wind_speed !== null ? `${data.wind_speed} m/s` : '-- m/s';
                 document.getElementById('w-dir').innerText = data.wind_direction !== null 
                     ? `${data.wind_direction}° ${getDirectionText(data.wind_direction)}` 
@@ -566,16 +540,14 @@
     <script>
         let jogInterval = null;
 
-        // 마우스를 누르면 0.2초 간격으로 이동 명령 지속 전송
         function startJog(cmd) {
             if (jogInterval) clearInterval(jogInterval);
-            sendCommand(cmd); // 즉시 1회 전송
+            sendCommand(cmd);
             jogInterval = setInterval(() => {
                 sendCommand(cmd);
             }, 200);
         }
 
-        // 마우스를 떼거나 영역을 벗어나면 정지 명령(RC_STOP) 전송
         function stopJog() {
             if (jogInterval) {
                 clearInterval(jogInterval);
@@ -592,77 +564,77 @@
         const body = document.getElementById('gamepad-body');
         const toggleBtn = document.getElementById('btn-toggle-gamepad');
 
-        let isDragging = false;
-        let currentX, currentY, initialMouseX, initialMouseY;
+        if (gamepad && header) {
+            let isDragging = false;
+            let currentX, currentY, initialMouseX, initialMouseY;
 
-        // 1. 드래그 시작 (헤더를 마우스로 눌렀을 때)
-        header.addEventListener('mousedown', (e) => {
-            if(e.target.tagName.toLowerCase() === 'button') return; // 버튼 클릭은 무시
-            
-            isDragging = true;
-            
-            // 핵심: 지도 영역에 갇히지 않도록 position을 fixed로 강제 변환
-            const rect = gamepad.getBoundingClientRect();
-            gamepad.style.position = 'fixed';
-            gamepad.style.left = rect.left + 'px';
-            gamepad.style.top = rect.top + 'px';
-            gamepad.style.bottom = 'auto'; // 하단 고정 해제
-            gamepad.style.right = 'auto';
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.tagName.toLowerCase() === 'button') return;
+                
+                isDragging = true;
+                const rect = gamepad.getBoundingClientRect();
+                gamepad.style.position = 'fixed';
+                gamepad.style.left = rect.left + 'px';
+                gamepad.style.top = rect.top + 'px';
+                gamepad.style.bottom = 'auto';
+                gamepad.style.right = 'auto';
 
-            initialMouseX = e.clientX;
-            initialMouseY = e.clientY;
-            currentX = rect.left;
-            currentY = rect.top;
+                initialMouseX = e.clientX;
+                initialMouseY = e.clientY;
+                currentX = rect.left;
+                currentY = rect.top;
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
 
-        // 2. 드래그 중
-        function onMouseMove(e) {
-            if (!isDragging) return;
-            e.preventDefault(); // 텍스트 선택 등 방해 동작 방지
-            
-            const dx = e.clientX - initialMouseX;
-            const dy = e.clientY - initialMouseY;
-            gamepad.style.left = (currentX + dx) + 'px';
-            gamepad.style.top = (currentY + dy) + 'px';
-        }
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                const dx = e.clientX - initialMouseX;
+                const dy = e.clientY - initialMouseY;
+                gamepad.style.left = (currentX + dx) + 'px';
+                gamepad.style.top = (currentY + dy) + 'px';
+            }
 
-        // 3. 드래그 종료
-        function onMouseUp() {
-            isDragging = false;
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
 
-        // 4. 숨기기/펼치기 토글 기능
-        window.toggleGamepad = function() {
-            if (body.style.display === 'none') {
+            window.toggleGamepad = function() {
+                if (!body || !toggleBtn) return;
+                if (body.style.display === 'none') {
+                    body.style.display = 'flex';
+                    toggleBtn.innerText = '－';
+                    header.style.borderRadius = '8px 8px 0 0';
+                } else {
+                    body.style.display = 'none';
+                    toggleBtn.innerText = '＋';
+                    header.style.borderRadius = '8px';
+                }
+            };
+
+            window.resetGamepadPosition = function() {
+                if (!body || !toggleBtn) return;
+                gamepad.style.position = '';
+                gamepad.style.left = '';
+                gamepad.style.top = '';
+                gamepad.style.bottom = '';
+                gamepad.style.right = '';
                 body.style.display = 'flex';
                 toggleBtn.innerText = '－';
-                header.style.borderRadius = '8px 8px 0 0'; // 모서리 둥글기 원상복구
-            } else {
-                body.style.display = 'none';
-                toggleBtn.innerText = '＋';
-                header.style.borderRadius = '8px'; // 닫혔을 때 전체 둥글게
+                header.style.borderRadius = '8px 8px 0 0';
+            };
+        }
+    </script>
+    <script>
+        jQuery(document).ready(function() {
+            if (typeof window.renderWaypointListUI === "function") {
+                window.renderWaypointListUI();
             }
-        };
-
-        // 5. 초기 위치로 복귀 기능 (↺ 버튼)
-        window.resetGamepadPosition = function() {
-            // 인라인으로 부여된 fixed 및 위치 스타일을 모두 제거하고 원래 CSS 속성으로 되돌림
-            gamepad.style.position = '';
-            gamepad.style.left = '';
-            gamepad.style.top = '';
-            gamepad.style.bottom = '';
-            gamepad.style.right = '';
-            
-            // 만약 닫혀있었다면 자동으로 열어줌
-            body.style.display = 'flex';
-            toggleBtn.innerText = '－';
-            header.style.borderRadius = '8px 8px 0 0';
-        };
+        });
     </script>
 </body>
 </html>
