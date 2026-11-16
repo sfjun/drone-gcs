@@ -1,0 +1,72 @@
+{
+  "mission_id": "GCS_MISSION_20261115142835",
+  "created_at": "2026. 11. 15. 오후 11:28:35",
+  "coordinate_frame": "WGS84_AMSL",
+  "total_waypoints": 4,
+  "estimated_flight_time_sec": 28,
+  "home_position": {
+    "longitude_X": 126.919412,
+    "latitude_Y": 37.460822,
+    "base_height_m": 111,
+    "takeoff_altitude_m": 230
+  },
+  "waypoints": [
+    {
+      "seq": 1,
+      "node_id": "Home",
+      "command": "TAKEOFF",
+      "address": "3D 건물 아파트 공역 옥상",
+      "longitude_X": 126.919412,
+      "latitude_Y": 37.460822,
+      "altitude_amsl": 230,
+      "altitude_agl": 119,
+      "base_height_m": 111,
+      "heading_deg": 0,
+      "hold_time_sec": 4.5,
+      "speed_mps": 5
+    },
+    {
+      "seq": 2,
+      "node_id": "WP_1",
+      "command": "WAYPOINT",
+      "address": "3D 건물 비율 연동 순항 공역",
+      "longitude_X": 126.918967,
+      "latitude_Y": 37.459127,
+      "altitude_amsl": 230,
+      "altitude_agl": 55,
+      "base_height_m": 175,
+      "heading_deg": 102,
+      "hold_time_sec": 1.5,
+      "speed_mps": 10
+    },
+    {
+      "seq": 3,
+      "node_id": "WP_AUTO_GUARD",
+      "command": "HOVER_ALIGN",
+      "address": "최종 자율 항행 목적지 공역 직상공 수직 진입점",
+      "longitude_X": 126.92029,
+      "latitude_Y": 37.458903,
+      "altitude_amsl": 230,
+      "altitude_agl": 100,
+      "base_height_m": 130,
+      "heading_deg": 0,
+      "hold_time_sec": 3.5,
+      "speed_mps": 8
+    },
+    {
+      "seq": 4,
+      "node_id": "Destination",
+      "command": "LAND",
+      "address": "최종 자율 항행 목적지 공역",
+      "longitude_X": 126.92029,
+      "latitude_Y": 37.458903,
+      "altitude_amsl": 185,
+      "altitude_agl": 55,
+      "base_height_m": 130,
+      "heading_deg": 0,
+      "hold_time_sec": 0,
+      "speed_mps": 2,
+      "target_floor": 18
+    }
+  ]
+}
