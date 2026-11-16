@@ -114,28 +114,36 @@ document.addEventListener("DOMContentLoaded", function() {
         crossX.style.top = (e.clientY - rect.top) + 'px';
     });
 
-    var droneSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="48" height="48" style="filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5));">
-        <g stroke="#38bdf8" stroke-width="6" fill="none">
-            <circle cx="22" cy="22" r="16"/>
-            <circle cx="78" cy="22" r="16"/>
-            <circle cx="22" cy="78" r="16"/>
-            <circle cx="78" cy="78" r="16"/>
-        </g>
-        <g stroke="#38bdf8" stroke-width="8" stroke-linecap="round">
-            <line x1="22" y1="22" x2="50" y2="50"/>
-            <line x1="78" y1="22" x2="50" y2="50"/>
-            <line x1="22" y1="78" x2="50" y2="50"/>
-            <line x1="78" y1="78" x2="50" y2="50"/>
-        </g>
-        <rect x="36" y="32" width="28" height="36" rx="8" fill="#38bdf8"/>
-        <rect x="46" y="26" width="8" height="8" rx="2" fill="#0f172a"/>
-        <circle cx="50" cy="30" r="2" fill="#ef4444"/>
-        <g fill="#0f172a">
-            <circle cx="22" cy="22" r="4"/>
-            <circle cx="78" cy="22" r="4"/>
-            <circle cx="22" cy="78" r="4"/>
-            <circle cx="78" cy="78" r="4"/>
-        </g>
+    // 🎯 VTOL(수직이착륙기) 형태의 2D SVG 아이콘으로 교체
+    var droneSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="60" height="60" style="filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5));">
+        <!-- Booms (수직이착륙 모터 지지대) -->
+        <rect x="25" y="20" width="6" height="60" fill="#0f172a" rx="3"/>
+        <rect x="69" y="20" width="6" height="60" fill="#0f172a" rx="3"/>
+        
+        <!-- 4 Rotors (프로펠러) -->
+        <circle cx="28" cy="20" r="12" stroke="#38bdf8" stroke-width="4" fill="none" stroke-dasharray="4 2"/>
+        <circle cx="72" cy="20" r="12" stroke="#38bdf8" stroke-width="4" fill="none" stroke-dasharray="4 2"/>
+        <circle cx="28" cy="80" r="12" stroke="#38bdf8" stroke-width="4" fill="none" stroke-dasharray="4 2"/>
+        <circle cx="72" cy="80" r="12" stroke="#38bdf8" stroke-width="4" fill="none" stroke-dasharray="4 2"/>
+        <circle cx="28" cy="20" r="4" fill="#0f172a"/>
+        <circle cx="72" cy="20" r="4" fill="#0f172a"/>
+        <circle cx="28" cy="80" r="4" fill="#0f172a"/>
+        <circle cx="72" cy="80" r="4" fill="#0f172a"/>
+        
+        <!-- Main Wings (주 날개) -->
+        <path d="M 5 55 L 42 43 L 58 43 L 95 55 L 95 62 L 58 52 L 42 52 L 5 62 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+        
+        <!-- Tail (꼬리 날개) -->
+        <path d="M 32 85 L 45 72 L 55 72 L 68 85 L 62 90 L 50 82 L 38 90 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+        
+        <!-- Fuselage (동체) -->
+        <rect x="40" y="8" width="20" height="80" rx="10" fill="#38bdf8" stroke="#0f172a" stroke-width="4"/>
+        
+        <!-- Cockpit (조종석/전면 센서부) -->
+        <path d="M 44 20 Q 50 6 56 20 Z" fill="#0f172a"/>
+        
+        <!-- Status LED -->
+        <circle cx="50" cy="38" r="3" fill="#ef4444"/>
     </svg>`;
     
     // 🎯 원래 디폴트 마커 좌표 복구
@@ -582,7 +590,8 @@ window.executeNaviDispatch = async function(startLat, startLon, targetLat, targe
     const KAKAO_REST_KEY = "210a614a5fb6ebcfa3c618600c3a39ab"; 
     
     // 카카오 길찾기 단건 호출 API
-    const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${startLon},${startLat}&destination=${targetLon},${targetLat}`;
+    // map_manager.js 의 executeNaviDispatch 함수 내 URL 1줄 수정
+    const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${startLon},${startLat}&destination=${targetLon},${targetLat}&priority=DISTANCE`;
 
     try {
         const response = await fetch(url, {

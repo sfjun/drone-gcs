@@ -21,13 +21,13 @@ body {
 .content { 
     display: flex; 
     flex-direction: row;
-    flex-wrap: wrap;       /* 💡 창이 작아지면 자식 패널들이 아래로 떨어지도록 유연성 유지 */
+    flex-wrap: wrap;       /* 💡 창이 작아지면 자식 패널들이 아래로 떨어지도록 반응형 유지 */
     gap: 20px; 
     flex: 1; 
     width: 100%;
-    height: calc(100% - 40px); /* 💡 부모 바디 크기를 절대 넘어가지 못하도록 제약 */
-    min-height: 0;         /* 💡 Flex 자식의 무한 확장을 막는 1차 방어벽 */
-    overflow-y: auto;       /* 💡 [핵심] 창이 아래로 떨어져 화면이 넘칠 경우, 창 전체가 늘어나는 대신 이 컨테이너 내부에만 스크롤이 생김 */
+    height: calc(100% - 40px); 
+    min-height: 0;         
+    overflow-y: auto;      /* 💡 창이 아래로 떨어져 화면이 넘칠 경우 내부에만 세로 스크롤 생성 */
 }
 
 /* 3. 각 패널들의 유연한 성장 및 최소 크기 제어 */
@@ -40,39 +40,35 @@ body {
     flex-direction: column; 
     box-sizing: border-box;
     
-    /* 💡 평소에는 100% 높이를 채우되, 줄바꿈 시 유연하게 대처 */
     flex-grow: 1;      
     flex-shrink: 1;     
-    min-width: 0;          /* 💡 내부 캔버스 때문에 패널이 무한히 벌어지는 현상 차단 */
-    min-height: 0;         /* 💡 내부 캔버스 때문에 패널이 무한히 늘어나는 현상 차단 */
+    min-width: 0;          
+    min-height: 0;         
 }
 
-/* [좌측 드론 패널] - 조종기가 찌그러지지 않게 넉넉한 너비 확보 */
+/* [좌측 드론 패널] - 너비 축소 */
 .left { 
-    flex-basis: 340px;     /* 기본 너비를 늘려줌 */
-    min-width: 340px;      /* 창이 좁아져도 조종기가 찌그러지지 않는 최소 방어선 */
-    max-width: 380px;      /* 화면이 태평양처럼 넓어져도 혼자 다 차지하지 않게 막음 */
+    flex-basis: 300px;     /* 기본 너비 축소 (기존 340px -> 300px) */
+    min-width: 300px;      /* 최소 늘어남 방어선 축소 (기존 340px -> 300px) */
+    max-width: 320px;      /* 최대 팽창치 축소 (기존 380px -> 340px) */
     height: 100%;
     min-height: 400px;     
 }
 
-/* [중앙 영상 패널] */
+/* [중앙 영상 패널] - 처음부터 안 떨어지게 크기 다이어트 */
 .center { 
-    flex-basis: 550px;  
-    min-width: 450px;   
+    flex-basis: 400px;  
+    min-width: 350px;   
     height: 100%;
-    min-height: 400px;     /* 줄바꿈 시 유지할 최소 높이 */
+    min-height: 400px;     
     overflow: hidden; 
 } 
 
-/* [우측 지도 패널] */
+/* [우측 지도 패널] - 처음부터 안 떨어지게 크기 다이어트 */
 .right { 
-    flex-basis: 600px;  /* 평소 가로 권장 너비 */
-    min-width: 400px;   
+    flex-basis: 450px;  
+    min-width: 350px;   
     
-    /* 💡 [핵심] 평소에는 한 줄에 맞춰 늘어나다가, 창이 좁아져서 아래 줄로 떨어지는 순간
-          지도 패널 전체 높이를 '정확히 고정된 픽셀(예: 500px)'로 고정해 버립니다.
-          이렇게 단단한 벽을 쳐주어야 세슘이 밑으로 화면을 늘리지 못합니다. */
     height: 100%;
     min-height: 500px !important; 
 }
@@ -84,7 +80,6 @@ body {
     min-height: 200px; 
 }
 
-/* 🚨 기존의 map-cesium-wrapper 스타일을 인라인이 아닌 여기에 확실하게 고정합니다. */
 #map-cesium-wrapper {
     flex: 1;
     width: 100%;
@@ -92,24 +87,16 @@ body {
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid #1e293b;
-    
-    /* 🎯 [매우 중요] 자식인 세슘 캔버스를 내부에 가두기 위해 부모는 반드시 relative여야 합니다. */
     position: relative !important; 
 }
 
-/* 🚨 무한 루프의 진짜 범인이었던 #map(또는 cesiumContainer) 영역입니다.
-      반드시 이 구조로 교체하여 물리 엔진을 잠가야 합니다. */
 #map, #cesiumContainer {
-    /* 🎯 [최후의 치트키] 위에서 지정한 부모 wrapper(#map-cesium-wrapper)의 
-          가로세로 500px 크기 안에 지도를 강제로 묶어버리는 자바스크립트/CSS 국룰 공식입니다.
-          이렇게 absolute로 묶으면 지도가 브라우저 화면을 밑으로 밀어낼 수 없습니다. */
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    min-height: 0 !important; /* ❌ 스스로 아래로 늘어나는 성질을 완벽 차단 */
-    
+    min-height: 0 !important; 
     border-radius: 5px; 
     margin-bottom: 0 !important; 
     z-index: 1; 
@@ -127,7 +114,7 @@ input[type="text"] {
     font-size: 10pt; 
 }
 
-/* 공통 버튼 설정 - width: 100% 제거 */
+/* 공통 버튼 설정 */
 button { 
     background: #1e293b; 
     color: #e2e8f0; 
@@ -150,7 +137,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-blue { background: #0284c7; border: none; } .btn-blue:hover:not(:disabled) { background: #0369a1; }
 .btn-gray { background: #475569; border: none; } .btn-gray:hover:not(:disabled) { background: #334155; }
 
-/* 왼쪽 패널 내부 버튼 100% 꽉 채우기 */
 .left button {
     width: 100%;
 }
@@ -209,7 +195,7 @@ h3 {
 #video-canvas {
     width: 100%;
     height: 100%;
-    object-fit: fill; /* 원상복구 (또는 이 줄을 아예 삭제하셔도 됩니다) */
+    object-fit: fill; 
 }
 
 .center > div:last-child {
@@ -334,23 +320,19 @@ h3 {
     display: none !important;
 }
 
-/* OpenLayers 기본 줌 컨트롤 우측 상단으로 이동 */
 .ol-zoom {
     left: auto !important;
     right: 10px !important;
-    top: 50px !important; /* 위성/일반 버튼 아래쪽에 겹치지 않게 배치 */
+    top: 50px !important; 
 }
 
-/* =========================================================================
-   반응형 헤더 & 기상 정보 (창 축소 시 기상정보 글자-위, 데이터-아래 배치)
-   ========================================================================= */
 @media (max-width: 1350px) {
     #weather-info {
         gap: 12px !important;
         padding: 8px 15px !important;
     }
     #weather-info > div {
-        flex-direction: column;      /* 텍스트를 위로, 데이터를 아래로 */
+        flex-direction: column;      
         justify-content: center;
         gap: 3px !important;
         font-size: 0.85rem;
@@ -361,7 +343,6 @@ h3 {
    🎮 가상 조종기 (드래그, 접기, 그리드 정돈 완벽 통합본)
    ========================================================================= */
 
-/* 1. 조종기 전체 컨테이너 */
 .virtual-gamepad {
     position: absolute;
     bottom: 15px;
@@ -374,13 +355,12 @@ h3 {
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    padding: 0; /* 패딩을 없애고 헤더/바디로 나눔 */
+    padding: 0; 
     width: auto; 
     margin: 0;
     box-sizing: border-box;
 }
 
-/* 2. 드래그용 상단 헤더 */
 .gamepad-header {
     display: flex;
     justify-content: space-between;
@@ -390,31 +370,29 @@ h3 {
     border-radius: 8px 8px 0 0;
     cursor: grab;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    user-select: none; /* 드래그 시 글자 선택 방지 */
+    user-select: none; 
 }
 .gamepad-header:active { cursor: grabbing; }
 
-/* 3. 헤더 조작 버튼 (복귀, 숨기기) - 크기 및 클릭 영역 확대 */
 .gamepad-btn {
     background: transparent;
     border: none;
     color: #94a3b8;
-    font-size: 18px;         /* 글자 크기: 14px -> 18px 확대 */
+    font-size: 18px;         
     cursor: pointer;
-    padding: 6px 10px;       /* 마우스로 클릭하기 쉽도록 여백(클릭 판정 영역) 확대 */
+    padding: 6px 10px;       
     margin: 0;
     line-height: 1;
     font-weight: bold;
     transition: 0.2s;
     width: auto;
-    border-radius: 4px;      /* 마우스 오버 시 예쁘게 보이도록 모서리 둥글기 추가 */
+    border-radius: 4px;      
 }
 .gamepad-btn:hover { 
     color: #38bdf8; 
-    background: rgba(255, 255, 255, 0.1); /* 마우스 올렸을 때 버튼 영역이 눈에 보이게 강조 */
+    background: rgba(255, 255, 255, 0.1); 
 }
 
-/* 4. 기존 조종기 요소들을 담는 바디 영역 */
 .gamepad-body {
     display: flex;
     justify-content: center;
@@ -423,14 +401,12 @@ h3 {
     padding: 12px 15px;
 }
 
-/* 5. 각 영역(스틱/버튼)을 감싸는 컨테이너 */
 .pad-container {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* 6. 라벨 텍스트 */
 .pad-label {
     font-size: 11px;
     color: #94a3b8;
@@ -440,7 +416,6 @@ h3 {
     text-align: center;
 }
 
-/* ✨ 7. 십자키 버튼 3x3 그리드 배열 (모양 깨짐 해결) ✨ */
 .d-pad {
     display: grid;
     grid-template-columns: repeat(3, 24px); 
@@ -448,7 +423,6 @@ h3 {
     gap: 3px;
 }
 
-/* 8. 십자키 화살표 버튼 디자인 */
 .pad-btn {
     background: #1e293b;
     color: #cbd5e1;
@@ -456,7 +430,7 @@ h3 {
     border-radius: 6px;
     margin: 0 !important;
     padding: 0;
-    font-size: 11px; /* 화살표 크기 */
+    font-size: 11px; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -479,7 +453,6 @@ h3 {
     box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
 }
 
-/* 9. 십자키 중앙 장식 */
 .pad-center {
     background: radial-gradient(circle, #475569 20%, #1e293b 80%);
     border-radius: 50%;
@@ -488,7 +461,6 @@ h3 {
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
 }
 
-/* 10. 중앙 시스템 제어 영역 고정폭 */
 .pad-center-controls {
     display: flex;
     flex-direction: column;
@@ -498,7 +470,6 @@ h3 {
     flex-shrink: 0;
 }
 
-/* 11. 중앙 시스템 제어 버튼 세부 정돈 */
 .pad-center-controls button {
     padding: 7px 0 !important;
     font-size: 10px !important;
@@ -508,74 +479,43 @@ h3 {
     transition: all 0.1s ease;
     box-shadow: 0 3px 5px rgba(0,0,0,0.3);
 }
-.pad-center-controls button:active {
-    transform: scale(0.92) translateY(2px);
-    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
-}
-
-/* 5. 중앙 시스템 제어 영역 고정폭 할당 (양쪽 십자키를 밀어내지 않게 함) */
-.pad-center-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 84px; /* 무한정 늘어나지 않도록 너비 고정 */
-    flex-shrink: 0;
-}
-
-/* 6. 중앙 버튼들 강제 정돈 (HTML 인라인 스타일 무시하고 예쁘게 맞춤) */
-.pad-center-controls button {
-    padding: 7px 0 !important;
-    font-size: 10px !important;
-    margin: 0 !important;
-    width: 100%;
-    border-radius: 4px !important;
-    transition: all 0.1s ease;
-    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
-}
-
 .pad-center-controls button:active {
     transform: scale(0.92) translateY(2px);
     box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
 }
 
 /* =========================================================================
-   ✨ AI 영상 경고 오버레이 (HUD) - 하단 배치 및 폰트 축소 버전
+   ✨ AI 영상 경고 오버레이 (HUD) 
    ========================================================================= */
 .ai-video-overlay {
     position: absolute;
-    bottom: 20px;          /* 기존 top에서 bottom으로 변경하여 하단에 배치 */
+    bottom: 20px;          
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.85); /* 관제창 UI와 어울리는 어두운 반투명 배경 */
-    color: #f87171;        /* 눈이 편안한 부드러운 경고 레드 컬러 */
-    padding: 6px 16px;     /* 패딩을 줄여서 자막스럽게 슬림하게 조정 */
+    background: rgba(15, 23, 42, 0.85); 
+    color: #f87171;        
+    padding: 6px 16px;     
     border-radius: 4px;    
-    font-size: 13px;       /* 채팅창 글씨 크기(약 13px)와 동일하게 축소 */
+    font-size: 13px;       
     font-weight: bold;
     z-index: 1000;         
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     pointer-events: none;  
-    white-space: nowrap;   /* 글씨가 찌그러지지 않고 한 줄로 예쁘게 출력되도록 설정 */
+    white-space: nowrap;   
     
-    /* 부드럽게 나타나고 사라지는 효과 */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s;
 }
 
-/* 알림이 활성화되었을 때의 상태 */
 .ai-video-overlay.active {
     opacity: 1;
     visibility: visible;
 }
 
-/* ==========================================
-   ✨ AI 탐지 객체 말풍선 라벨 스타일
-   ========================================== */
 .ai-person-tag {
     position: absolute;
-    background: rgba(239, 68, 68, 0.9); /* 눈에 띄는 붉은색 반투명 배경 */
+    background: rgba(239, 68, 68, 0.9); 
     color: white;
     padding: 2px 6px;
     font-size: 11px;
@@ -584,14 +524,11 @@ h3 {
     pointer-events: none;
     white-space: nowrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    transform: translate(-50%, -100%); /* 박스 바로 윗쪽에 위치하도록 조정 */
+    transform: translate(-50%, -100%); 
     z-index: 50;
-    transition: all 0.1s ease-out; /* 부드럽게 따라오도록 설정 */
+    transition: all 0.1s ease-out; 
 }
 
-/* ==========================================
-   웨이포인트 완료 버튼 위 십자선 숨김 및 커서 수정
-   ========================================== */
 #map:has(#waypoint-btn-container:hover) .crosshair-x,
 #map:has(#waypoint-btn-container:hover) .crosshair-y {
     display: none !important;
@@ -600,3 +537,80 @@ h3 {
 #waypoint-btn-container button {
     cursor: pointer !important;
 }
+
+.joy-container-mini {
+    position: relative;
+    width: 100%; height: 100%;
+    min-width: 24px; min-height: 24px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+    border: 1px solid #334155;
+    touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+}
+.joy-stick-mini {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: linear-gradient(145deg, #38bdf8, #2563eb);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3);
+    pointer-events: none;
+    transition: transform 0.05s ease-out;
+}
+
+/* =========================================================================
+   🗺️ 지도 패널 드래그(플로팅) 및 리사이즈 전용 CSS
+   ========================================================================= */
+.map-panel-floating {
+    position: fixed !important;
+    z-index: 9999 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
+    overflow: hidden !important;
+    min-width: 350px !important;
+    min-height: 400px !important;
+}
+
+/* 🪟 4방향(대각선 모서리) 리사이즈 핸들 및 꺾쇠(ㄱ, ㄴ) 디자인 */
+.resize-handle { 
+    position: absolute; 
+    z-index: 10000; 
+    display: none; 
+    background: transparent;
+}
+
+.map-panel-floating .resize-handle { 
+    display: block; 
+    opacity: 0.5;
+    transition: 0.2s;
+}
+
+/* 마우스 올렸을 때 파란색으로 활성화 */
+.map-panel-floating .resize-handle:hover {
+    opacity: 1;
+    border-color: #38bdf8 !important;
+}
+
+/* 각 모서리별 방향에 맞춘 테두리(꺾쇠) 디자인 */
+.res-nw { top: 4px; left: 4px; width: 12px; height: 12px; cursor: nw-resize; z-index: 10001; border-top: 2.5px solid #64748b; border-left: 2.5px solid #64748b; }
+.res-ne { top: 4px; right: 4px; width: 12px; height: 12px; cursor: ne-resize; z-index: 10001; border-top: 2.5px solid #64748b; border-right: 2.5px solid #64748b; }
+.res-sw { bottom: 4px; left: 4px; width: 12px; height: 12px; cursor: sw-resize; z-index: 10001; border-bottom: 2.5px solid #64748b; border-left: 2.5px solid #64748b; }
+.res-se { bottom: 4px; right: 4px; width: 12px; height: 12px; cursor: se-resize; z-index: 10001; border-bottom: 2.5px solid #64748b; border-right: 2.5px solid #64748b; }
+
+/* 드래그 헤더 및 버튼 */
+.map-drag-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #334155;
+    cursor: grab; user-select: none;
+}
+.map-drag-header:active { cursor: grabbing; }
+
+.btn-reset-map {
+    background: transparent; color: #cbd5e1; border: 1px solid #334155; border-radius: 4px;
+    padding: 2px 8px; font-size: 14px; cursor: pointer; font-weight: bold; margin-right: 5px; transition: 0.2s;
+}
+.btn-reset-map:hover { color: #38bdf8; background: rgba(255, 255, 255, 0.1); }
+
+/* 🗺️ 지도 영역 전체에 다크모드 필터 적용 (색상 반전 및 대비 조정)
+#map canvas {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+} */

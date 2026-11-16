@@ -138,28 +138,48 @@
             <h3>DRONE / FLIGHT STATUS</h3>
 
             <!-- 드론 상태 정보 영역 -->
-            <div style="font-family: inherit; font-weight: bold;">
-                <div style="margin-bottom: 8px;"> 
-                    <span style="color:#94a3b8;">MODE:</span> <span id="status-mode" style="color: #38bdf8;">STANDBY</span>
-                </div>
-                <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 4px;"> 
-                    <span style="color:#94a3b8; width: 40px;">ALT:</span> 
+            <div style="font-family: inherit; font-weight: bold; display: grid; grid-template-columns: 110px 1fr; row-gap: 10px; align-items: center;">
+                
+                <!-- MODE -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">MODE</span>
+                <span id="status-mode" style="color: #38bdf8; padding-left: 10px;">STANDBY</span>
+
+                <!-- ALT -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">ALTITUDE</span>
+                <div style="padding-left: 10px;">
                     <span id="status-alt-rel" style="color: #38bdf8; font-weight: bold;">0.0 m</span>
-                    <span style="font-size: 11px; color:#64748b; margin-right: 4px;">(상대)</span>
-                    <span style="color:#94a3b8;">/</span>
-                    <span id="status-alt-msl" style="color: #10b981; font-weight: bold; margin-left: 4px;">0.0 m</span>
-                    <span style="font-size: 11px; color:#64748b;">(해발)</span>
+                    <span style="font-size: 11px; color:#64748b; margin-left: 6px;">(상대)</span>
                 </div>
-                <div style="margin-bottom: 8px;"> 
-                    <span style="color:#94a3b8;">GPS:</span> <span id="status-gps">대기 중...</span>
+
+                <!-- 지면 해발 -->
+                <span></span>
+                <div style="padding-left: 10px;">
+                    <span id="status-alt-terrain" style="color: #facc15; font-weight: bold;">0.0 m</span>
+                    <span style="font-size: 11px; color:#64748b; margin-left: 6px;">(지면해발)</span>
                 </div>
-                <div style="margin-bottom: 8px;"> 
-                    <span style="color:#94a3b8;">BATTERY:</span> <span id="status-battery">100%</span>
+
+                <!-- 드론 해발 -->
+                <span></span>
+                <div style="padding-left: 10px;">
+                    <span id="status-alt-drone" style="color: #10b981; font-weight: bold;">0.0 m</span>
+                    <span style="font-size: 11px; color:#64748b; margin-left: 6px;">(드론해발)</span>
                 </div>
-                <!-- 시스템 상태 항목 -->
-                <div style="margin-bottom: 8px;">
-                    <span style="color:#94a3b8;">SYS STATUS:</span> <span id="telemetry-sys-status" style="color: #FFC107; font-weight: bold;">CAUTION</span>
-                </div>
+
+                <!-- GPS -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">GPS</span>
+                <span id="status-gps" style="padding-left: 10px;">대기 중...</span>
+
+                <!-- GPS SATS -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">GPS SATS</span>
+                <span id="status-sats" style="color: #10b981; font-weight: bold; padding-left: 10px;">대기 중...</span>
+
+                <!-- BATTERY -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">BATTERY</span>
+                <span id="status-battery" style="padding-left: 10px;">100%</span>
+
+                <!-- SYS STATUS -->
+                <span style="background: #1e293b; color: #cbd5e1; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 12px; letter-spacing: 0.5px;">SYS STATUS</span>
+                <span id="telemetry-sys-status" style="color: #FFC107; font-weight: bold; padding-left: 10px;">CAUTION</span>
             </div>
 
             <!-- 구분선 -->
@@ -213,9 +233,9 @@
         <div class="center panel">
 
             <div class="tabs">
-                <button class="tab-btn active">RGB LIVE</button>
-                <button class="tab-btn">THERMAL</button>
-                <button class="tab-btn">AI OVERLAY</button>
+                <button class="tab-btn active" onclick="switchVideoTab('RGB', this)">RGB LIVE</button>
+                <button class="tab-btn" onclick="switchVideoTab('THERMAL', this)">THERMAL</button>
+                <button class="tab-btn" onclick="switchVideoTab('AI_OVERLAY', this)">AI OVERLAY</button>
             </div>
 
             <!-- 비디오 영역 (높이 고정 및 고정 비율 유지) -->
@@ -246,37 +266,44 @@
         </div> <!-- 중앙 패널 끝 -->
 
         <!-- 오른쪽 패널 -->
-        <div class="panel right">
+        <div class="panel right" id="map-panel">
+            
+            <!-- 🪟 4방향(대각선 모서리) 리사이즈 핸들 -->
+            <div class="resize-handle res-nw" data-dir="nw"></div>
+            <div class="resize-handle res-ne" data-dir="ne"></div>
+            <div class="resize-handle res-sw" data-dir="sw"></div>
+            <div class="resize-handle res-se" data-dir="se"></div>
 
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
-                <h3 style="margin:0;">
-                    SITUATION MAP
-                </h3>
-
+            <!-- ✋ 드래그 핸들 (헤더 영역) -->
+            <div id="map-panel-header" class="map-drag-header">
+                <h3 style="margin:0; pointer-events: none;">SITUATION MAP</h3>
+                
                 <div style="display:flex; gap:5px;">
+                    <!-- ↺ 원위치(초기화) 버튼 -->
+                    <button class="btn-reset-map" onclick="resetMapPanel()" title="지도 위치/크기 초기화">↺</button>
                     <button id="btn-map-osm" class="btn-blue" style="margin:0; padding:5px 12px; font-size:9pt;">일반</button>
                     <button id="btn-map-sat" class="btn-gray" style="margin:0; padding:5px 12px; font-size:9pt;">위성</button>
                 </div>
             </div>
 
             <div style="position:relative; display:flex; flex-direction:column; flex-grow:1;">
-
-               <div id="map" style="width:100%; height:350px;"></div>
+               <!-- 지도가 패널 크기에 맞춰 늘어나도록 flex-grow 적용 -->
+               <div id="map" style="width:100%; flex-grow:1; min-height: 250px;"></div>
 
                 <!-- 🎮 가상 조종기 (드래그, 접기 지원) -->
-                <div class="virtual-gamepad" id="virtual-gamepad">
+                <div class="virtual-gamepad" id="virtual-gamepad" style="border-radius: 8px;">
                     
                     <!-- 상단 드래그 헤더 및 제어 버튼 -->
-                    <div class="gamepad-header" id="gamepad-header">
+                    <div class="gamepad-header" id="gamepad-header" style="border-radius: 8px;">                        
                         <span style="font-size: 11px; font-weight: bold; color: #cbd5e1; pointer-events: none;">🎮 드론 조종패드</span>
                         <div style="display: flex; gap: 5px;">
                             <button class="gamepad-btn" onclick="resetGamepadPosition()" title="초기 위치로 복귀">↺</button>
-                            <button class="gamepad-btn" id="btn-toggle-gamepad" onclick="toggleGamepad()" title="숨기기/펼치기">－</button>
+                            <button class="gamepad-btn" id="btn-toggle-gamepad" onclick="toggleGamepad()" title="숨기기/펼치기">＋</button>
                         </div>
                     </div>
 
                     <!-- 기존 컨트롤 영역 (숨김 대상) -->
-                    <div class="gamepad-body" id="gamepad-body">
+                    <div class="gamepad-body" id="gamepad-body" style="display: none;">
                         <!-- 왼쪽 스틱 -->
                         <div class="pad-container">
                             <div class="pad-label">고도 / 회전</div>
@@ -285,7 +312,11 @@
                                 <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="상승">▲</button>
                                 <div></div>
                                 <button class="pad-btn" onmousedown="startJog('RC_YAW_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌회전">◀</button>
-                                <div class="pad-center"></div>
+                                <div class="pad-center" style="display: flex; justify-content: center; align-items: center; padding: 2px;">
+                                    <div class="joy-container-mini" id="joy-left" style="width: 24px; height: 24px;">
+                                        <div class="joy-stick-mini" id="stick-left"></div>
+                                    </div>
+                                </div>
                                 <button class="pad-btn" onmousedown="startJog('RC_YAW_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우회전">▶</button>
                                 <div></div>
                                 <button class="pad-btn" onmousedown="startJog('RC_THROTTLE_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="하강">▼</button>
@@ -303,6 +334,12 @@
                                 <button class="btn-blue" onclick="sendCommand('LAND')">착륙</button>
                                 <button style="background: #64748b; color: white; border: none;" onclick="sendCommand('BRAKE')">정지</button>
                                 <button style="background: #8b5cf6; color: white; border: none;" onclick="sendCommand('RTH')">RTH</button>
+                                <!-- ✨ 위급 시 즉시 모터 전원을 차단하는 비상 정지(KILL) 버튼 추가 -->
+                                <button onclick="sendCommand('EMERGENCY_KILL')" 
+                                        style="grid-column: span 2; background: #b91c1c; color: #ffffff; border: 1px solid #f87171; font-weight: bold; letter-spacing: -0.5px;"
+                                        title="비행 상태와 무관하게 모터를 즉시 강제 정지합니다">
+                                    🚨 비상정지
+                                </button>
                             </div>
                         </div>
 
@@ -314,7 +351,11 @@
                                 <button class="pad-btn" onmousedown="startJog('RC_PITCH_DOWN')" onmouseup="stopJog()" onmouseleave="stopJog()" title="전진">▲</button>
                                 <div></div>
                                 <button class="pad-btn" onmousedown="startJog('RC_ROLL_LEFT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="좌이동">◀</button>
-                                <div class="pad-center"></div>
+                                <div class="pad-center" style="display: flex; justify-content: center; align-items: center; padding: 2px;">
+                                    <div class="joy-container-mini" id="joy-right" style="width: 24px; height: 24px;">
+                                        <div class="joy-stick-mini" id="stick-right"></div>
+                                    </div>
+                                </div>
                                 <button class="pad-btn" onmousedown="startJog('RC_ROLL_RIGHT')" onmouseup="stopJog()" onmouseleave="stopJog()" title="우이동">▶</button>
                                 <div></div>
                                 <button class="pad-btn" onmousedown="startJog('RC_PITCH_UP')" onmouseup="stopJog()" onmouseleave="stopJog()" title="후진">▼</button>
@@ -325,10 +366,10 @@
                 </div>
                 <!-- 🎮 조종패드 끝 -->
 
-                <!-- 🔍 지도 검색 컨테이너 -->
-                <div id="search-container" style="position:absolute; top:10px; left:10px; z-index:999; display:flex; flex-direction:column; width:500px;">
+                <!-- 🔍 지도 검색 컨테이너 (지도 크기에 맞춰 유연하게 줄어들도록 수정) -->
+                <div id="search-container" style="position:absolute; top:10px; left:10px; right:10px; width:auto; max-width:550px; z-index:999; display:flex; flex-direction:column;">
                     
-                    <div style="display:flex; align-items:center; width:100%; height:32px; background:rgba(30,41,59,0.7); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                    <div style="display:flex; align-items:center; width:100%; height:32px; background:rgba(30,41,59,0.85); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
                         <input
                             type="text"
                             id="address-input"
@@ -359,7 +400,7 @@
                             드론
                         </button>
                     </div>
-
+                            
                     <!-- 드롭다운 결과창 (초기엔 숨김) -->
                     <div id="search-results-dropdown" style="display:none; flex-direction:column; width:100%; margin-top:5px; background:rgba(15,23,42,0.95); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.3); border-radius:5px; box-shadow:0 4px 6px rgba(0,0,0,0.5); max-height:200px; overflow-y:auto;">
                     </div>
@@ -663,6 +704,309 @@
             toggleBtn.innerText = '－';
             header.style.borderRadius = '8px 8px 0 0';
         };
+    </script>
+
+    <!-- 🎮 미니 아날로그 조이스틱 스크립트 -->
+    <script>
+        let joyLeft = { x: 0, y: 0 };
+        let joyRight = { x: 0, y: 0 };
+        let joyTimer = null;
+
+        // 조이스틱 최대 속도 (십자 버튼보다 미세하게 제어 가능)
+        const MAX_SPEED_XY = 2.5; 
+        const MAX_SPEED_Z = 1.5;  
+        const MAX_YAW_RATE = 0.8; 
+
+        function sendJoyCommand() {
+            let vz = joyLeft.y * MAX_SPEED_Z; 
+            let yaw = joyLeft.x * MAX_YAW_RATE;
+            let vx = -joyRight.y * MAX_SPEED_XY;
+            let vy = joyRight.x * MAX_SPEED_XY;
+
+            if (vx === 0 && vy === 0 && vz === 0 && yaw === 0) {
+                // 십자 버튼(jogInterval)을 누르고 있지 않을 때만 정지 명령 전송
+                if (typeof jogInterval === 'undefined' || jogInterval === null) {
+                    sendCommand('RC_STOP');
+                }
+            } else {
+                sendCommand(`JOY_MOVE:${vx.toFixed(2)},${vy.toFixed(2)},${vz.toFixed(2)},${yaw.toFixed(2)}`);
+            }
+        }
+
+        function setupJoystick(containerId, stickId, joyState) {
+            const container = document.getElementById(containerId);
+            const stick = document.getElementById(stickId);
+            let isActive = false;
+            const maxRadius = 15; // 중앙의 좁은 공간에 맞춘 이동 반경 제한
+
+            container.addEventListener('pointerdown', (e) => {
+                isActive = true;
+                stick.style.transition = 'none'; 
+                container.setPointerCapture(e.pointerId); 
+                updateStick(e);
+                if (!joyTimer) joyTimer = setInterval(sendJoyCommand, 150);
+            });
+
+            container.addEventListener('pointermove', (e) => {
+                if (!isActive) return;
+                updateStick(e);
+            });
+
+            const resetStick = () => {
+                if(!isActive) return;
+                isActive = false;
+                joyState.x = 0; joyState.y = 0;
+                stick.style.transition = 'transform 0.15s ease-out';
+                stick.style.transform = `translate(0px, 0px)`;
+                
+                if (joyLeft.x === 0 && joyLeft.y === 0 && joyRight.x === 0 && joyRight.y === 0) {
+                    if (joyTimer) clearInterval(joyTimer);
+                    joyTimer = null;
+                    if (typeof jogInterval === 'undefined' || jogInterval === null) {
+                        sendCommand('RC_STOP');
+                    }
+                }
+            };
+
+            container.addEventListener('pointerup', resetStick);
+            container.addEventListener('pointercancel', resetStick);
+
+            function updateStick(e) {
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                let dx = e.clientX - rect.left - centerX;
+                let dy = e.clientY - rect.top - centerY;
+                
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                }
+                
+                stick.style.transform = `translate(${dx}px, ${dy}px)`;
+                joyState.x = dx / maxRadius;
+                joyState.y = dy / maxRadius;
+            }
+        }
+
+        setupJoystick('joy-left', 'stick-left', joyLeft);
+        setupJoystick('joy-right', 'stick-right', joyRight);
+
+    // ==========================================
+    // ✨ WASD 키보드 연동 (왼쪽 스틱 제어) 및 마우스 공존 처리
+    // ==========================================
+    const keyState = {};
+    const maxRadius = 15; // 미니 스틱 최대 이동 반경
+
+    window.addEventListener('keydown', (e) => {
+        // ✨ 핵심: 채팅창, 주소 검색창 등 입력 필드에 글자를 칠 때는 드론 조종 무시!
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        const key = e.key.toLowerCase();
+        if (['w', 'a', 's', 'd'].includes(key)) {
+            keyState[key] = true;
+            updateStickFromKeyboard();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        const key = e.key.toLowerCase();
+        if (['w', 'a', 's', 'd'].includes(key)) {
+            keyState[key] = false;
+            updateStickFromKeyboard();
+        }
+    });
+
+    function updateStickFromKeyboard() {
+        const stickLeft = document.getElementById('stick-left');
+        if (!stickLeft) return;
+
+        let dx = 0;
+        let dy = 0;
+
+        // W: 상승(위), S: 하강(아래), A: 좌회전(왼쪽), D: 우회전(오른쪽)
+        if (keyState['w']) dy -= maxRadius;
+        if (keyState['s']) dy += maxRadius;
+        if (keyState['a']) dx -= maxRadius;
+        if (keyState['d']) dx += maxRadius;
+
+        // 키를 누르고 있을 때 시각적 스틱 위치 반영 및 값 갱신
+        if (keyState['w'] || keyState['s'] || keyState['a'] || keyState['d']) {
+            stickLeft.style.transition = 'transform 0.05s ease-out';
+            stickLeft.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            joyLeft.x = dx / maxRadius;
+            joyLeft.y = dy / maxRadius;
+
+            if (!joyTimer) {
+                joyTimer = setInterval(sendJoyCommand, 150);
+            }
+        } else {
+            // 모든 키를 떼면 원위치 및 정지
+            stickLeft.style.transform = `translate(0px, 0px)`;
+            joyLeft.x = 0;
+            joyLeft.y = 0;
+
+            if (joyLeft.x === 0 && joyLeft.y === 0 && joyRight.x === 0 && joyRight.y === 0) {
+                if (joyTimer) clearInterval(joyTimer);
+                joyTimer = null;
+                if (typeof jogInterval === 'undefined' || jogInterval === null) {
+                    sendCommand('RC_STOP');
+                }
+            }
+        }
+    }
+    </script>
+
+    <!-- 🗺️ 지도 패널 드래그 및 리사이즈 기능 스크립트 -->
+    <script>
+        const mapPanel = document.getElementById('map-panel');
+        const mapHeader = document.getElementById('map-panel-header');
+        
+        // 💡 지도가 빠져나간 자리를 유지할 투명 더미 패널 변수
+        let mapSpacer = null; 
+
+        let isMapDragging = false;
+        let mapStartX, mapStartY, mapInitialX, mapInitialY;
+
+        // 1. 드래그 시작
+        mapHeader.addEventListener('mousedown', (e) => {
+            if(e.target.tagName.toLowerCase() === 'button') return; 
+            
+            isMapDragging = true;
+            
+            // 처음 드래그 시 고정 크기를 읽어온 후 플로팅 클래스 부여
+            if (!mapPanel.classList.contains('map-panel-floating')) {
+                const rect = mapPanel.getBoundingClientRect();
+                
+                // 지도가 띄워지면, 빈자리에 똑같은 크기의 투명 패널을 끼워넣음
+                mapSpacer = document.createElement('div');
+                mapSpacer.className = 'panel right'; 
+                mapSpacer.style.opacity = '0';          
+                mapSpacer.style.pointerEvents = 'none'; 
+                mapPanel.parentNode.insertBefore(mapSpacer, mapPanel);
+
+                mapPanel.style.left = rect.left + 'px';
+                mapPanel.style.top = rect.top + 'px';
+                mapPanel.style.width = rect.width + 'px';
+                mapPanel.style.height = rect.height + 'px';
+                mapPanel.classList.add('map-panel-floating');
+            }
+
+            mapStartX = e.clientX;
+            mapStartY = e.clientY;
+            mapInitialX = parseFloat(mapPanel.style.left);
+            mapInitialY = parseFloat(mapPanel.style.top);
+
+            document.addEventListener('mousemove', onMapMouseMove);
+            document.addEventListener('mouseup', onMapMouseUp);
+        });
+
+        // 2. 드래그 중 이동
+        function onMapMouseMove(e) {
+            if (!isMapDragging) return;
+            e.preventDefault(); 
+            const dx = e.clientX - mapStartX;
+            const dy = e.clientY - mapStartY;
+            mapPanel.style.left = (mapInitialX + dx) + 'px';
+            mapPanel.style.top = (mapInitialY + dy) + 'px';
+        }
+
+        // 3. 드래그 종료
+        function onMapMouseUp() {
+            isMapDragging = false;
+            document.removeEventListener('mousemove', onMapMouseMove);
+            document.removeEventListener('mouseup', onMapMouseUp);
+        }
+
+        // 4. 원위치(초기화) 버튼 기능
+        window.resetMapPanel = function() {
+            mapPanel.classList.remove('map-panel-floating');
+            mapPanel.style.left = '';
+            mapPanel.style.top = '';
+            mapPanel.style.width = '';
+            mapPanel.style.height = '';
+            
+            // 지도가 원래 자리로 돌아오면 투명 더미 패널을 삭제
+            if (mapSpacer) {
+                mapSpacer.remove();
+                mapSpacer = null;
+            }
+            
+            // 크기 원복 후 지도 캔버스 리렌더링
+            setTimeout(() => { if (typeof map !== 'undefined') map.updateSize(); }, 100);
+        };
+
+        // ==========================================
+        // 🪟 4방향(대각선 모서리) 리사이즈 로직
+        // ==========================================
+        let isMapResizing = false;
+        let resizeDir = '';
+        let startW, startH, startLeft, startTop;
+
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                isMapResizing = true;
+                resizeDir = handle.getAttribute('data-dir');
+                mapStartX = e.clientX;
+                mapStartY = e.clientY;
+                startW = mapPanel.offsetWidth;
+                startH = mapPanel.offsetHeight;
+                startLeft = mapPanel.offsetLeft;
+                startTop = mapPanel.offsetTop;
+                
+                document.addEventListener('mousemove', onMapResizeMove);
+                document.addEventListener('mouseup', onMapResizeUp);
+                
+                e.preventDefault();
+                e.stopPropagation(); // 헤더 드래그 이벤트와 충돌 방지
+            });
+        });
+
+        function onMapResizeMove(e) {
+            if (!isMapResizing) return;
+            const dx = e.clientX - mapStartX;
+            const dy = e.clientY - mapStartY;
+            
+            let newW = startW, newH = startH, newL = startLeft, newT = startTop;
+
+            // 대각선 4방향 처리
+            if (resizeDir.includes('e')) newW = startW + dx;
+            if (resizeDir.includes('w')) { newW = startW - dx; newL = startLeft + dx; }
+            if (resizeDir.includes('s')) newH = startH + dy;
+            if (resizeDir.includes('n')) { newH = startH - dy; newT = startTop + dy; }
+
+            // 최소 크기 제한 방어 (CSS와 동일)
+            if (newW >= 350) {
+                mapPanel.style.width = newW + 'px';
+                if (resizeDir.includes('w')) mapPanel.style.left = newL + 'px';
+            }
+            if (newH >= 400) {
+                mapPanel.style.height = newH + 'px';
+                if (resizeDir.includes('n')) mapPanel.style.top = newT + 'px';
+            }
+            
+            // 지도 캔버스 실시간 핏(Fit) 업데이트
+            if (typeof map !== 'undefined') map.updateSize();
+        }
+
+        function onMapResizeUp() {
+            isMapResizing = false;
+            document.removeEventListener('mousemove', onMapResizeMove);
+            document.removeEventListener('mouseup', onMapResizeUp);
+        }
+
+        // 패널 자체 크기 감지 시 지도 업데이트
+        const resizeObserver = new ResizeObserver(() => {
+            if (typeof map !== 'undefined') {
+                map.updateSize();
+            }
+        });
+        resizeObserver.observe(mapPanel);
     </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-// ==========================================
+// ====================================================
 // gcs_client.js - 메인 관제 웹소켓 및 UI 로직 (통합 완결본)
-// ==========================================
+// ====================================================
 
 function updateEventLog(message) {
     const logElement = document.getElementById('single-event-log');
@@ -115,23 +115,40 @@ function connectWebSocket() {
                 const modeEl = document.getElementById("status-mode");
                 if (modeEl) modeEl.innerText = msg.data;
             }
+            else if (msg.type === "GPS_SAT") {
+                const satsEl = document.getElementById("status-sats");
+                if (satsEl) {
+                    if (msg.data === 255) {
+                        satsEl.innerText = "수신 불가 (0 개)";
+                        satsEl.style.color = "#ef4444"; // 빨간색
+                    } else {
+                        satsEl.innerText = msg.data + " 개";
+                        // 위성이 8개 이상이면 초록색, 부족하면 노란색으로 경고 표시
+                        satsEl.style.color = msg.data >= 8 ? "#10b981" : "#facc15"; 
+                    }
+                }
+            }
             else if (msg.type === "GPS") {
+                // 변경된 HTML ID에 맞춰 요소 가져오기
                 const altRelEl = document.getElementById("status-alt-rel");
-                const altMslEl = document.getElementById("status-alt-msl");
+                const altTerrainEl = document.getElementById("status-alt-terrain");
+                const altDroneEl = document.getElementById("status-alt-drone");
                 
-                if (altRelEl && altMslEl) {
-                    // 1. 상대 고도 처리 (노이즈 보정 포함)
+                if (altRelEl && altTerrainEl && altDroneEl) {
+                    // 1. 상대 고도 처리
                     let currentAlt = msg.data.alt;
                     if (currentAlt < 0 && currentAlt > -0.5) {
                         currentAlt = 0.0;
                     }
                     
-                    // 2. 해발 고도 처리 (안전망 추가)
-                    let mslAlt = msg.data.msl_alt !== undefined ? msg.data.msl_alt : 0.0;
+                    // 2. 백엔드에서 넘겨주는 신규 고도 데이터 파싱 (없으면 0.0m)
+                    let terrainMsl = msg.data.terrain_msl !== undefined ? msg.data.terrain_msl : 0.0;
+                    let droneMsl = msg.data.drone_msl !== undefined ? msg.data.drone_msl : 0.0;
 
-                    // 3. UI 업데이트
+                    // 3. UI 업데이트 적용
                     altRelEl.innerText = currentAlt.toFixed(1) + " m";
-                    altMslEl.innerText = mslAlt.toFixed(1) + " m";
+                    altTerrainEl.innerText = terrainMsl.toFixed(1) + " m";
+                    altDroneEl.innerText = droneMsl.toFixed(1) + " m";
                 }
                 
                 const gpsText = document.getElementById("status-gps");
@@ -148,18 +165,17 @@ function connectWebSocket() {
                 // VWorld 지도(vmap) 위에서 드론 위치 마커 이동 연동
                 if (msg.data.lat !== 0 && msg.data.lon !== 0) {
                     if (typeof moveMarker === "function") {
-                        // ✨ 수정: lat, lon 뒤에 msg.data.hdg 를 추가로 넘겨줍니다. ✨
                         moveMarker(msg.data.lat, msg.data.lon, msg.data.hdg);
                     }
                 }
 
-                // ✨ 목표 고도 도달 감지 로직 (9.5m -> 48.0m로 넉넉하게 변경)
-                if (window.pendingFlyTo && msg.data.alt >= 48.0) {
-                    window.pendingFlyTo = false; // 중복 실행 방지
+                // 출동 중 목표 고도(3m 기준 -> 2.5m 이상) 도달 감지 로직
+                if (window.pendingFlyTo && msg.data.alt >= 2.5) {
+                    window.pendingFlyTo = false; 
                     if (window.targetWaypoint && window.targetWaypoint.lat) {
                         const lat = window.targetWaypoint.lat;
                         const lon = window.targetWaypoint.lon;
-                        updateEventLog(`🎯 [출동 3단계] 고도 확보 완료! 목표 지점(${lat.toFixed(5)}, ${lon.toFixed(5)})으로 자동 비행합니다!`);
+                        updateEventLog(`🎯 [출동 3단계] 고도(3m) 확보 완료! 목표 지점(${lat.toFixed(5)}, ${lon.toFixed(5)})으로 자동 비행합니다!`);
                         sendCommand(`FLY_TO:${lat},${lon}`);
                     }
                 }
@@ -385,35 +401,35 @@ window.dispatchDrone = function() {
         }
     }
 
-    // ✨ 핵심 수정 1: 현재 고도를 확인하여 비행 중(3m 이상)일 때의 로직 ✨
-    const altEl = document.getElementById("status-alt");
+    // ✨ 현재 고도를 확인하여 비행 중(1.5m 이상)일 때의 로직 (3m 기준에 맞게 변경)
+    const altEl = document.getElementById("status-alt-rel");
     const currentAlt = altEl ? parseFloat(altEl.innerText) : 0;
 
-    if (currentAlt > 3.0) {
-        if (currentAlt < 48.0) {
-            // 1단계: 고도가 낮으면 제자리에서 50m로 먼저 수직 상승
-            updateEventLog("🎯 [재출동] 제자리에서 안전 고도(50m)로 먼저 수직 상승합니다.");
+    if (currentAlt > 1.5) {
+        if (currentAlt < 2.5) {
+            // 1단계: 고도가 낮으면 제자리에서 3m로 먼저 수직 상승
+            updateEventLog("🎯 [재출동] 제자리에서 안전 고도(3m)로 먼저 수직 상승합니다.");
             
-            // [수정된 부분] TAKEOFF 명령 대신, 드론의 현재 위치로 FLY_TO 명령을 보내 제자리 상승 유도
             const gpsText = document.getElementById("status-gps").innerText;
             const curCoords = gpsText.split(",");
-            const curLat = parseFloat(curCoords[0]);
-            const curLon = parseFloat(curCoords[1]);
+            if (curCoords.length === 2) {
+                const curLat = parseFloat(curCoords[0]);
+                const curLon = parseFloat(curCoords[1]);
+                sendCommand(`FLY_TO:${curLat},${curLon}`);
+            }
             
-            sendCommand(`FLY_TO:${curLat},${curLon}`);
-            
-            window.pendingFlyTo = true; // 50m 도달 시 진짜 목표 지점으로 이동하도록 락 걸기
+            window.pendingFlyTo = true;
         } else {
-            // 2단계: 이미 50m 부근이라면 즉시 목표 지점으로 이동
+            // 2단계: 이미 2.5m 이상이라면 즉시 목표 지점으로 이동
             updateEventLog("🎯 [재출동] 안전 고도 확보됨. 새 목표 지점으로 즉시 이동합니다.");
             const lat = window.targetWaypoint.lat;
             const lon = window.targetWaypoint.lon;
             sendCommand(`FLY_TO:${lat},${lon}`);
         }
-        return; // 아래의 시동 및 이륙 로직을 건너뜀
+        return;
     }
 
-    // ✨ 핵심 수정 2: 바닥에 있을 경우 GUIDED 모드로 강제 전환 후 시동 ✨
+    // 바닥에 있을 경우 GUIDED 모드로 강제 전환 후 시동
     updateEventLog("⚙️ [출동 준비] 비행 모드를 GUIDED로 변경합니다.");
     sendCommand('GUIDED');
 
@@ -422,11 +438,44 @@ window.dispatchDrone = function() {
         sendCommand('ARM');
     }, 1500);
 
-    // ✨ 핵심 수정 3: 시동 후 안정화 대기 시간 및 메시지 변경
     setTimeout(() => {
-        updateEventLog("🚁 [출동 2단계] 이륙(TAKEOFF 50m) 명령을 전송합니다.");
+        updateEventLog("🚁 [출동 2단계] 이륙(TAKEOFF 3m) 명령을 전송합니다.");
         sendCommand('TAKEOFF');
         window.pendingFlyTo = true;
-        updateEventLog("⏳ 이륙 중... 목표 고도(50m) 도달을 대기합니다.");
+        updateEventLog("⏳ 이륙 중... 목표 고도(3m) 도달을 대기합니다.");
     }, 5000);
+};
+
+// ==========================================
+// 📱 비디오 탭 전환 (라즈베리파이 <-> 무선 모바일 AI 카메라)
+// ==========================================
+window.mobileStreamUrl = "http://172.30.1.50:8080/video"; // 스마트폰 IP Webcam 기본값
+
+window.switchVideoTab = function(mode, btnEl) {
+    // 1. 클릭한 탭 버튼에 파란색 활성화(active) 표시 이동
+    document.querySelectorAll('.tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+
+    // 2. 서버 연결 여부 확인
+    if (!isConnected || !ws) {
+        updateEventLog("⚠️ 먼저 좌측의 '연결 시작' 버튼을 눌러 서버와 연결해주세요.");
+        return;
+    }
+
+    // 3. 탭 모드에 따라 백엔드로 명령 전송
+    if (mode === 'AI_OVERLAY') {
+        const inputUrl = prompt(
+            "스마트폰 IP Webcam 주소(예: http://172.30.1.XX:8080/video) 또는 웹캠 번호(0, 1)를 입력하세요:", 
+            window.mobileStreamUrl
+        );
+        if (!inputUrl) return;
+        
+        window.mobileStreamUrl = inputUrl.trim();
+        updateEventLog(`📱 [AI OVERLAY] 무선 모바일 카메라 연결 중... (${window.mobileStreamUrl})`);
+        sendCommand(`VIDEO_MOBILE:${window.mobileStreamUrl}`);
+    } 
+    else if (mode === 'RGB') {
+        updateEventLog("🎥 [RGB LIVE] 기본 드론(라즈베리 파이) 영상 모드로 전환합니다.");
+        sendCommand("VIDEO_RPI");
+    }
 };

@@ -262,12 +262,19 @@ async def handle_drone_command(command: str):
         shared_drone.set_connection_string(ip_val)
         if not shared_drone.running:
             shared_drone.start()
-        if getattr(shared_video, 'pipeline', None) is None:
+        if getattr(shared_video, 'pipeline', None) is None and not shared_video.mobile_running:
             shared_video.start()
     elif command == "DISCONNECT":
         shared_drone.stop()
         shared_video.stop()
-    elif command in ["ARM", "DISARM", "TAKEOFF", "LAND", "BRAKE", "RTH"] or command.startswith("RC_") or command.startswith("FLY_TO:") or command.startswith("MISSION:"):
+    elif command.startswith("VIDEO_MOBILE:"):
+        stream_url = command.split("VIDEO_MOBILE:")[1]
+        shared_video.start_mobile_ai(stream_url)
+    elif command == "VIDEO_RPI":
+        shared_video.start()
+
+    # 👇 아래 리스트에 "EMERGENCY_KILL", "GUIDED" 추가!
+    elif command in ["ARM", "DISARM", "EMERGENCY_KILL", "GUIDED", "TAKEOFF", "LAND", "BRAKE", "RTH"] or command.startswith("RC_") or command.startswith("FLY_TO:") or command.startswith("MISSION:") or command.startswith("JOY_MOVE:"):
         shared_drone.send_command(command)
 
 @app.websocket("/ws/drone")
