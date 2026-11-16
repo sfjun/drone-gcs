@@ -1,1 +1,0 @@
-https://github.com/amvlab/aircraft-models/blob/main/models/EVTOL_nologo.glb
