@@ -1,0 +1,36 @@
+공공데이터포탈======
+
+   var protocolStr = "https" + "://";
+    var domainHost = "api" + ".data" + ".go" + ".kr";
+    var restPath = "/openapi/tn_pubr_public_fgtcar_prkarea_api";
+    
+    var finalEndPointUrl = protocolStr + domainHost + restPath;
+    var serviceKey = "90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264";
+ 
+
+데이터포맷
+JSON+XML
+End Point
+https://api.data.go.kr/openapi/tn_pubr_public_fgtcar_prkarea_api
+일반 인증키
+90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264
+
+
+가로수 12m, 전신주 16m, 가로등 12m, 765kV 초고압 철탑: 평균 80m ~ 100m, 이순신대교 (여수): 주탑 높이가 270m
+
+
+var odcloudBaseUrl = "api.odcloud.kr/api";
+var serviceKey = "90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264";
+
+var odcloudBaseUrl = "api.odcloud.kr/api";
+var serviceKey = "90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264";
+
+
+데이터포맷
+JSON+XML
+Base URL
+api.odcloud.kr/api
+Swagger URL
+https://infuser.odcloud.kr/oas/docs?namespace=3076395/v1
+일반 인증키
+90ea73c6e0923d02c55b75c493f847b58727bf8b8b09a4aa4cf1f4085c041264

@@ -1,0 +1,333 @@
+var vw = vw || {};
+vw.version = '3.0';
+vw.ol3 = {};
+
+vw.ol3.BaseURLs = {
+		vworldUrl : vworldUrl
+		, vworld2DCache : vworld2DCache
+		, vworldBaseMapUrl : vworldBaseMapUrl
+		, vworldStyledMapUrl : vworldStyledMapUrl
+		, vworldApiUrl : 'https://api.vworld.kr/req/wmts/vector'
+};
+
+var vworldVers={OpenLayers:"7.5.2",Base:'service',Hybrid:'service',Satellite:'service',Gray:'service',White:'service',Midnight:'service',ServerMaxLevel:18};
+
+vw.ol3.ExtUrls  = {
+		    vmapcss: vw.ol3.BaseURLs.vworldUrl + "/css/OpenLayers/ol.v7.css",
+		    vmap23css: vw.ol3.BaseURLs.vworldUrl + "/css/ws3dmap/WS3DRelease3/vmap23.css",		    
+		    openlayers: vw.ol3.BaseURLs.vworldUrl + "/js/map/OpenLayers-"  + vworldVers.OpenLayers + "/ol.v752.min.js",
+			olext: vw.ol3.BaseURLs.vworldUrl + "/js/map/ol-ext/ol-ext.min.js",
+		    jqueryui: vw.ol3.BaseURLs.vworldUrl + "/jquery/ol3/jquery-ui.min.js",
+		    jquery: vw.ol3.BaseURLs.vworldUrl + "/js/dtkmap/jquery-3.7.0.min.js",
+		    apiv30css : vw.ol3.BaseURLs.vworldUrl + "/css/ws3dmap/WS3DRelease3/api.v30.css",
+		    ws3dcss : vw.ol3.BaseURLs.vworldUrl + "/css/ws3dmap/WS3DRelease3/VWViewer.css"
+		};
+	vw.ol3.MapUrls ={
+			base:vw.ol3.BaseURLs.vworldBaseMapUrl+"/Base/"+vworldVers.Base+"/",
+			hybrid:vw.ol3.BaseURLs.vworldBaseMapUrl+"/Hybrid/"+vworldVers.Hybrid+"/",
+			raster:vw.ol3.BaseURLs.vworldBaseMapUrl+"/Satellite/"+vworldVers.Satellite+"/",
+			gray:vw.ol3.BaseURLs.vworldBaseMapUrl+"/gray/"+vworldVers.Gray+"/",
+			white:vw.ol3.BaseURLs.vworldBaseMapUrl+"/white/"+vworldVers.White+"/",
+			midnight:vw.ol3.BaseURLs.vworldBaseMapUrl+"/midnight/"+vworldVers.Midnight+"/",
+			lgt_base:vw.ol3.BaseURLs.vworldBaseMapUrl+"/vector/Base/"+vworldVers.Base+"/",
+			vt_poi:vw.ol3.BaseURLs.vworldApiUrl+"/getTile/"+vworldVectorKey+"/poi/{z}/{x}/{y}",
+			vt_road: vw.ol3.BaseURLs.vworldApiUrl+"/getTile/"+vworldVectorKey+"/traffic/{z}/{x}/{y}",
+			tile2d:vw.ol3.BaseURLs.vworld2DCache+'/tile',
+			print:vw.ol3.BaseURLs.vworldUrl+'/printMap.do',
+			wms:vw.ol3.BaseURLs.vworld2DCache+'/gis/map/WMS?',
+			wms2:vw.ol3.BaseURLs.vworld2DCache+'/gis/map/WMS2?',
+			wfs:vw.ol3.BaseURLs.vworld2DCache+'/gis/map/WFS?',
+			api2DCheck:vw.ol3.BaseURLs.vworldUrl+"/check2DNum.do?version=3.0&key="+vworldApiKey,
+			api3DCheck:vw.ol3.BaseURLs.vworldUrl+"/checkWGLNum.do?version=3.0&type=WGL&key="+vworldApiKey
+	};
+	
+	vw.ol3.CommonFunc = {
+		_trim: function(txt) {
+			 return txt.replace(/(^\s*)|(\s*$)/gi, "");
+		},
+		_getBrowser: function(name) {
+			var isChk = false;
+			var agent = navigator.userAgent.toLowerCase();
+			name = name.toLowerCase();
+			if (agent.indexOf(name) != -1) {
+				isChk = true;
+			}
+			return isChk;
+		},
+		_browserName: function(){
+			var agt = navigator.userAgent.toLowerCase();
+			if (agt.indexOf("edge") != -1) return 'Edge';
+			if (agt.indexOf("chrome") != -1) return 'Chrome'; 
+			if (agt.indexOf("opera") != -1) return 'Opera'; 
+			if (agt.indexOf("staroffice") != -1) return 'Star Office'; 
+			if (agt.indexOf("webtv") != -1) return 'WebTV'; 
+			if (agt.indexOf("beonex") != -1) return 'Beonex'; 
+			if (agt.indexOf("chimera") != -1) return 'Chimera'; 
+			if (agt.indexOf("netpositive") != -1) return 'NetPositive'; 
+			if (agt.indexOf("phoenix") != -1) return 'Phoenix'; 
+			if (agt.indexOf("firefox") != -1) return 'Firefox'; 
+			if (agt.indexOf("safari") != -1) return 'Safari'; 
+			if (agt.indexOf("skipstone") != -1) return 'SkipStone'; 
+			if (agt.indexOf("msie") != -1 || agt.indexOf("trident") != -1) return 'Internet Explorer'; 
+			if (agt.indexOf("netscape") != -1) return 'Netscape'; 
+			if (agt.indexOf("mozilla/5.0") != -1) return 'Mozilla'; 
+			return '';
+		},
+		_getElement: function (id) {
+            return document.getElementById(id);
+        },
+        _createElement: function (type) {
+            return window.document.createElement(type);
+        },
+        _append: function(parentObj,childObj) {
+        	$(parentObj).append($(childObj));
+        },
+        _firstChildByClassName: function(_className) {
+        	var _parentNode = window.document.getElementsByClassName(_className);
+        	var _targetNode;
+	  		  for(var i=0;i < _parentNode.length;i++) {
+    		  			_targetNode =  _parentNode[0];  
+	 		  };
+	 		  return _targetNode;
+        },
+        _getElementsByClassName: function(_className) {
+        	return window.document.getElementsByClassName(_className);
+        },
+        _setCss: function(_className, _cssName, _cssValue) {
+			var _olContainerEl = this._firstChildByClassName(_className);
+			 this._css(_olContainerEl,_cssName,_cssValue);
+        },
+        _css: function(obj,cssName,cssValue) {
+        	$(obj).css(cssName,cssValue);
+        },
+        _hover: function(obj,overFunc,outFunc) {
+        	$(obj).hover(overFunc,outFunc);
+        },
+        _show: function(obj) {
+        	$(obj).show();
+        },
+        _hide: function(obj) {
+        	$(obj).hide();
+        },
+        _attr: function(obj,name,value) {
+        	$(obj).attr(name,value);    		        	
+        },
+        _setClassName: function(obj,value) {
+        	obj.className = value;
+        },
+        _removeClass: function(obj,value) {
+        	$(obj).removeClass(value);
+        },
+        _addClass: function(obj,value) {
+        	$(obj).addClass(value);
+        },
+        _remove: function(obj) {
+        	$(obj).remove();
+        },
+        _on: function(obj,eventName,func) {
+        	$(obj).on(eventName, func);
+        },
+        _un: function(obj,eventName) {
+        	$(obj).on(eventName);
+        },
+        _html: function(obj,value) {
+        	$(obj).html(value);
+        },
+        _click: function(obj,func) {
+        	$(obj).click(func);
+        },
+        _val : function(obj,name,value) {
+        	$(obj).val(name,value);
+        },
+        _getAttribute: function(obj,name) {
+        	return $(obj).attr(name);
+        },
+        _setAttribute: function(obj,name,value) {
+        	$(obj).attr(name,value);
+        },
+        _split: function(_string,_deli) {
+        	return _string.split("-");
+        },
+        _isDef: function(_obj) {
+        	if ( _obj != undefined && _obj != null )	{
+        		return true;
+        	} else {
+        		return false;
+        	}
+        },
+        _linkExtStyle: function (srcUrl) {
+            var js = this._createElement('link');
+            js.setAttribute('type', "text/css");
+            js.setAttribute('href', srcUrl);
+            js.setAttribute('rel', 'stylesheet');
+            document.getElementsByTagName('head')[0].appendChild(js);
+            return false;
+        },
+        _getTimeStringhtml: function (min) {
+               var h = parseInt(min / 60);
+               var m = parseInt(min % 60);
+               if (h != 0 && m != 0) {
+                   return "<strong class='num'>" + h + "</strong>시간<strong class='num'> " + m + "</strong>분";
+               } else if (h != 0 && m == 0) {
+                   return "<strong class='num'>" + h + "</strong>시간 ";
+               } else if (h == 0 && m != 0) {
+                   return "<strong class='num'>" + m + "</strong>분";
+               } else {
+                   return "<strong class='num'>1</strong>분 미만";
+               }
+           },
+           _getTimeString:  function (min) {
+               var h = parseInt(min / 60);
+               var m = parseInt(min % 60);
+               if (h != 0 && m != 0) {
+                   return h + "시간 " + m + "분";
+               } else if (h != 0 && m == 0) {
+                   return h + "시간 ";
+               } else if (h == 0 && m != 0) {
+                   return m + "분";
+               } else {
+                   return "1분 미만";
+               }
+           },
+           _commify: function (n) {
+               var reg = /(^[+-]?\d+)(\d{3})/;
+               n += '';
+               while (reg.test(n))
+                   n = n.replace(reg, '$1' + ',' + '$2');
+               return n;
+           },
+           _sleep: function (ms){
+   			var start = new Date().getTime();
+   			for (var i = 0; i < 1e7; i++) {
+   			    if ((new Date().getTime() - start) > ms){
+   			      break;
+   			    }
+   			}
+   		},
+        _loadExtLibs: function (UrlArray, afterFunc) {
+            var srcUrl = '',
+                afterUrl = '';
+            var remainUrls = UrlArray;
+            if (remainUrls != null && remainUrls.length > 0) {
+                srcUrl = remainUrls.shift();
+            }
+            if (srcUrl != '') {
+                if (remainUrls.length > 0) {
+                    afterUrl = remainUrls[0];
+                }
+                var js = this._createElement('script');
+                js.setAttribute('type', "text/javascript");
+                js.setAttribute('src', srcUrl);
+                js.setAttribute('async', false);
+                js.onreadystatechange = function () {
+                    if (js.readyState == 'loaded' || js.readyState == 'complete') {
+                        if (afterUrl != '') {
+                            js.onreadystatechange = null;
+                            vw.ol3.CommonFunc._loadExtLibs(remainUrls, afterFunc);
+                        } else {
+                            afterFunc();
+                        }
+                    }
+                }
+                js.onload = function () {
+                    if (afterUrl != '') {
+                        js.onload = null;
+                        vw.ol3.CommonFunc._loadExtLibs(remainUrls, afterFunc);
+                    } else {
+                        afterFunc();
+                    }
+                }
+                document.getElementsByTagName('head')[0].appendChild(js);
+            }
+            return false;
+        },
+        _ShimResize: function (type) {
+            if ((vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu) == null) || (vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu) == null)) return false;
+            if ( type == 'on')  {
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.height = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.height = '132px';
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.opacity = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.opacity = 1;
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.filter = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.filter = 'alpha(opacity=100)';
+            }
+            if (type == 'off') {
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.height = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.height = '66px';
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.opacity = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.opacity = 1;
+            	vw.ol3.CommonFunc._getElement(vw.vworldIDs.idmenu).style.filter = vw.ol3.CommonFunc._getElement(vw.vworldIDs.idshim).style.filter = 'alpha(opacity=100)';
+            }
+        },
+        _isIE: function(){return ((navigator.userAgent.indexOf("MSIE") != -1 || navigator.userAgent.indexOf("Trident") != -1))?true:false;
+		},
+		_makeinvisible: function(divid, visible){			
+			var visdiv = vw.ol3.CommonFunc._getElement(divid);
+			if (visdiv == null) return;
+			if (vw.ol3.CommonFunc._isIE()) {
+				if (visible == true){
+					visdiv.style.height = '100%';
+					visdiv.style.display = 'inline-block';	
+					visdiv.style.visibility = 'visible';				
+				} else {
+					visdiv.style.height = '0px';
+					visdiv.style.display = 'none';	
+					visdiv.style.visibility = 'hidden';
+				}
+			}else{
+				if (visible == true){
+					visdiv.style.height = '100%';
+					visdiv.style.visibility = 'visible';
+					visdiv.style.display = 'inline-block';									
+				} else {
+					visdiv.style.height = '0px';
+					visdiv.style.display = 'none';
+					visdiv.style.visibility = 'hidden';	
+				}		
+			}
+		},
+		_isMobile: function (){
+			try{
+				var browserCheckText=['iPhone','iPod','BlackBerry','Android','Windows CE','LG','MOT','SAMSUNG','SonyEricsson'];
+				for (var word in browserCheckText){
+					if (navigator.userAgent.toUpperCase().match(browserCheckText[word].toUpperCase()) != null){
+						return true;
+						break;
+					}
+				}
+				return false;
+			}catch(e){return false;}
+		},
+		_isNumber: function(s) {
+		  s += '';
+		  s = s.replace(/^\s*|\s*$/g, '');
+		  if (s == '' || isNaN(s)) return false;
+		  return true;
+		},
+		_makeUniqeIds: function() {
+		  var id = Math.random().toString(36).substr(5, 10);
+		  return id;
+		},
+		_getTransformXY: function( plon, plat, toEPSG, targetEPSG ) {			
+			return ol.proj.transform([ plon, plat ], toEPSG , targetEPSG );
+		},
+		_replaceAll: function(str, searchStr, replaceStr) {
+		 	   return str.split(searchStr).join(replaceStr);
+		}
+};
+	 	 	
+	(function() {
+	document.write("<script type=\'text/javascript\' src=\'" + vw.ol3.ExtUrls.jquery + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" + vw.ol3.ExtUrls.jqueryui + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" + vw.ol3.ExtUrls.openlayers + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" + vw.ol3.ExtUrls.olext + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  vw.ol3.BaseURLs.vworldUrl +  "/js/dtkmap/imgdownload.js" + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  vw.ol3.BaseURLs.vworldUrl +  "/js/analmap/extmlib/proj4.281.js" + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  window.v_protocol +  "map.vworld.kr/vectortiles/proxyUrl.jsp?url=/req/wmts/vector/getStyle/" + vworldVectorKey + "/vectorStylePoi/lastest'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  window.v_protocol +  "map.vworld.kr/vectortiles/proxyUrl.jsp?url=/req/wmts/vector/getStyle/" + vworldVectorKey + "/vectorStyleTraffic/lastest'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  vw.ol3.BaseURLs.vworldUrl +  "/js/ws3dmap/WS3DRelease3/vw.ol7.webgl2DMapClassInit.v30.min.js" + "\'></script>");
+	if ( vworldNoCss === null || typeof vworldNoCss === undefined || 
+			(vworldNoCss === "n" || vworldNoCss === "N") ) {
+		vw.ol3.CommonFunc._linkExtStyle(vw.ol3.ExtUrls.vmap23css);
+		vw.ol3.CommonFunc._linkExtStyle(vw.ol3.ExtUrls.vmapcss);
+		vw.ol3.CommonFunc._linkExtStyle(vw.ol3.ExtUrls.ws3dcss);
+		vw.ol3.CommonFunc._linkExtStyle(vw.ol3.ExtUrls.apiv30css);
+	}
+	document.write("<script type=\'text/javascript\' src=\'" +  vw.ol3.MapUrls.api2DCheck + "\'></script>");
+	document.write("<script type=\'text/javascript\' src=\'" +  vw.ol3.MapUrls.api3DCheck + "\'></script>");
+})();
