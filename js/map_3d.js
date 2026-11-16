@@ -3555,6 +3555,8 @@ window.exportMissionJSON = function () {
         };
     }
 
+    
+
     // 기존 버튼(downloadBtn 또는 copyBtn)의 부모 컨테이너에 신규 버튼 2개 자동 생성
     var btnContainer = (downloadBtn && downloadBtn.parentElement) || (copyBtn && copyBtn.parentElement);
 

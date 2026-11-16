@@ -12,6 +12,11 @@ import socket
 from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
 
+from fastapi.responses import FileResponse, RedirectResponse
+
+
+from fastapi.responses import FileResponse, RedirectResponse, Response # Response 추가
+from typing import Dict, Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
@@ -297,6 +302,8 @@ async def car_websocket_endpoint(websocket: WebSocket):
         if not main_active_websockets and not car_active_websockets:
             shared_drone.stop()
             shared_video.stop()
+
+
 
 if __name__ == "__main__":
     main_url = f"http://{HOST_IP}:8000"
